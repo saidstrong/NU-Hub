@@ -37,7 +37,7 @@ export default async function HomePage() {
   return (
     <main>
       <TopBar
-        title="NU Hub"
+        title="NU Atrium"
         subtitle="Marketplace, events, and campus collaboration in one place"
         actions={[{ label: "Search", href: "/search" }]}
       />

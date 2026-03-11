@@ -1,4 +1,4 @@
--- NU Hub MVP Foundation (Phase 1)
+-- NU Atrium MVP Foundation (Phase 1)
 -- Extensions, helper functions, core tables, constraints, indexes, and triggers.
 
 create extension if not exists pgcrypto;

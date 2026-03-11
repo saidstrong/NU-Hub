@@ -8,7 +8,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "NU Hub Skeleton",
+  title: "NU Atrium Skeleton",
   description: "Low-fidelity campus app prototype",
 };
 

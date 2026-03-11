@@ -6,7 +6,7 @@ export default function WelcomePage() {
     <main className="flex min-h-[80vh] flex-col items-center justify-center">
       <div className="wire-panel w-full p-6 text-center">
         <p className="wire-label">Campus Utility</p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight">NU Hub</h1>
+        <h1 className="mt-2 text-3xl font-semibold tracking-tight">NU Atrium</h1>
         <p className="mt-3 text-sm text-wire-300">
           A structural prototype for market, events, and student community discovery.
         </p>

@@ -9,7 +9,7 @@ export default function AuthLayout({
     <div className="flex min-h-screen flex-col px-4 py-6">
       <div className="wire-panel mb-2 flex items-center justify-between text-xs text-wire-300">
         <Link href="/welcome" className="wire-action py-1">
-          NU Hub
+          NU Atrium
         </Link>
         <Link href="/home" className="wire-action py-1">
           Skip to App

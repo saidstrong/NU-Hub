@@ -48,7 +48,7 @@ export default async function EditProfilePage({ searchParams }: EditProfilePageP
     <main>
       <TopBar
         title="Edit Profile"
-        subtitle="Update profile sections used across NU Hub"
+        subtitle="Update profile sections used across NU Atrium"
         backHref="/profile"
       />
       {error ? (

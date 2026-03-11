@@ -1,4 +1,4 @@
-# NU Hub MVP
+# NU Atrium MVP
 
 Production deployment notes for Vercel + Supabase.
 

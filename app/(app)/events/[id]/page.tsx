@@ -52,7 +52,7 @@ export default async function EventDetailPage({ params, searchParams }: EventDet
 
   const { event, organizer, isSaved, participationStatus } = detail;
   const dateLabel = formatEventDate(event.starts_at, event.ends_at);
-  const organizerLabel = organizer?.full_name || "NU Hub editorial team";
+  const organizerLabel = organizer?.full_name || "NU Atrium editorial team";
   const interestedActive = participationStatus === "interested";
   const joinedActive = participationStatus === "joined";
   const organizerMeta = [organizer?.school, organizer?.major, organizer?.year_label]

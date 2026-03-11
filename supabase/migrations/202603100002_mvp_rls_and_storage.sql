@@ -1,4 +1,4 @@
--- NU Hub MVP Foundation (Phase 1)
+-- NU Atrium MVP Foundation (Phase 1)
 -- RLS, policies, and storage bucket/policies.
 
 alter table public.profiles enable row level security;

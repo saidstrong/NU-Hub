@@ -14,7 +14,7 @@ export default function SettingsPage() {
       <section className="wire-panel">
         <div className="mb-4 border-b border-wire-700 pb-3">
           <h2 className="wire-section-title">Profile and preferences</h2>
-          <p className="mt-1 wire-meta">Practical controls for your NU Hub experience.</p>
+          <p className="mt-1 wire-meta">Practical controls for your NU Atrium experience.</p>
         </div>
         <div className="space-y-2">
           <Link
