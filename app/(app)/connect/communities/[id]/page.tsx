@@ -1,0 +1,182 @@
+import Link from "next/link";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { FormSection } from "@/components/ui/FormSection";
+import { SubmitButton } from "@/components/ui/SubmitButton";
+import { TagChip } from "@/components/ui/TagChip";
+import { TopBar } from "@/components/ui/TopBar";
+import { requireUser } from "@/lib/auth/session";
+import { joinOrRequestCommunityAction } from "@/lib/connect/actions";
+import { getCommunityDetail } from "@/lib/connect/data";
+
+type CommunityProfilePageProps = {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ message?: string; error?: string }>;
+};
+
+export default async function CommunityProfilePage({
+  params,
+  searchParams,
+}: CommunityProfilePageProps) {
+  const { message, error } = await searchParams;
+  const { id } = await params;
+  let detail = null as Awaited<ReturnType<typeof getCommunityDetail>>;
+  let loadError: string | null = null;
+
+  try {
+    detail = await getCommunityDetail(id);
+  } catch (loadDetailError) {
+    loadError = loadDetailError instanceof Error ? loadDetailError.message : "Failed to load community.";
+  }
+
+  if (!detail) {
+    return (
+      <main>
+        <TopBar
+          title="Community Profile"
+          subtitle="Purpose, membership, and participation details"
+          backHref="/connect/communities"
+        />
+        {error ? (
+          <div className="rounded-xl border border-red-400/30 bg-red-400/10 px-3 py-2 text-[13px] text-red-200">
+            {error}
+          </div>
+        ) : null}
+        {loadError ? (
+          <div className="rounded-xl border border-red-400/30 bg-red-400/10 px-3 py-2 text-[13px] text-red-200">
+            {loadError}
+          </div>
+        ) : null}
+        <EmptyState
+          title="Community not available"
+          description="This community may have been removed or is unavailable."
+          actionLabel="Back to communities"
+          actionHref="/connect/communities"
+        />
+      </main>
+    );
+  }
+
+  const { community, memberCount, membership, ownerProfile } = detail;
+  const user = await requireUser();
+  const isOwner = community.created_by === user.id;
+  const ownerName = ownerProfile?.full_name?.trim() || "Community owner";
+  const ownerMeta = [ownerProfile?.school, ownerProfile?.major, ownerProfile?.year_label]
+    .map((value) => value?.trim())
+    .filter(Boolean)
+    .join(" - ");
+  const joinActionLabel = community.join_type === "open" ? "Join community" : "Request to join";
+  const joinPendingLabel = community.join_type === "open" ? "Joining..." : "Submitting...";
+  const statusLabel =
+    membership?.status === "joined"
+      ? "Joined"
+      : membership?.status === "pending"
+        ? "Pending"
+        : membership?.status === "rejected"
+          ? "Rejected"
+          : membership?.status === "left"
+            ? "Left"
+            : null;
+  const statusNote =
+    membership?.status === "pending"
+      ? "Your join request is waiting for owner review."
+      : membership?.status === "rejected"
+        ? "Your previous request was rejected by the owner."
+        : membership?.status === "left"
+          ? "You have left this community."
+          : null;
+
+  return (
+    <main>
+      <TopBar
+        title="Community Profile"
+        subtitle="Purpose, membership, and participation details"
+        backHref="/connect/communities"
+      />
+      {message ? (
+        <div className="rounded-xl border border-accent/35 bg-accent/10 px-3 py-2 text-[13px] text-wire-100">
+          {message}
+        </div>
+      ) : null}
+      {error ? (
+        <div className="rounded-xl border border-red-400/30 bg-red-400/10 px-3 py-2 text-[13px] text-red-200">
+          {error}
+        </div>
+      ) : null}
+      {loadError ? (
+        <div className="rounded-xl border border-red-400/30 bg-red-400/10 px-3 py-2 text-[13px] text-red-200">
+          {loadError}
+        </div>
+      ) : null}
+
+      <section className="wire-panel">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h2 className="text-[17px] font-semibold tracking-tight text-wire-100">{community.name}</h2>
+          <span className="rounded-xl border border-wire-600 bg-wire-800 px-2 py-1 text-[12px] text-wire-300">
+            {community.join_type === "open" ? "Open" : "Request"}
+          </span>
+        </div>
+        <div className="mb-2 flex flex-wrap gap-2">
+          {community.tags.length > 0 ? community.tags.map((tag) => <TagChip key={tag} label={tag} />) : null}
+        </div>
+        <p className="wire-meta">Members: {memberCount}</p>
+        {statusLabel ? <p className="mt-1 wire-meta">Your status: {statusLabel}</p> : null}
+        {statusNote ? <p className="mt-1 text-[12px] text-wire-300">{statusNote}</p> : null}
+      </section>
+
+      <FormSection title="Description" description="Community purpose and scope.">
+        <p className="text-[13px] text-wire-200">{community.description}</p>
+      </FormSection>
+
+      <FormSection title="Owner" description="Community owner profile context.">
+        <p className="text-[13px] text-wire-200">{ownerName}</p>
+        {ownerMeta ? <p className="mt-1 wire-meta">{ownerMeta}</p> : null}
+      </FormSection>
+
+      {isOwner ? (
+        <div className="wire-action-row">
+          <Link href="/connect/communities/requests" className="wire-action">
+            Manage requests
+          </Link>
+          <Link href="/connect/my-communities?view=created" className="wire-action">
+            My communities
+          </Link>
+        </div>
+      ) : membership?.status === "joined" ? (
+        <div className="wire-action-row-single">
+          <button type="button" className="wire-action-primary w-full" disabled>
+            Joined community
+          </button>
+        </div>
+      ) : membership?.status === "pending" ? (
+        <div className="wire-action-row-single">
+          <button type="button" className="wire-action w-full" disabled>
+            Request pending
+          </button>
+        </div>
+      ) : membership?.status === "rejected" ? (
+        <div className="wire-action-row-single">
+          <button type="button" className="wire-action w-full" disabled>
+            Request rejected
+          </button>
+        </div>
+      ) : membership?.status === "left" ? (
+        <div className="wire-action-row-single">
+          <button type="button" className="wire-action w-full" disabled>
+            Rejoin unavailable
+          </button>
+        </div>
+      ) : (
+        <div className="wire-action-row-single">
+          <form action={joinOrRequestCommunityAction}>
+            <input type="hidden" name="communityId" value={community.id} />
+            <SubmitButton
+              label={joinActionLabel}
+              pendingLabel={joinPendingLabel}
+              variant="primary"
+            />
+          </form>
+        </div>
+      )}
+    </main>
+  );
+}

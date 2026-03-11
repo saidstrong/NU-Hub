@@ -1,0 +1,21 @@
+import Link from "next/link";
+
+export default function AuthLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex min-h-screen flex-col px-4 py-6">
+      <div className="wire-panel mb-2 flex items-center justify-between text-xs text-wire-300">
+        <Link href="/welcome" className="wire-action py-1">
+          NU Hub
+        </Link>
+        <Link href="/home" className="wire-action py-1">
+          Skip to App
+        </Link>
+      </div>
+      <div className="flex-1 pt-2">{children}</div>
+    </div>
+  );
+}
