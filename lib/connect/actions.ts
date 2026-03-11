@@ -1,43 +1,98 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
+import {
+  getStringValue,
+  redirectWithError,
+  redirectWithMessage,
+  sanitizeInternalPath,
+} from "@/lib/actions/helpers";
 import { requireUser } from "@/lib/auth/session";
 import { writeInAppNotification } from "@/lib/notifications/write";
 import { createClient } from "@/lib/supabase/server";
 import {
+  createCommunitySchema,
   communityJoinSchema,
   communityRequestReviewSchema,
 } from "@/lib/validation/connect";
 
-function getStringValue(formData: FormData, key: string): string {
-  const value = formData.get(key);
-  return typeof value === "string" ? value : "";
+async function deleteCommunityOnCreateFailure(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  communityId: string,
+) {
+  await supabase.from("communities").delete().eq("id", communityId);
 }
 
-function sanitizeInternalPath(path: string | undefined, fallback: string): string {
-  if (!path || !path.startsWith("/") || path.startsWith("//")) {
-    return fallback;
+export async function createCommunityAction(formData: FormData) {
+  const parsed = createCommunitySchema.safeParse({
+    name: getStringValue(formData, "name"),
+    description: getStringValue(formData, "description"),
+    category: getStringValue(formData, "category"),
+    tagsInput: getStringValue(formData, "tagsInput"),
+    joinType: getStringValue(formData, "joinType"),
+  });
+
+  if (!parsed.success) {
+    redirectWithError(
+      "/connect/communities/create",
+      parsed.error.issues[0]?.message ?? "Invalid community input.",
+    );
   }
 
-  return path;
-}
+  const user = await requireUser();
+  const supabase = await createClient();
 
-function appendSearchParam(path: string, key: "message" | "error", value: string): string {
-  const [pathname, queryString = ""] = path.split("?");
-  const params = new URLSearchParams(queryString);
-  params.set(key, value);
-  const nextQuery = params.toString();
+  const { data: community, error: communityInsertError } = await supabase
+    .from("communities")
+    .insert({
+      created_by: user.id,
+      name: parsed.data.name,
+      description: parsed.data.description,
+      category: parsed.data.category,
+      tags: parsed.data.tagsInput,
+      join_type: parsed.data.joinType,
+    })
+    .select("id")
+    .single();
 
-  return nextQuery ? `${pathname}?${nextQuery}` : pathname;
-}
+  if (communityInsertError || !community) {
+    redirectWithError("/connect/communities/create", "Failed to create community.");
+  }
 
-function redirectWithError(path: string, message: string): never {
-  redirect(appendSearchParam(path, "error", message));
-}
+  const { error: memberInsertError } = await supabase
+    .from("community_members")
+    .insert({
+      community_id: community.id,
+      user_id: user.id,
+      role: "member",
+      status: "pending",
+    });
 
-function redirectWithMessage(path: string, message: string): never {
-  redirect(appendSearchParam(path, "message", message));
+  if (memberInsertError) {
+    await deleteCommunityOnCreateFailure(supabase, community.id);
+    redirectWithError("/connect/communities/create", "Failed to initialize community owner access.");
+  }
+
+  const { error: ownerUpdateError } = await supabase
+    .from("community_members")
+    .update({
+      role: "owner",
+      status: "joined",
+    })
+    .eq("community_id", community.id)
+    .eq("user_id", user.id);
+
+  if (ownerUpdateError) {
+    await deleteCommunityOnCreateFailure(supabase, community.id);
+    redirectWithError("/connect/communities/create", "Failed to finalize community owner access.");
+  }
+
+  revalidatePath("/connect");
+  revalidatePath("/connect/communities");
+  revalidatePath("/connect/my-communities");
+  revalidatePath(`/connect/communities/${community.id}`);
+
+  redirectWithMessage(`/connect/communities/${community.id}`, "Community created.");
 }
 
 export async function joinOrRequestCommunityAction(formData: FormData) {

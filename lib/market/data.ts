@@ -242,7 +242,7 @@ export async function getListingDetail(listingId: string): Promise<{
     };
   }
 
-  const [{ data: seller, error: sellerError }, { data: savedRow }, imageUrls] = await Promise.all([
+  const [{ data: seller, error: sellerError }, { data: savedRow, error: savedRowError }, imageUrls] = await Promise.all([
     supabase
       .from("profiles")
       .select("user_id, full_name, school, major, year_label")
@@ -259,6 +259,10 @@ export async function getListingDetail(listingId: string): Promise<{
 
   if (sellerError) {
     throw new Error("Failed to load seller profile.");
+  }
+
+  if (savedRowError) {
+    throw new Error("Failed to load saved listing status.");
   }
 
   return {

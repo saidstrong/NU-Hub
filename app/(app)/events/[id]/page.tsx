@@ -1,6 +1,7 @@
 import { EmptyState } from "@/components/ui/EmptyState";
 import { TagChip } from "@/components/ui/TagChip";
 import { TopBar } from "@/components/ui/TopBar";
+import { notFound } from "next/navigation";
 import {
   setEventParticipationAction,
   toggleSavedEventAction,
@@ -9,6 +10,7 @@ import {
   formatEventDate,
   getEventDetail,
 } from "@/lib/events/data";
+import { isUuid } from "@/lib/validation/uuid";
 
 type EventDetailPageProps = {
   params: Promise<{ id: string }>;
@@ -18,6 +20,11 @@ type EventDetailPageProps = {
 export default async function EventDetailPage({ params, searchParams }: EventDetailPageProps) {
   const { message } = await searchParams;
   const { id } = await params;
+
+  if (!isUuid(id)) {
+    notFound();
+  }
+
   let detail: Awaited<ReturnType<typeof getEventDetail>> | null = null;
   let loadError: string | null = null;
 

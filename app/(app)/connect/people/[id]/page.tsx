@@ -3,7 +3,9 @@ import { FormSection } from "@/components/ui/FormSection";
 import { ProfileHeader } from "@/components/ui/ProfileHeader";
 import { TagChip } from "@/components/ui/TagChip";
 import { TopBar } from "@/components/ui/TopBar";
+import { notFound } from "next/navigation";
 import { getPersonProfile, toPersonCardData } from "@/lib/connect/data";
+import { isUuid } from "@/lib/validation/uuid";
 
 type PersonProfilePageProps = {
   params: Promise<{ id: string }>;
@@ -11,6 +13,10 @@ type PersonProfilePageProps = {
 
 export default async function PersonProfilePage({ params }: PersonProfilePageProps) {
   const { id } = await params;
+
+  if (!isUuid(id)) {
+    notFound();
+  }
 
   let person = null as Awaited<ReturnType<typeof getPersonProfile>>;
   let loadError: string | null = null;

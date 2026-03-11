@@ -2,12 +2,14 @@
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ShellButton } from "@/components/ui/ShellButton";
 import { TopBar } from "@/components/ui/TopBar";
+import { notFound } from "next/navigation";
 import { toggleSavedListingAction } from "@/lib/market/actions";
 import {
   formatPriceKzt,
   formatStatusLabel,
   getListingDetail,
 } from "@/lib/market/data";
+import { isUuid } from "@/lib/validation/uuid";
 
 type MarketItemDetailPageProps = {
   params: Promise<{ id: string }>;
@@ -20,6 +22,11 @@ export default async function MarketItemDetailPage({
 }: MarketItemDetailPageProps) {
   const { message } = await searchParams;
   const { id } = await params;
+
+  if (!isUuid(id)) {
+    notFound();
+  }
+
   let loadError: string | null = null;
   let detail: Awaited<ReturnType<typeof getListingDetail>> | null = null;
 

@@ -2,6 +2,11 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import {
+  getStringArray,
+  getStringValue,
+  redirectWithError,
+} from "@/lib/actions/helpers";
 import { createClient } from "@/lib/supabase/server";
 import { requireUser } from "@/lib/auth/session";
 import type { Database } from "@/types/database";
@@ -15,24 +20,6 @@ import {
   parseProjects,
 } from "@/lib/validation/profile";
 
-function getStringValue(formData: FormData, key: string): string {
-  const value = formData.get(key);
-  return typeof value === "string" ? value : "";
-}
-
-function getStringArray(formData: FormData, key: string): string[] {
-  return formData
-    .getAll(key)
-    .filter((value): value is string => typeof value === "string")
-    .map((value) => value.trim())
-    .filter(Boolean);
-}
-
-function redirectWithError(path: string, message: string): never {
-  const params = new URLSearchParams({ error: message });
-  redirect(`${path}?${params.toString()}`);
-}
-
 async function updateProfile(
   userId: string,
   payload: Database["public"]["Tables"]["profiles"]["Update"],
@@ -45,7 +32,7 @@ async function updateProfile(
     .eq("user_id", userId);
 
   if (error) {
-    redirectWithError(onErrorPath, error.message);
+    redirectWithError(onErrorPath, "Failed to save profile updates. Please try again.");
   }
 }
 

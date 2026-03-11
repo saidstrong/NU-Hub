@@ -210,6 +210,14 @@ export async function getEventDetail(eventId: string): Promise<{
     throw new Error("Failed to load organizer profile.");
   }
 
+  if (savedResult.error) {
+    throw new Error("Failed to load saved event status.");
+  }
+
+  if (participantResult.error) {
+    throw new Error("Failed to load participation status.");
+  }
+
   return {
     event,
     organizer: organizerResult.data,

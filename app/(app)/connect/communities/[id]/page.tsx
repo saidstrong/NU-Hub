@@ -4,9 +4,11 @@ import { FormSection } from "@/components/ui/FormSection";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import { TagChip } from "@/components/ui/TagChip";
 import { TopBar } from "@/components/ui/TopBar";
+import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/auth/session";
 import { joinOrRequestCommunityAction } from "@/lib/connect/actions";
 import { getCommunityDetail } from "@/lib/connect/data";
+import { isUuid } from "@/lib/validation/uuid";
 
 type CommunityProfilePageProps = {
   params: Promise<{ id: string }>;
@@ -19,6 +21,11 @@ export default async function CommunityProfilePage({
 }: CommunityProfilePageProps) {
   const { message, error } = await searchParams;
   const { id } = await params;
+
+  if (!isUuid(id)) {
+    notFound();
+  }
+
   let detail = null as Awaited<ReturnType<typeof getCommunityDetail>>;
   let loadError: string | null = null;
 

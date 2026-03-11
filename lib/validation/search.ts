@@ -10,7 +10,10 @@ const searchInputSchema = z
   .max(SEARCH_MAX_QUERY_LENGTH, `Search query is too long (max ${SEARCH_MAX_QUERY_LENGTH} chars).`);
 
 export function sanitizeSearchQuery(value: string): string {
-  return value.replace(/[%_,()]/g, " ").replace(/\s+/g, " ").trim();
+  return value
+    .replace(/[%_,()"'\\;]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 export function parseSearchQueryParam(value?: string): {

@@ -2,31 +2,15 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import {
+  getStringValue,
+  redirectWithError,
+  sanitizeInternalPath,
+} from "@/lib/actions/helpers";
 import { requireUser } from "@/lib/auth/session";
 import { writeInAppNotification } from "@/lib/notifications/write";
 import { createClient } from "@/lib/supabase/server";
-import {
-  eventParticipationSchema,
-  toggleSavedEventSchema,
-} from "@/lib/validation/events";
-
-function getStringValue(formData: FormData, key: string): string {
-  const value = formData.get(key);
-  return typeof value === "string" ? value : "";
-}
-
-function sanitizeInternalPath(path: string | undefined, fallback: string): string {
-  if (!path || !path.startsWith("/") || path.startsWith("//")) {
-    return fallback;
-  }
-
-  return path;
-}
-
-function redirectWithError(path: string, message: string): never {
-  const params = new URLSearchParams({ error: message });
-  redirect(`${path}?${params.toString()}`);
-}
+import { eventParticipationSchema, toggleSavedEventSchema } from "@/lib/validation/events";
 
 export async function toggleSavedEventAction(formData: FormData) {
   const parsed = toggleSavedEventSchema.safeParse({

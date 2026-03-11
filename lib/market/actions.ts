@@ -2,6 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import {
+  getStringValue,
+  redirectWithError,
+  sanitizeInternalPath,
+} from "@/lib/actions/helpers";
 import { requireUser } from "@/lib/auth/session";
 import { getCurrentProfile } from "@/lib/profile/data";
 import { createClient } from "@/lib/supabase/server";
@@ -15,28 +20,10 @@ import {
 
 const LISTING_IMAGES_BUCKET = "listing-images";
 
-function getStringValue(formData: FormData, key: string): string {
-  const value = formData.get(key);
-  return typeof value === "string" ? value : "";
-}
-
 function getFileValue(formData: FormData, key: string): File[] {
   return formData
     .getAll(key)
     .filter((value): value is File => value instanceof File && value.size > 0);
-}
-
-function sanitizeInternalPath(path: string | undefined, fallback: string): string {
-  if (!path || !path.startsWith("/") || path.startsWith("//")) {
-    return fallback;
-  }
-
-  return path;
-}
-
-function redirectWithError(path: string, message: string): never {
-  const params = new URLSearchParams({ error: message });
-  redirect(`${path}?${params.toString()}`);
 }
 
 function mapCreateListingErrorMessage(errorCode?: string): string {

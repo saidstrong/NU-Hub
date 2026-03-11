@@ -2,6 +2,7 @@
 
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { redirectWithError, redirectWithMessage } from "@/lib/actions/helpers";
 import { getPostAuthRedirectPath, sanitizeNextPath } from "@/lib/auth/redirects";
 import { createClient } from "@/lib/supabase/server";
 import { loginSchema, signUpSchema } from "@/lib/validation/auth";
@@ -12,14 +13,22 @@ function resolveSearchParam(
   return typeof value === "string" && value.length > 0 ? value : undefined;
 }
 
-function redirectWithError(path: string, message: string): never {
-  const params = new URLSearchParams({ error: message });
-  redirect(`${path}?${params.toString()}`);
-}
+function mapSignUpErrorMessage(errorMessage: string): string {
+  const normalized = errorMessage.toLowerCase();
 
-function redirectWithMessage(path: string, message: string): never {
-  const params = new URLSearchParams({ message });
-  redirect(`${path}?${params.toString()}`);
+  if (normalized.includes("already") && normalized.includes("registered")) {
+    return "An account with this email already exists.";
+  }
+
+  if (normalized.includes("password")) {
+    return "Password does not meet security requirements.";
+  }
+
+  if (normalized.includes("email")) {
+    return "Please use a valid NU email address.";
+  }
+
+  return "Unable to create account. Please try again.";
 }
 
 async function getEmailRedirectTo(path: string): Promise<string | undefined> {
@@ -75,7 +84,7 @@ export async function signUpAction(formData: FormData) {
   });
 
   if (error) {
-    redirectWithError("/signup", error.message);
+    redirectWithError("/signup", mapSignUpErrorMessage(error.message));
   }
 
   if (!data.user) {
