@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { requireUser } from "@/lib/auth/session";
 import { isEventOwner } from "@/lib/events/ownership";
+import { createPaginationWindow, splitPaginatedRows } from "@/lib/pagination";
 import type { Database } from "@/types/database";
 
 export type EventRow = Database["public"]["Tables"]["events"]["Row"];
@@ -32,6 +33,10 @@ export type EventCardData = {
   location: string;
   category: string;
   status?: string;
+};
+export type PaginatedEventResult<TEvent> = {
+  events: TEvent[];
+  hasMore: boolean;
 };
 
 type OrganizerProfile = Pick<
@@ -88,6 +93,20 @@ export function formatParticipationLabel(status: EventParticipationStatus): stri
 }
 
 export async function getPublishedEvents(limit = 24): Promise<EventCardSource[]> {
+  const { events } = await getPublishedEventsPage(1, limit);
+  return events;
+}
+
+export async function getPublishedEventsPage(
+  page = 1,
+  pageSize = 24,
+): Promise<PaginatedEventResult<EventCardSource>> {
+  const { from, to, pageSize: safePageSize } = createPaginationWindow({
+    page,
+    pageSize,
+    defaultPageSize: 24,
+    maxPageSize: 48,
+  });
   const supabase = await createClient();
 
   const { data, error } = await supabase
@@ -95,34 +114,60 @@ export async function getPublishedEvents(limit = 24): Promise<EventCardSource[]>
     .select(EVENT_CARD_SELECT)
     .eq("is_published", true)
     .order("starts_at", { ascending: true })
-    .limit(limit);
+    .order("id", { ascending: true })
+    .range(from, to);
 
   if (error) {
     throw new Error("Failed to load events.");
   }
 
-  return data;
+  const paged = splitPaginatedRows(data, safePageSize);
+  return {
+    events: paged.rows,
+    hasMore: paged.hasMore,
+  };
 }
 
 export async function getSavedEvents(): Promise<EventCardSource[]> {
+  const { events } = await getSavedEventsPage(1, 50);
+  return events;
+}
+
+export async function getSavedEventsPage(
+  page = 1,
+  pageSize = 20,
+): Promise<PaginatedEventResult<EventCardSource>> {
   const user = await requireUser();
+  const { from, to, pageSize: safePageSize } = createPaginationWindow({
+    page,
+    pageSize,
+    defaultPageSize: 20,
+    maxPageSize: 40,
+  });
   const supabase = await createClient();
 
   const { data: savedRows, error: savedError } = await supabase
     .from("saved_events")
-    .select("event_id")
+    .select("event_id, created_at")
     .eq("user_id", user.id)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .order("event_id", { ascending: false })
+    .range(from, to);
 
   if (savedError) {
     throw new Error("Failed to load saved events.");
   }
 
-  if (savedRows.length === 0) {
-    return [];
+  const pagedSavedRows = splitPaginatedRows(savedRows, safePageSize);
+
+  if (pagedSavedRows.rows.length === 0) {
+    return {
+      events: [],
+      hasMore: false,
+    };
   }
 
-  const eventIds = savedRows.map((row) => row.event_id);
+  const eventIds = pagedSavedRows.rows.map((row) => row.event_id);
   const { data: events, error: eventsError } = await supabase
     .from("events")
     .select(EVENT_CARD_SELECT)
@@ -135,33 +180,59 @@ export async function getSavedEvents(): Promise<EventCardSource[]> {
 
   const eventsById = new Map(events.map((event) => [event.id, event]));
 
-  return eventIds
-    .map((id) => eventsById.get(id))
-    .filter((event): event is EventCardSource => Boolean(event));
+  return {
+    events: eventIds
+      .map((id) => eventsById.get(id))
+      .filter((event): event is EventCardSource => Boolean(event)),
+    hasMore: pagedSavedRows.hasMore,
+  };
 }
 
 export async function getMyEvents(
   status: EventParticipationStatus = "interested",
 ): Promise<EventCardSource[]> {
-  const user = await requireUser();
-  const supabase = await createClient();
+  const { events } = await getMyEventsPage(status, 1, 50);
+  return events;
+}
 
-  const { data: participantRows, error: participantError } = await supabase
+export async function getMyEventsPage(
+  status: EventParticipationStatus = "interested",
+  page = 1,
+  pageSize = 20,
+): Promise<PaginatedEventResult<EventCardSource>> {
+  const user = await requireUser();
+  const { from, to, pageSize: safePageSize } = createPaginationWindow({
+    page,
+    pageSize,
+    defaultPageSize: 20,
+    maxPageSize: 40,
+  });
+  const supabase = await createClient();
+  const participantRowsQuery = supabase
     .from("event_participants")
-    .select("event_id")
+    .select("event_id, created_at")
     .eq("user_id", user.id)
     .eq("status", status)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .order("event_id", { ascending: false })
+    .range(from, to);
 
-  if (participantError) {
+  const { data: participantRowsPage, error: participantRowsPageError } = await participantRowsQuery;
+
+  if (participantRowsPageError) {
     throw new Error("Failed to load your events.");
   }
 
-  if (participantRows.length === 0) {
-    return [];
+  const pagedParticipants = splitPaginatedRows(participantRowsPage, safePageSize);
+
+  if (pagedParticipants.rows.length === 0) {
+    return {
+      events: [],
+      hasMore: false,
+    };
   }
 
-  const eventIds = participantRows.map((row) => row.event_id);
+  const eventIds = pagedParticipants.rows.map((row) => row.event_id);
   const { data: events, error: eventsError } = await supabase
     .from("events")
     .select(EVENT_CARD_SELECT)
@@ -174,13 +245,30 @@ export async function getMyEvents(
 
   const eventsById = new Map(events.map((event) => [event.id, event]));
 
-  return eventIds
-    .map((id) => eventsById.get(id))
-    .filter((event): event is EventCardSource => Boolean(event));
+  return {
+    events: eventIds
+      .map((id) => eventsById.get(id))
+      .filter((event): event is EventCardSource => Boolean(event)),
+    hasMore: pagedParticipants.hasMore,
+  };
 }
 
 export async function getMyCreatedEvents(limit = 50): Promise<EventCreatedCardSource[]> {
+  const { events } = await getMyCreatedEventsPage(1, limit);
+  return events;
+}
+
+export async function getMyCreatedEventsPage(
+  page = 1,
+  pageSize = 20,
+): Promise<PaginatedEventResult<EventCreatedCardSource>> {
   const user = await requireUser();
+  const { from, to, pageSize: safePageSize } = createPaginationWindow({
+    page,
+    pageSize,
+    defaultPageSize: 20,
+    maxPageSize: 40,
+  });
   const supabase = await createClient();
 
   const { data, error } = await supabase
@@ -188,13 +276,18 @@ export async function getMyCreatedEvents(limit = 50): Promise<EventCreatedCardSo
     .select(EVENT_CREATED_CARD_SELECT)
     .eq("created_by", user.id)
     .order("created_at", { ascending: false })
-    .limit(limit);
+    .order("id", { ascending: false })
+    .range(from, to);
 
   if (error) {
     throw new Error("Failed to load your created events.");
   }
 
-  return data;
+  const paged = splitPaginatedRows(data, safePageSize);
+  return {
+    events: paged.rows,
+    hasMore: paged.hasMore,
+  };
 }
 
 export async function getOwnedEventForEdit(eventId: string): Promise<EventEditSource | null> {

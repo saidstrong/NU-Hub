@@ -1,18 +1,38 @@
 import { EmptyState } from "@/components/ui/EmptyState";
 import { EventCard } from "@/components/ui/EventCard";
+import { PageNavigation } from "@/components/ui/PageNavigation";
 import { TopBar } from "@/components/ui/TopBar";
 import { toggleSavedEventAction } from "@/lib/events/actions";
-import { getSavedEvents, toEventCardData } from "@/lib/events/data";
+import { getSavedEventsPage, toEventCardData } from "@/lib/events/data";
+import { buildPageHref, parsePageParam } from "@/lib/pagination";
 
-export default async function SavedEventsPage() {
-  let events: Awaited<ReturnType<typeof getSavedEvents>> = [];
+type SavedEventsPageProps = {
+  searchParams: Promise<{
+    page?: string;
+  }>;
+};
+
+const SAVED_EVENTS_PAGE_SIZE = 12;
+
+export default async function SavedEventsPage({ searchParams }: SavedEventsPageProps) {
+  const { page: pageParam } = await searchParams;
+  const page = parsePageParam(pageParam);
+
+  let events: Awaited<ReturnType<typeof getSavedEventsPage>>["events"] = [];
+  let hasMore = false;
   let loadError: string | null = null;
 
   try {
-    events = await getSavedEvents();
+    const pagedEvents = await getSavedEventsPage(page, SAVED_EVENTS_PAGE_SIZE);
+    events = pagedEvents.events;
+    hasMore = pagedEvents.hasMore;
   } catch (error) {
     loadError = error instanceof Error ? error.message : "Failed to load saved events.";
   }
+
+  const previousHref = page > 1 ? buildPageHref("/events/saved", page - 1) : undefined;
+  const nextHref = hasMore ? buildPageHref("/events/saved", page + 1) : undefined;
+  const currentPageHref = buildPageHref("/events/saved", page);
 
   return (
     <main>
@@ -34,7 +54,7 @@ export default async function SavedEventsPage() {
               <EventCard event={toEventCardData(event)} href={`/events/${event.id}`} />
               <form action={toggleSavedEventAction} className="mt-2">
                 <input type="hidden" name="eventId" value={event.id} />
-                <input type="hidden" name="redirectTo" value="/events/saved" />
+                <input type="hidden" name="redirectTo" value={currentPageHref} />
                 <button type="submit" className="wire-action w-full text-[12px]">
                   Remove from saved
                 </button>
@@ -50,6 +70,12 @@ export default async function SavedEventsPage() {
           actionHref="/events"
         />
       ) : null}
+      <PageNavigation
+        previousHref={previousHref}
+        nextHref={nextHref}
+        previousLabel="Previous page"
+        nextLabel="Next page"
+      />
     </main>
   );
 }

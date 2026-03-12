@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { requireUser } from "@/lib/auth/session";
 import { isCommunityOwner } from "@/lib/connect/ownership";
+import { createPaginationWindow, splitPaginatedRows } from "@/lib/pagination";
 import type { Database } from "@/types/database";
 
 export type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
@@ -78,6 +79,17 @@ export type CommunityRequestItem = {
   requester_name: string;
   requester_meta: string;
   note: string;
+};
+export type CommunityListEntry = {
+  community: CommunityCardSource;
+  memberCount: number;
+};
+export type MyCommunityListEntry = CommunityListEntry & {
+  status?: string;
+};
+export type PaginatedCommunityResult<TItem> = {
+  items: TItem[];
+  hasMore: boolean;
 };
 
 function formatJoinType(joinType: CommunityRow["join_type"]): string {
@@ -184,25 +196,44 @@ export async function getCommunities(limit = 24): Promise<Array<{
   community: CommunityCardSource;
   memberCount: number;
 }>> {
+  const { items } = await getCommunitiesPage(1, limit);
+  return items;
+}
+
+export async function getCommunitiesPage(
+  page = 1,
+  pageSize = 24,
+): Promise<PaginatedCommunityResult<CommunityListEntry>> {
+  const { from, to, pageSize: safePageSize } = createPaginationWindow({
+    page,
+    pageSize,
+    defaultPageSize: 24,
+    maxPageSize: 48,
+  });
   const supabase = await createClient();
 
   const { data, error } = await supabase
     .from("communities")
     .select("id, name, description, tags, join_type")
     .order("created_at", { ascending: false })
-    .limit(limit);
+    .order("id", { ascending: false })
+    .range(from, to);
 
   if (error) {
     throw new Error("Failed to load communities.");
   }
 
-  const communityIds = data.map((community) => community.id);
+  const paged = splitPaginatedRows(data, safePageSize);
+  const communityIds = paged.rows.map((community) => community.id);
   const memberCounts = await getJoinedMemberCounts(supabase, communityIds);
 
-  return data.map((community) => ({
-    community,
-    memberCount: memberCounts.get(community.id) ?? 0,
-  }));
+  return {
+    items: paged.rows.map((community) => ({
+      community,
+      memberCount: memberCounts.get(community.id) ?? 0,
+    })),
+    hasMore: paged.hasMore,
+  };
 }
 
 export async function getCommunityDetail(communityId: string): Promise<CommunityDetail | null> {
@@ -255,7 +286,22 @@ export async function getCommunityDetail(communityId: string): Promise<Community
 export async function getMyCommunities(
   view: "joined" | "created" | "pending" = "joined",
 ): Promise<Array<{ community: CommunityCardSource; memberCount: number; status?: string }>> {
+  const { items } = await getMyCommunitiesPage(view, 1, 50);
+  return items;
+}
+
+export async function getMyCommunitiesPage(
+  view: "joined" | "created" | "pending" = "joined",
+  page = 1,
+  pageSize = 20,
+): Promise<PaginatedCommunityResult<MyCommunityListEntry>> {
   const user = await requireUser();
+  const { from, to, pageSize: safePageSize } = createPaginationWindow({
+    page,
+    pageSize,
+    defaultPageSize: 20,
+    maxPageSize: 40,
+  });
   const supabase = await createClient();
 
   if (view === "created") {
@@ -263,38 +309,56 @@ export async function getMyCommunities(
       .from("communities")
       .select("id, name, description, tags, join_type")
       .eq("created_by", user.id)
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: false })
+      .range(from, to);
 
     if (error) {
       throw new Error("Failed to load your created communities.");
     }
 
+    const paged = splitPaginatedRows(data, safePageSize);
     const memberCounts = await getJoinedMemberCounts(
       supabase,
-      data.map((community) => community.id),
+      paged.rows.map((community) => community.id),
     );
-    return data.map((community) => ({
-      community,
-      memberCount: memberCounts.get(community.id) ?? 0,
-      status: "Owner",
-    }));
+
+    return {
+      items: paged.rows.map((community) => ({
+        community,
+        memberCount: memberCounts.get(community.id) ?? 0,
+        status: "Owner",
+      })),
+      hasMore: paged.hasMore,
+    };
   }
 
   const membershipStatus = view === "pending" ? "pending" : "joined";
-  const { data: memberships, error: membershipsError } = await supabase
+  const membershipsQuery = supabase
     .from("community_members")
     .select("community_id, status")
     .eq("user_id", user.id)
     .eq("status", membershipStatus)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .order("community_id", { ascending: false })
+    .range(from, to);
 
-  if (membershipsError) {
+  const { data: membershipsPage, error: membershipsPageError } = await membershipsQuery;
+
+  if (membershipsPageError) {
     throw new Error("Failed to load your community memberships.");
   }
 
-  if (memberships.length === 0) return [];
+  const pagedMemberships = splitPaginatedRows(membershipsPage, safePageSize);
 
-  const communityIds = memberships.map((membership) => membership.community_id);
+  if (pagedMemberships.rows.length === 0) {
+    return {
+      items: [],
+      hasMore: false,
+    };
+  }
+
+  const communityIds = pagedMemberships.rows.map((membership) => membership.community_id);
   const { data: communities, error: communitiesError } = await supabase
     .from("communities")
     .select("id, name, description, tags, join_type")
@@ -307,13 +371,9 @@ export async function getMyCommunities(
   const communityMap = new Map(communities.map((community) => [community.id, community]));
   const memberCounts = await getJoinedMemberCounts(supabase, communityIds);
 
-  const resolvedCommunities: Array<{
-    community: CommunityCardSource;
-    memberCount: number;
-    status?: string;
-  }> = [];
+  const resolvedCommunities: MyCommunityListEntry[] = [];
 
-  for (const membership of memberships) {
+  for (const membership of pagedMemberships.rows) {
     const community = communityMap.get(membership.community_id);
     if (!community) continue;
 
@@ -324,7 +384,10 @@ export async function getMyCommunities(
     });
   }
 
-  return resolvedCommunities;
+  return {
+    items: resolvedCommunities,
+    hasMore: pagedMemberships.hasMore,
+  };
 }
 
 export async function getOwnedCommunityForEdit(
@@ -350,7 +413,7 @@ export async function getOwnedCommunityForEdit(
   return community;
 }
 
-export async function getOwnerPendingCommunityRequests(): Promise<CommunityRequestItem[]> {
+export async function getOwnerPendingCommunityRequests(limit = 80): Promise<CommunityRequestItem[]> {
   const user = await requireUser();
   const supabase = await createClient();
 
@@ -377,7 +440,8 @@ export async function getOwnerPendingCommunityRequests(): Promise<CommunityReque
     .select("community_id, user_id")
     .in("community_id", ownedCommunityIds)
     .eq("status", "pending")
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(limit);
 
   if (requestError) {
     throw new Error("Failed to load join requests.");

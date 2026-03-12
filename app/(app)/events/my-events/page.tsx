@@ -1,20 +1,25 @@
 import { EmptyState } from "@/components/ui/EmptyState";
 import { EventCard } from "@/components/ui/EventCard";
+import { PageNavigation } from "@/components/ui/PageNavigation";
 import { TabRow } from "@/components/ui/TabRow";
 import { TopBar } from "@/components/ui/TopBar";
 import {
   formatParticipationLabel,
-  getMyCreatedEvents,
-  getMyEvents,
+  getMyCreatedEventsPage,
+  getMyEventsPage,
   toEventCardData,
 } from "@/lib/events/data";
+import { buildPageHref, parsePageParam } from "@/lib/pagination";
 
 type MyEventsPageProps = {
   searchParams: Promise<{
     status?: string;
     message?: string;
+    page?: string;
   }>;
 };
+
+const MY_EVENTS_PAGE_SIZE = 12;
 
 function parseStatus(value?: string): "interested" | "joined" | "created" {
   if (value === "joined" || value === "created") return value;
@@ -22,8 +27,9 @@ function parseStatus(value?: string): "interested" | "joined" | "created" {
 }
 
 export default async function MyEventsPage({ searchParams }: MyEventsPageProps) {
-  const { status, message } = await searchParams;
+  const { status, message, page: pageParam } = await searchParams;
   const selectedStatus = parseStatus(status);
+  const page = parsePageParam(pageParam);
   const activeIndex = selectedStatus === "interested" ? 0 : selectedStatus === "joined" ? 1 : 2;
   const participationLabel =
     selectedStatus === "joined"
@@ -31,20 +37,32 @@ export default async function MyEventsPage({ searchParams }: MyEventsPageProps) 
       : formatParticipationLabel("interested");
 
   let events: Array<
-    | Awaited<ReturnType<typeof getMyEvents>>[number]
-    | Awaited<ReturnType<typeof getMyCreatedEvents>>[number]
+    | Awaited<ReturnType<typeof getMyEventsPage>>["events"][number]
+    | Awaited<ReturnType<typeof getMyCreatedEventsPage>>["events"][number]
   > = [];
+  let hasMore = false;
   let loadError: string | null = null;
 
   try {
     if (selectedStatus === "created") {
-      events = await getMyCreatedEvents();
+      const pagedEvents = await getMyCreatedEventsPage(page, MY_EVENTS_PAGE_SIZE);
+      events = pagedEvents.events;
+      hasMore = pagedEvents.hasMore;
     } else {
-      events = await getMyEvents(selectedStatus);
+      const pagedEvents = await getMyEventsPage(selectedStatus, page, MY_EVENTS_PAGE_SIZE);
+      events = pagedEvents.events;
+      hasMore = pagedEvents.hasMore;
     }
   } catch (error) {
     loadError = error instanceof Error ? error.message : "Failed to load your events.";
   }
+
+  const previousHref = page > 1
+    ? buildPageHref("/events/my-events", page - 1, { status: selectedStatus })
+    : undefined;
+  const nextHref = hasMore
+    ? buildPageHref("/events/my-events", page + 1, { status: selectedStatus })
+    : undefined;
 
   return (
     <main>
@@ -61,9 +79,9 @@ export default async function MyEventsPage({ searchParams }: MyEventsPageProps) 
 
       <TabRow
         tabs={[
-          { label: "Interested", href: "/events/my-events?status=interested" },
-          { label: "Joined", href: "/events/my-events?status=joined" },
-          { label: "Created", href: "/events/my-events?status=created" },
+          { label: "Interested", href: buildPageHref("/events/my-events", 1, { status: "interested" }) },
+          { label: "Joined", href: buildPageHref("/events/my-events", 1, { status: "joined" }) },
+          { label: "Created", href: buildPageHref("/events/my-events", 1, { status: "created" }) },
         ]}
         activeIndex={activeIndex}
       />
@@ -108,6 +126,12 @@ export default async function MyEventsPage({ searchParams }: MyEventsPageProps) 
           actionHref="/events"
         />
       ) : null}
+      <PageNavigation
+        previousHref={previousHref}
+        nextHref={nextHref}
+        previousLabel="Previous page"
+        nextLabel="Next page"
+      />
     </main>
   );
 }

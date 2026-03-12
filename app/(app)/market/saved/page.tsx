@@ -1,18 +1,38 @@
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ListingCard } from "@/components/ui/ListingCard";
+import { PageNavigation } from "@/components/ui/PageNavigation";
 import { TopBar } from "@/components/ui/TopBar";
 import { toggleSavedListingAction } from "@/lib/market/actions";
-import { getSavedListings, toListingCardData } from "@/lib/market/data";
+import { getSavedListingsPage, toListingCardData } from "@/lib/market/data";
+import { buildPageHref, parsePageParam } from "@/lib/pagination";
 
-export default async function SavedListingsPage() {
-  let listings: Awaited<ReturnType<typeof getSavedListings>> = [];
+type SavedListingsPageProps = {
+  searchParams: Promise<{
+    page?: string;
+  }>;
+};
+
+const SAVED_LISTINGS_PAGE_SIZE = 12;
+
+export default async function SavedListingsPage({ searchParams }: SavedListingsPageProps) {
+  const { page: pageParam } = await searchParams;
+  const page = parsePageParam(pageParam);
+
+  let listings: Awaited<ReturnType<typeof getSavedListingsPage>>["listings"] = [];
+  let hasMore = false;
   let loadError: string | null = null;
 
   try {
-    listings = await getSavedListings();
+    const pagedListings = await getSavedListingsPage(page, SAVED_LISTINGS_PAGE_SIZE);
+    listings = pagedListings.listings;
+    hasMore = pagedListings.hasMore;
   } catch (error) {
     loadError = error instanceof Error ? error.message : "Failed to load saved listings.";
   }
+
+  const previousHref = page > 1 ? buildPageHref("/market/saved", page - 1) : undefined;
+  const nextHref = hasMore ? buildPageHref("/market/saved", page + 1) : undefined;
+  const currentPageHref = buildPageHref("/market/saved", page);
 
   return (
     <main>
@@ -34,7 +54,7 @@ export default async function SavedListingsPage() {
               <ListingCard listing={toListingCardData(listing)} href={`/market/item/${listing.id}`} />
               <form action={toggleSavedListingAction} className="mt-2">
                 <input type="hidden" name="listingId" value={listing.id} />
-                <input type="hidden" name="redirectTo" value="/market/saved" />
+                <input type="hidden" name="redirectTo" value={currentPageHref} />
                 <button type="submit" className="wire-action w-full text-[12px]">
                   Remove from saved
                 </button>
@@ -50,6 +70,12 @@ export default async function SavedListingsPage() {
           actionHref="/market"
         />
       ) : null}
+      <PageNavigation
+        previousHref={previousHref}
+        nextHref={nextHref}
+        previousLabel="Previous page"
+        nextLabel="Next page"
+      />
     </main>
   );
 }

@@ -1,18 +1,23 @@
 import Link from "next/link";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { PageNavigation } from "@/components/ui/PageNavigation";
 import { TopBar } from "@/components/ui/TopBar";
 import { markNotificationReadAction } from "@/lib/notifications/actions";
 import {
   formatNotificationTime,
-  getMyNotifications,
+  getMyNotificationsPage,
 } from "@/lib/notifications/data";
+import { buildPageHref, parsePageParam } from "@/lib/pagination";
 import { isSafeInternalPath } from "@/lib/security/paths";
 
 type NotificationsPageProps = {
   searchParams: Promise<{
     error?: string;
+    page?: string;
   }>;
 };
+
+const NOTIFICATIONS_PAGE_SIZE = 20;
 
 function formatNotificationType(type: "market" | "events" | "community" | "system"): string {
   if (type === "events") return "Event";
@@ -26,18 +31,26 @@ function toInternalLink(link: string | null): string | null {
 }
 
 export default async function NotificationsPage({ searchParams }: NotificationsPageProps) {
-  const { error } = await searchParams;
-  let notifications: Awaited<ReturnType<typeof getMyNotifications>> = [];
+  const { error, page: pageParam } = await searchParams;
+  const page = parsePageParam(pageParam);
+  let notifications: Awaited<ReturnType<typeof getMyNotificationsPage>>["notifications"] = [];
+  let hasMore = false;
   let loadError: string | null = null;
 
   try {
-    notifications = await getMyNotifications();
+    const pagedNotifications = await getMyNotificationsPage(page, NOTIFICATIONS_PAGE_SIZE);
+    notifications = pagedNotifications.notifications;
+    hasMore = pagedNotifications.hasMore;
   } catch (notificationsError) {
     loadError =
       notificationsError instanceof Error
         ? notificationsError.message
         : "Failed to load notifications.";
   }
+
+  const previousHref = page > 1 ? buildPageHref("/profile/notifications", page - 1) : undefined;
+  const nextHref = hasMore ? buildPageHref("/profile/notifications", page + 1) : undefined;
+  const currentPageHref = buildPageHref("/profile/notifications", page);
 
   return (
     <main>
@@ -84,7 +97,7 @@ export default async function NotificationsPage({ searchParams }: NotificationsP
                       {!notification.is_read ? (
                         <form action={markNotificationReadAction}>
                           <input type="hidden" name="notificationId" value={notification.id} />
-                          <input type="hidden" name="redirectTo" value="/profile/notifications" />
+                          <input type="hidden" name="redirectTo" value={currentPageHref} />
                           <button type="submit" className="wire-action-compact">
                             Mark read
                           </button>
@@ -115,6 +128,12 @@ export default async function NotificationsPage({ searchParams }: NotificationsP
             actionHref="/profile"
           />
         ) : null}
+        <PageNavigation
+          previousHref={previousHref}
+          nextHref={nextHref}
+          previousLabel="Previous page"
+          nextLabel="Next page"
+        />
       </section>
     </main>
   );

@@ -2,30 +2,42 @@ import Link from "next/link";
 import { CommunityCard } from "@/components/ui/CommunityCard";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FilterRow } from "@/components/ui/FilterRow";
+import { PageNavigation } from "@/components/ui/PageNavigation";
 import { SearchBar } from "@/components/ui/SearchBar";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { TopBar } from "@/components/ui/TopBar";
-import { getCommunities, toCommunityCardData } from "@/lib/connect/data";
+import { getCommunitiesPage, toCommunityCardData } from "@/lib/connect/data";
+import { buildPageHref, parsePageParam } from "@/lib/pagination";
 
 type CommunitiesDiscoveryPageProps = {
   searchParams: Promise<{
     message?: string;
     error?: string;
+    page?: string;
   }>;
 };
+
+const COMMUNITIES_PAGE_SIZE = 12;
 
 export default async function CommunitiesDiscoveryPage({
   searchParams,
 }: CommunitiesDiscoveryPageProps) {
-  const { message, error } = await searchParams;
-  let communities: Awaited<ReturnType<typeof getCommunities>> = [];
+  const { message, error, page: pageParam } = await searchParams;
+  const page = parsePageParam(pageParam);
+  let communities: Awaited<ReturnType<typeof getCommunitiesPage>>["items"] = [];
+  let hasMore = false;
   let loadError: string | null = null;
 
   try {
-    communities = await getCommunities(50);
+    const pagedCommunities = await getCommunitiesPage(page, COMMUNITIES_PAGE_SIZE);
+    communities = pagedCommunities.items;
+    hasMore = pagedCommunities.hasMore;
   } catch (error) {
     loadError = error instanceof Error ? error.message : "Failed to load communities.";
   }
+
+  const previousHref = page > 1 ? buildPageHref("/connect/communities", page - 1) : undefined;
+  const nextHref = hasMore ? buildPageHref("/connect/communities", page + 1) : undefined;
 
   return (
     <main>
@@ -75,6 +87,12 @@ export default async function CommunitiesDiscoveryPage({
           />
         ) : null}
       </SectionCard>
+      <PageNavigation
+        previousHref={previousHref}
+        nextHref={nextHref}
+        previousLabel="Previous page"
+        nextLabel="Next page"
+      />
 
       <section className="wire-panel">
         <div className="mb-3 border-b border-wire-700 pb-3">

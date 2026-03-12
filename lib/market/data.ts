@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { requireUser } from "@/lib/auth/session";
 import { isListingOwner } from "@/lib/market/ownership";
+import { createPaginationWindow, splitPaginatedRows } from "@/lib/pagination";
 import type { Database } from "@/types/database";
 
 export type ListingRow = Database["public"]["Tables"]["listings"]["Row"];
@@ -30,6 +31,10 @@ export type ListingCardData = {
   location: string;
   status?: string;
   imageUrl?: string;
+};
+export type PaginatedListingResult = {
+  listings: ListingWithCoverRow[];
+  hasMore: boolean;
 };
 
 const LISTING_IMAGES_BUCKET = "listing-images";
@@ -134,6 +139,20 @@ export function toListingCardDataWithOptions(
 }
 
 export async function getActiveListings(limit = 24): Promise<ListingWithCoverRow[]> {
+  const { listings } = await getActiveListingsPage(1, limit);
+  return listings;
+}
+
+export async function getActiveListingsPage(
+  page = 1,
+  pageSize = 24,
+): Promise<PaginatedListingResult> {
+  const { from, to, pageSize: safePageSize } = createPaginationWindow({
+    page,
+    pageSize,
+    defaultPageSize: 24,
+    maxPageSize: 48,
+  });
   const supabase = await createClient();
 
   const { data, error } = await supabase
@@ -141,18 +160,23 @@ export async function getActiveListings(limit = 24): Promise<ListingWithCoverRow
     .select(LISTING_CARD_SELECT)
     .eq("status", "active")
     .order("created_at", { ascending: false })
-    .limit(limit);
+    .order("id", { ascending: false })
+    .range(from, to);
 
   if (error) {
     throw new Error("Failed to load active listings.");
   }
 
+  const paged = splitPaginatedRows(data, safePageSize);
   const coverMap = await getCoverImageMap(
     supabase,
-    data.map((listing) => listing.id),
+    paged.rows.map((listing) => listing.id),
   );
 
-  return data.map((listing) => withCoverImage(listing, coverMap));
+  return {
+    listings: paged.rows.map((listing) => withCoverImage(listing, coverMap)),
+    hasMore: paged.hasMore,
+  };
 }
 
 export async function getActiveListingsByCategory(
@@ -184,14 +208,31 @@ export async function getActiveListingsByCategory(
 export async function getMyListings(
   status: "active" | "reserved" | "sold" = "active",
 ): Promise<ListingWithCoverRow[]> {
+  const { listings } = await getMyListingsPage(status, 1, 50);
+  return listings;
+}
+
+export async function getMyListingsPage(
+  status: "active" | "reserved" | "sold" = "active",
+  page = 1,
+  pageSize = 20,
+): Promise<PaginatedListingResult> {
   const user = await requireUser();
+  const { from, to, pageSize: safePageSize } = createPaginationWindow({
+    page,
+    pageSize,
+    defaultPageSize: 20,
+    maxPageSize: 40,
+  });
   const supabase = await createClient();
 
   let query = supabase
     .from("listings")
     .select(LISTING_CARD_SELECT)
     .eq("seller_id", user.id)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: false })
+    .range(from, to);
 
   if (status === "active") {
     query = query.in("status", ["active", "draft"]);
@@ -205,33 +246,58 @@ export async function getMyListings(
     throw new Error("Failed to load your listings.");
   }
 
+  const paged = splitPaginatedRows(data, safePageSize);
   const coverMap = await getCoverImageMap(
     supabase,
-    data.map((listing) => listing.id),
+    paged.rows.map((listing) => listing.id),
   );
 
-  return data.map((listing) => withCoverImage(listing, coverMap));
+  return {
+    listings: paged.rows.map((listing) => withCoverImage(listing, coverMap)),
+    hasMore: paged.hasMore,
+  };
 }
 
 export async function getSavedListings(): Promise<ListingWithCoverRow[]> {
+  const { listings } = await getSavedListingsPage(1, 50);
+  return listings;
+}
+
+export async function getSavedListingsPage(
+  page = 1,
+  pageSize = 20,
+): Promise<PaginatedListingResult> {
   const user = await requireUser();
+  const { from, to, pageSize: safePageSize } = createPaginationWindow({
+    page,
+    pageSize,
+    defaultPageSize: 20,
+    maxPageSize: 40,
+  });
   const supabase = await createClient();
 
   const { data: savedRows, error: savedError } = await supabase
     .from("saved_listings")
-    .select("listing_id")
+    .select("listing_id, created_at")
     .eq("user_id", user.id)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .order("listing_id", { ascending: false })
+    .range(from, to);
 
   if (savedError) {
     throw new Error("Failed to load saved listings.");
   }
 
-  if (savedRows.length === 0) {
-    return [];
+  const pagedSavedRows = splitPaginatedRows(savedRows, safePageSize);
+
+  if (pagedSavedRows.rows.length === 0) {
+    return {
+      listings: [],
+      hasMore: false,
+    };
   }
 
-  const listingIds = savedRows.map((row) => row.listing_id);
+  const listingIds = pagedSavedRows.rows.map((row) => row.listing_id);
   const { data: listings, error: listingsError } = await supabase
     .from("listings")
     .select(LISTING_CARD_SELECT)
@@ -244,13 +310,16 @@ export async function getSavedListings(): Promise<ListingWithCoverRow[]> {
   const coverMap = await getCoverImageMap(supabase, listingIds);
   const listingById = new Map(listings.map((listing) => [listing.id, listing]));
 
-  return listingIds
+  return {
+    listings: listingIds
     .map((id) => {
       const listing = listingById.get(id);
       if (!listing) return null;
       return withCoverImage(listing, coverMap);
     })
-    .filter((listing): listing is ListingWithCoverRow => Boolean(listing));
+    .filter((listing): listing is ListingWithCoverRow => Boolean(listing)),
+    hasMore: pagedSavedRows.hasMore,
+  };
 }
 
 export async function getOwnedListingForEdit(listingId: string): Promise<ListingEditSource | null> {

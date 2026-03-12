@@ -23,9 +23,8 @@ import { toIlikePattern } from "@/lib/validation/search";
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
 
 const LISTING_IMAGES_BUCKET = "listing-images";
-const PROFILE_SEARCH_SCAN_LIMIT = 80;
-const COMMUNITY_SEARCH_SCAN_LIMIT = 80;
-type CommunitySearchRow = CommunityCardSource & { category: string | null };
+const SEARCH_SECTION_MAX_LIMIT = 10;
+type CommunitySearchRow = CommunityCardSource;
 
 export type GlobalSearchResults = {
   listings: ListingCardData[];
@@ -33,37 +32,6 @@ export type GlobalSearchResults = {
   people: PersonCardData[];
   communities: CommunityCardData[];
 };
-
-function includesQuery(value: string | null | undefined, queryLower: string): boolean {
-  return (value ?? "").toLowerCase().includes(queryLower);
-}
-
-function matchesProfile(profile: PeopleDiscoveryItem, queryLower: string): boolean {
-  if (
-    includesQuery(profile.full_name, queryLower) ||
-    includesQuery(profile.school, queryLower) ||
-    includesQuery(profile.major, queryLower) ||
-    includesQuery(profile.bio, queryLower)
-  ) {
-    return true;
-  }
-
-  return [profile.interests, profile.goals, profile.looking_for, profile.skills]
-    .flat()
-    .some((value) => value.toLowerCase().includes(queryLower));
-}
-
-function matchesCommunity(community: CommunitySearchRow, queryLower: string): boolean {
-  if (
-    includesQuery(community.name, queryLower) ||
-    includesQuery(community.description, queryLower) ||
-    includesQuery(community.category, queryLower)
-  ) {
-    return true;
-  }
-
-  return community.tags.some((tag) => tag.toLowerCase().includes(queryLower));
-}
 
 function toListingImagePublicUrl(
   supabase: SupabaseServerClient,
@@ -107,18 +75,24 @@ async function getJoinedCommunityMemberCounts(
   const counts = new Map<string, number>();
   if (communityIds.length === 0) return counts;
 
-  const { data, error } = await supabase
-    .from("community_members")
-    .select("community_id")
-    .in("community_id", communityIds)
-    .eq("status", "joined");
+  const countEntries = await Promise.all(
+    communityIds.map(async (communityId) => {
+      const { count, error } = await supabase
+        .from("community_members")
+        .select("*", { count: "exact", head: true })
+        .eq("community_id", communityId)
+        .eq("status", "joined");
 
-  if (error) {
-    throw new Error("Failed to load community search counts.");
-  }
+      if (error) {
+        throw new Error("Failed to load community search counts.");
+      }
 
-  for (const row of data) {
-    counts.set(row.community_id, (counts.get(row.community_id) ?? 0) + 1);
+      return [communityId, count ?? 0] as const;
+    }),
+  );
+
+  for (const [communityId, count] of countEntries) {
+    counts.set(communityId, count);
   }
 
   return counts;
@@ -128,10 +102,11 @@ export async function searchGlobalEntities(
   query: string,
   limitPerSection: number,
 ): Promise<GlobalSearchResults> {
+  const safeSectionLimit = Math.max(1, Math.min(limitPerSection, SEARCH_SECTION_MAX_LIMIT));
   const user = await requireUser();
   const supabase = await createClient();
-  const pattern = toIlikePattern(query);
-  const queryLower = query.toLowerCase();
+  const normalizedQuery = query.toLowerCase();
+  const pattern = toIlikePattern(normalizedQuery);
 
   const [
     listingsResult,
@@ -147,14 +122,16 @@ export async function searchGlobalEntities(
         `title.ilike.${pattern},description.ilike.${pattern},category.ilike.${pattern},pickup_location.ilike.${pattern}`,
       )
       .order("created_at", { ascending: false })
-      .limit(limitPerSection),
+      .order("id", { ascending: false })
+      .limit(safeSectionLimit),
     supabase
       .from("events")
       .select("id, title, starts_at, ends_at, location, category")
       .eq("is_published", true)
       .or(`title.ilike.${pattern},description.ilike.${pattern},category.ilike.${pattern},location.ilike.${pattern}`)
       .order("starts_at", { ascending: true })
-      .limit(limitPerSection),
+      .order("id", { ascending: true })
+      .limit(safeSectionLimit),
     supabase
       .from("profiles")
       .select(
@@ -162,13 +139,17 @@ export async function searchGlobalEntities(
       )
       .neq("user_id", user.id)
       .eq("onboarding_completed", true)
+      .ilike("search_text", pattern)
       .order("created_at", { ascending: false })
-      .limit(PROFILE_SEARCH_SCAN_LIMIT),
+      .order("user_id", { ascending: false })
+      .limit(safeSectionLimit),
     supabase
       .from("communities")
-      .select("id, name, description, category, tags, join_type")
+      .select("id, name, description, tags, join_type")
+      .ilike("search_text", pattern)
       .order("created_at", { ascending: false })
-      .limit(COMMUNITY_SEARCH_SCAN_LIMIT),
+      .order("id", { ascending: false })
+      .limit(safeSectionLimit),
   ]);
 
   if (listingsResult.error) {
@@ -205,21 +186,14 @@ export async function searchGlobalEntities(
 
   const events = eventRows.map((event) => toEventCardData(event));
 
-  const people = profileRows
-    .filter((profile) => matchesProfile(profile, queryLower))
-    .slice(0, limitPerSection)
-    .map((profile) => toPersonCardData(profile));
-
-  const matchedCommunities = communityRows
-    .filter((community) => matchesCommunity(community, queryLower))
-    .slice(0, limitPerSection);
+  const people = profileRows.map((profile) => toPersonCardData(profile));
 
   const joinedMemberCounts = await getJoinedCommunityMemberCounts(
     supabase,
-    matchedCommunities.map((community) => community.id),
+    communityRows.map((community) => community.id),
   );
 
-  const communities = matchedCommunities.map((community) =>
+  const communities = communityRows.map((community) =>
     toCommunityCardData(community, joinedMemberCounts.get(community.id) ?? 0),
   );
 

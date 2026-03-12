@@ -1,25 +1,43 @@
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FilterRow } from "@/components/ui/FilterRow";
 import { EventCard } from "@/components/ui/EventCard";
+import { PageNavigation } from "@/components/ui/PageNavigation";
 import { SearchBar } from "@/components/ui/SearchBar";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { TagChip } from "@/components/ui/TagChip";
 import { TopBar } from "@/components/ui/TopBar";
 import { eventCategories } from "@/lib/mock-data";
-import { getPublishedEvents, toEventCardData } from "@/lib/events/data";
+import { getPublishedEventsPage, toEventCardData } from "@/lib/events/data";
+import { buildPageHref, parsePageParam } from "@/lib/pagination";
 
-export default async function EventsHomePage() {
-  let events: Awaited<ReturnType<typeof getPublishedEvents>> = [];
+type EventsHomePageProps = {
+  searchParams: Promise<{
+    page?: string;
+  }>;
+};
+
+const EVENTS_PAGE_SIZE = 5;
+
+export default async function EventsHomePage({ searchParams }: EventsHomePageProps) {
+  const { page: pageParam } = await searchParams;
+  const page = parsePageParam(pageParam);
+
+  let events: Awaited<ReturnType<typeof getPublishedEventsPage>>["events"] = [];
+  let hasMore = false;
   let loadError: string | null = null;
 
   try {
-    events = await getPublishedEvents();
+    const pagedEvents = await getPublishedEventsPage(page, EVENTS_PAGE_SIZE);
+    events = pagedEvents.events;
+    hasMore = pagedEvents.hasMore;
   } catch (error) {
     loadError = error instanceof Error ? error.message : "Failed to load events.";
   }
 
   const featuredEvent = events[0];
   const upcomingEvents = events.slice(1, 5);
+  const previousHref = page > 1 ? buildPageHref("/events", page - 1) : undefined;
+  const nextHref = hasMore ? buildPageHref("/events", page + 1) : undefined;
 
   return (
     <main>
@@ -76,6 +94,13 @@ export default async function EventsHomePage() {
           />
         ) : null}
       </SectionCard>
+
+      <PageNavigation
+        previousHref={previousHref}
+        nextHref={nextHref}
+        previousLabel="Previous page"
+        nextLabel="Next page"
+      />
     </main>
   );
 }

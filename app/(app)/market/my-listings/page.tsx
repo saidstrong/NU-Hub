@@ -1,15 +1,20 @@
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ListingCard } from "@/components/ui/ListingCard";
+import { PageNavigation } from "@/components/ui/PageNavigation";
 import { TabRow } from "@/components/ui/TabRow";
 import { TopBar } from "@/components/ui/TopBar";
-import { getMyListings, toListingCardDataWithOptions } from "@/lib/market/data";
+import { getMyListingsPage, toListingCardDataWithOptions } from "@/lib/market/data";
+import { buildPageHref, parsePageParam } from "@/lib/pagination";
 
 type MyListingsPageProps = {
   searchParams: Promise<{
     status?: string;
     message?: string;
+    page?: string;
   }>;
 };
+
+const MY_LISTINGS_PAGE_SIZE = 12;
 
 function parseStatus(value?: string): "active" | "reserved" | "sold" {
   if (value === "reserved" || value === "sold") return value;
@@ -17,19 +22,29 @@ function parseStatus(value?: string): "active" | "reserved" | "sold" {
 }
 
 export default async function MyListingsPage({ searchParams }: MyListingsPageProps) {
-  const { status, message } = await searchParams;
+  const { status, message, page: pageParam } = await searchParams;
   const selectedStatus = parseStatus(status);
+  const page = parsePageParam(pageParam);
 
-  let listings: Awaited<ReturnType<typeof getMyListings>> = [];
+  let listings: Awaited<ReturnType<typeof getMyListingsPage>>["listings"] = [];
+  let hasMore = false;
   let loadError: string | null = null;
 
   try {
-    listings = await getMyListings(selectedStatus);
+    const pagedListings = await getMyListingsPage(selectedStatus, page, MY_LISTINGS_PAGE_SIZE);
+    listings = pagedListings.listings;
+    hasMore = pagedListings.hasMore;
   } catch (error) {
     loadError = error instanceof Error ? error.message : "Failed to load your listings.";
   }
 
   const activeIndex = selectedStatus === "active" ? 0 : selectedStatus === "reserved" ? 1 : 2;
+  const previousHref = page > 1
+    ? buildPageHref("/market/my-listings", page - 1, { status: selectedStatus })
+    : undefined;
+  const nextHref = hasMore
+    ? buildPageHref("/market/my-listings", page + 1, { status: selectedStatus })
+    : undefined;
 
   return (
     <main>
@@ -46,9 +61,9 @@ export default async function MyListingsPage({ searchParams }: MyListingsPagePro
 
       <TabRow
         tabs={[
-          { label: "Active", href: "/market/my-listings?status=active" },
-          { label: "Reserved", href: "/market/my-listings?status=reserved" },
-          { label: "Sold", href: "/market/my-listings?status=sold" },
+          { label: "Active", href: buildPageHref("/market/my-listings", 1, { status: "active" }) },
+          { label: "Reserved", href: buildPageHref("/market/my-listings", 1, { status: "reserved" }) },
+          { label: "Sold", href: buildPageHref("/market/my-listings", 1, { status: "sold" }) },
         ]}
         activeIndex={activeIndex}
       />
@@ -79,6 +94,12 @@ export default async function MyListingsPage({ searchParams }: MyListingsPagePro
           actionHref="/market/post"
         />
       ) : null}
+      <PageNavigation
+        previousHref={previousHref}
+        nextHref={nextHref}
+        previousLabel="Previous page"
+        nextLabel="Next page"
+      />
     </main>
   );
 }
