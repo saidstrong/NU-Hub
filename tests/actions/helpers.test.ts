@@ -33,9 +33,14 @@ describe("action helpers", () => {
     expect(sanitizeInternalPath("/connect/communities", "/home")).toBe(
       "/connect/communities",
     );
+    expect(sanitizeInternalPath(" /connect/communities ", "/home")).toBe(
+      "/connect/communities",
+    );
     expect(sanitizeInternalPath(undefined, "/home")).toBe("/home");
     expect(sanitizeInternalPath("https://evil.site", "/home")).toBe("/home");
     expect(sanitizeInternalPath("//evil.site", "/home")).toBe("/home");
+    expect(sanitizeInternalPath("/%2F%2Fevil.site", "/home")).toBe("/home");
+    expect(sanitizeInternalPath("/\\evil.site", "/home")).toBe("/home");
   });
 
   it("appends and overwrites feedback query params", () => {

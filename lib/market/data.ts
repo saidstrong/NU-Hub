@@ -5,7 +5,11 @@ import type { Database } from "@/types/database";
 export type ListingRow = Database["public"]["Tables"]["listings"]["Row"];
 export type ListingImageRow = Database["public"]["Tables"]["listing_images"]["Row"];
 export type ListingStatus = ListingRow["status"];
-export type ListingWithCoverRow = ListingRow & { cover_image_url: string | null };
+export type ListingCardSource = Pick<
+  ListingRow,
+  "id" | "title" | "price_kzt" | "category" | "condition" | "pickup_location" | "status"
+>;
+export type ListingWithCoverRow = ListingCardSource & { cover_image_url: string | null };
 
 export type ListingSeller = Pick<
   Database["public"]["Tables"]["profiles"]["Row"],
@@ -24,6 +28,8 @@ export type ListingCardData = {
 };
 
 const LISTING_IMAGES_BUCKET = "listing-images";
+const LISTING_CARD_SELECT =
+  "id, title, price_kzt, category, condition, pickup_location, status";
 
 export function formatPriceKzt(priceKzt: number): string {
   return `${new Intl.NumberFormat("en-US").format(priceKzt)} KZT`;
@@ -50,7 +56,7 @@ async function getCoverImageMap(
 
   const { data, error } = await supabase
     .from("listing_images")
-    .select("listing_id, storage_path, sort_order")
+    .select("listing_id, storage_path")
     .in("listing_id", listingIds)
     .order("listing_id", { ascending: true })
     .order("sort_order", { ascending: true });
@@ -86,7 +92,7 @@ async function getListingImageUrls(
 }
 
 function withCoverImage(
-  listing: ListingRow,
+  listing: ListingCardSource,
   coverMap: Map<string, string>,
 ): ListingWithCoverRow {
   return {
@@ -95,12 +101,14 @@ function withCoverImage(
   };
 }
 
-export function toListingCardData(listing: ListingRow | ListingWithCoverRow): ListingCardData {
+export function toListingCardData(
+  listing: ListingCardSource | ListingWithCoverRow,
+): ListingCardData {
   return toListingCardDataWithOptions(listing);
 }
 
 export function toListingCardDataWithOptions(
-  listing: ListingRow | ListingWithCoverRow,
+  listing: ListingCardSource | ListingWithCoverRow,
   options: { showStatus?: boolean; imageUrl?: string | null } = {},
 ): ListingCardData {
   const coverImageUrl =
@@ -123,13 +131,39 @@ export async function getActiveListings(limit = 24): Promise<ListingWithCoverRow
 
   const { data, error } = await supabase
     .from("listings")
-    .select("*")
+    .select(LISTING_CARD_SELECT)
     .eq("status", "active")
     .order("created_at", { ascending: false })
     .limit(limit);
 
   if (error) {
     throw new Error("Failed to load active listings.");
+  }
+
+  const coverMap = await getCoverImageMap(
+    supabase,
+    data.map((listing) => listing.id),
+  );
+
+  return data.map((listing) => withCoverImage(listing, coverMap));
+}
+
+export async function getActiveListingsByCategory(
+  category: string,
+  limit = 100,
+): Promise<ListingWithCoverRow[]> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("listings")
+    .select(LISTING_CARD_SELECT)
+    .eq("status", "active")
+    .ilike("category", category)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    throw new Error("Failed to load category listings.");
   }
 
   const coverMap = await getCoverImageMap(
@@ -148,7 +182,7 @@ export async function getMyListings(
 
   let query = supabase
     .from("listings")
-    .select("*")
+    .select(LISTING_CARD_SELECT)
     .eq("seller_id", user.id)
     .order("created_at", { ascending: false });
 
@@ -193,7 +227,7 @@ export async function getSavedListings(): Promise<ListingWithCoverRow[]> {
   const listingIds = savedRows.map((row) => row.listing_id);
   const { data: listings, error: listingsError } = await supabase
     .from("listings")
-    .select("*")
+    .select(LISTING_CARD_SELECT)
     .in("id", listingIds);
 
   if (listingsError) {

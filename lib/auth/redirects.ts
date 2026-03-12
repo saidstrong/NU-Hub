@@ -1,16 +1,13 @@
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 import { getOnboardingRoute } from "@/lib/profile/onboarding";
+import { sanitizeInternalPathValue } from "@/lib/security/paths";
 import type { Database } from "@/types/database";
 
 export function sanitizeNextPath(
   path: string | null | undefined,
   fallback = "/home",
 ): string {
-  if (!path || !path.startsWith("/") || path.startsWith("//")) {
-    return fallback;
-  }
-
-  return path;
+  return sanitizeInternalPathValue(path, fallback);
 }
 
 export async function getPostAuthRedirectPath(

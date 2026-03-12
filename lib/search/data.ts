@@ -1,17 +1,21 @@
 import { requireUser } from "@/lib/auth/session";
 import {
+  type CommunityCardSource,
   toCommunityCardData,
   toPersonCardData,
   type CommunityCardData,
-  type CommunityRow,
   type PersonCardData,
   type PeopleDiscoveryItem,
 } from "@/lib/connect/data";
-import { toEventCardData, type EventCardData, type EventRow } from "@/lib/events/data";
+import {
+  toEventCardData,
+  type EventCardData,
+  type EventCardSource,
+} from "@/lib/events/data";
 import {
   toListingCardDataWithOptions,
   type ListingCardData,
-  type ListingRow,
+  type ListingCardSource,
 } from "@/lib/market/data";
 import { createClient } from "@/lib/supabase/server";
 import { toIlikePattern } from "@/lib/validation/search";
@@ -21,6 +25,7 @@ type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
 const LISTING_IMAGES_BUCKET = "listing-images";
 const PROFILE_SEARCH_SCAN_LIMIT = 80;
 const COMMUNITY_SEARCH_SCAN_LIMIT = 80;
+type CommunitySearchRow = CommunityCardSource & { category: string | null };
 
 export type GlobalSearchResults = {
   listings: ListingCardData[];
@@ -48,7 +53,7 @@ function matchesProfile(profile: PeopleDiscoveryItem, queryLower: string): boole
     .some((value) => value.toLowerCase().includes(queryLower));
 }
 
-function matchesCommunity(community: CommunityRow, queryLower: string): boolean {
+function matchesCommunity(community: CommunitySearchRow, queryLower: string): boolean {
   if (
     includesQuery(community.name, queryLower) ||
     includesQuery(community.description, queryLower) ||
@@ -136,7 +141,7 @@ export async function searchGlobalEntities(
   ] = await Promise.all([
     supabase
       .from("listings")
-      .select("*")
+      .select("id, title, price_kzt, category, condition, pickup_location, status")
       .eq("status", "active")
       .or(
         `title.ilike.${pattern},description.ilike.${pattern},category.ilike.${pattern},pickup_location.ilike.${pattern}`,
@@ -145,7 +150,7 @@ export async function searchGlobalEntities(
       .limit(limitPerSection),
     supabase
       .from("events")
-      .select("*")
+      .select("id, title, starts_at, ends_at, location, category")
       .eq("is_published", true)
       .or(`title.ilike.${pattern},description.ilike.${pattern},category.ilike.${pattern},location.ilike.${pattern}`)
       .order("starts_at", { ascending: true })
@@ -153,7 +158,7 @@ export async function searchGlobalEntities(
     supabase
       .from("profiles")
       .select(
-        "user_id, full_name, school, major, year_label, bio, interests, goals, looking_for, skills, projects, resume_url, links",
+        "user_id, full_name, school, major, year_label, bio, interests, goals, looking_for, skills",
       )
       .neq("user_id", user.id)
       .eq("onboarding_completed", true)
@@ -161,7 +166,7 @@ export async function searchGlobalEntities(
       .limit(PROFILE_SEARCH_SCAN_LIMIT),
     supabase
       .from("communities")
-      .select("*")
+      .select("id, name, description, category, tags, join_type")
       .order("created_at", { ascending: false })
       .limit(COMMUNITY_SEARCH_SCAN_LIMIT),
   ]);
@@ -182,10 +187,10 @@ export async function searchGlobalEntities(
     throw new Error("Failed to search communities.");
   }
 
-  const listingRows = listingsResult.data as ListingRow[];
-  const eventRows = eventsResult.data as EventRow[];
+  const listingRows = listingsResult.data as ListingCardSource[];
+  const eventRows = eventsResult.data as EventCardSource[];
   const profileRows = profilesResult.data as PeopleDiscoveryItem[];
-  const communityRows = communitiesResult.data as CommunityRow[];
+  const communityRows = communitiesResult.data as CommunitySearchRow[];
 
   const listingCoverMap = await getListingCoverMap(
     supabase,
@@ -225,4 +230,3 @@ export async function searchGlobalEntities(
     communities,
   };
 }
-

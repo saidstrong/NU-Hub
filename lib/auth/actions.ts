@@ -4,8 +4,25 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { redirectWithError, redirectWithMessage } from "@/lib/actions/helpers";
 import { getPostAuthRedirectPath, sanitizeNextPath } from "@/lib/auth/redirects";
+import { consumeRateLimit } from "@/lib/security/rate-limit";
+import { getClientIp } from "@/lib/security/request";
 import { createClient } from "@/lib/supabase/server";
 import { loginSchema, signUpSchema } from "@/lib/validation/auth";
+
+const LOGIN_IP_RATE_LIMIT = {
+  maxHits: 80,
+  windowMs: 10 * 60 * 1000,
+};
+
+const LOGIN_IDENTITY_RATE_LIMIT = {
+  maxHits: 10,
+  windowMs: 10 * 60 * 1000,
+};
+
+const SIGNUP_RATE_LIMIT = {
+  maxHits: 12,
+  windowMs: 60 * 60 * 1000,
+};
 
 function resolveSearchParam(
   value: FormDataEntryValue | null,
@@ -57,6 +74,13 @@ async function getEmailRedirectTo(path: string): Promise<string | undefined> {
 }
 
 export async function signUpAction(formData: FormData) {
+  const clientIp = await getClientIp();
+  const signUpRateResult = consumeRateLimit(`auth:signup:ip:${clientIp}`, SIGNUP_RATE_LIMIT);
+
+  if (!signUpRateResult.allowed) {
+    redirectWithError("/signup", "Too many sign-up attempts. Please try again later.");
+  }
+
   const parsed = signUpSchema.safeParse({
     fullName: resolveSearchParam(formData.get("fullName")) ?? "",
     email: resolveSearchParam(formData.get("email")) ?? "",
@@ -102,8 +126,27 @@ export async function signUpAction(formData: FormData) {
 }
 
 export async function loginAction(formData: FormData) {
+  const clientIp = await getClientIp();
+  const rawEmail = (resolveSearchParam(formData.get("email")) ?? "").trim().toLowerCase();
+  const rateLimitIdentity = rawEmail.slice(0, 120);
+
+  const loginIpRateResult = consumeRateLimit(`auth:login:ip:${clientIp}`, LOGIN_IP_RATE_LIMIT);
+  const loginIdentityRateResult = consumeRateLimit(
+    `auth:login:identity:${clientIp}:${rateLimitIdentity || "unknown"}`,
+    LOGIN_IDENTITY_RATE_LIMIT,
+  );
+
+  if (!loginIpRateResult.allowed || !loginIdentityRateResult.allowed) {
+    const next = sanitizeNextPath(resolveSearchParam(formData.get("next")));
+    const params = new URLSearchParams({
+      error: "Too many login attempts. Please try again later.",
+      ...(next !== "/home" ? { next } : {}),
+    });
+    redirect(`/login?${params.toString()}`);
+  }
+
   const parsed = loginSchema.safeParse({
-    email: resolveSearchParam(formData.get("email")) ?? "",
+    email: rawEmail,
     password: resolveSearchParam(formData.get("password")) ?? "",
     next: resolveSearchParam(formData.get("next")),
   });

@@ -57,7 +57,8 @@ export default async function EventDetailPage({ params, searchParams }: EventDet
     );
   }
 
-  const { event, organizer, isSaved, participationStatus } = detail;
+  const { event, organizer, isOwner, isSaved, participationStatus } = detail;
+  const isDraft = !event.is_published;
   const dateLabel = formatEventDate(event.starts_at, event.ends_at);
   const organizerLabel = organizer?.full_name || "NU Atrium editorial team";
   const interestedActive = participationStatus === "interested";
@@ -77,6 +78,11 @@ export default async function EventDetailPage({ params, searchParams }: EventDet
       {message ? (
         <div className="rounded-xl border border-accent/35 bg-accent/10 px-3 py-2 text-[13px] text-wire-100">
           {message}
+        </div>
+      ) : null}
+      {isDraft && isOwner ? (
+        <div className="rounded-xl border border-amber-400/30 bg-amber-400/10 px-3 py-2 text-[13px] text-amber-100">
+          This event is currently a draft and visible only to you.
         </div>
       ) : null}
 
@@ -104,38 +110,42 @@ export default async function EventDetailPage({ params, searchParams }: EventDet
         <div className="flex flex-wrap gap-2">
           <TagChip label={event.category} active />
           <TagChip label="Campus" />
-          <TagChip label="Curated" />
+          {isDraft ? <TagChip label="Draft" /> : <TagChip label="Curated" />}
         </div>
       </section>
 
-      <div className="wire-action-row">
-        <form action={setEventParticipationAction} className="w-full">
-          <input type="hidden" name="eventId" value={event.id} />
-          <input type="hidden" name="status" value="interested" />
-          <input type="hidden" name="redirectTo" value={`/events/${event.id}`} />
-          <button type="submit" className={interestedActive ? "wire-action-primary w-full" : "wire-action w-full"}>
-            {interestedActive ? "Interested" : "Mark interested"}
-          </button>
-        </form>
-        <form action={setEventParticipationAction} className="w-full">
-          <input type="hidden" name="eventId" value={event.id} />
-          <input type="hidden" name="status" value="joined" />
-          <input type="hidden" name="redirectTo" value={`/events/${event.id}`} />
-          <button type="submit" className={joinedActive ? "wire-action-primary w-full" : "wire-action w-full"}>
-            {joinedActive ? "Joined" : "Join event"}
-          </button>
-        </form>
-      </div>
+      {!isDraft ? (
+        <>
+          <div className="wire-action-row">
+            <form action={setEventParticipationAction} className="w-full">
+              <input type="hidden" name="eventId" value={event.id} />
+              <input type="hidden" name="status" value="interested" />
+              <input type="hidden" name="redirectTo" value={`/events/${event.id}`} />
+              <button type="submit" className={interestedActive ? "wire-action-primary w-full" : "wire-action w-full"}>
+                {interestedActive ? "Interested" : "Mark interested"}
+              </button>
+            </form>
+            <form action={setEventParticipationAction} className="w-full">
+              <input type="hidden" name="eventId" value={event.id} />
+              <input type="hidden" name="status" value="joined" />
+              <input type="hidden" name="redirectTo" value={`/events/${event.id}`} />
+              <button type="submit" className={joinedActive ? "wire-action-primary w-full" : "wire-action w-full"}>
+                {joinedActive ? "Joined" : "Join event"}
+              </button>
+            </form>
+          </div>
 
-      <div className="wire-action-row-single">
-        <form action={toggleSavedEventAction}>
-          <input type="hidden" name="eventId" value={event.id} />
-          <input type="hidden" name="redirectTo" value={`/events/${event.id}`} />
-          <button type="submit" className="wire-action w-full">
-            {isSaved ? "Unsave event" : "Save event"}
-          </button>
-        </form>
-      </div>
+          <div className="wire-action-row-single">
+            <form action={toggleSavedEventAction}>
+              <input type="hidden" name="eventId" value={event.id} />
+              <input type="hidden" name="redirectTo" value={`/events/${event.id}`} />
+              <button type="submit" className="wire-action w-full">
+                {isSaved ? "Unsave event" : "Save event"}
+              </button>
+            </form>
+          </div>
+        </>
+      ) : null}
     </main>
   );
 }

@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { sanitizeInternalPathValue } from "@/lib/security/paths";
 
 export type FeedbackParamKey = "error" | "message";
 
@@ -16,11 +17,7 @@ export function getStringArray(formData: FormData, key: string): string[] {
 }
 
 export function sanitizeInternalPath(path: string | undefined, fallback: string): string {
-  if (!path || !path.startsWith("/") || path.startsWith("//")) {
-    return fallback;
-  }
-
-  return path;
+  return sanitizeInternalPathValue(path, fallback);
 }
 
 export function appendSearchParam(path: string, key: FeedbackParamKey, value: string): string {

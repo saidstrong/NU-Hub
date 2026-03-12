@@ -6,6 +6,7 @@ import {
   formatNotificationTime,
   getMyNotifications,
 } from "@/lib/notifications/data";
+import { isSafeInternalPath } from "@/lib/security/paths";
 
 type NotificationsPageProps = {
   searchParams: Promise<{
@@ -21,8 +22,7 @@ function formatNotificationType(type: "market" | "events" | "community" | "syste
 }
 
 function toInternalLink(link: string | null): string | null {
-  if (!link || !link.startsWith("/") || link.startsWith("//")) return null;
-  return link;
+  return isSafeInternalPath(link) ? link.trim() : null;
 }
 
 export default async function NotificationsPage({ searchParams }: NotificationsPageProps) {

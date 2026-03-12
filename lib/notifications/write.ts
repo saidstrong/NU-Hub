@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { sanitizeInternalPathValue } from "@/lib/security/paths";
 import type { Database, Json } from "@/types/database";
 
 export type NotificationType = Database["public"]["Tables"]["notifications"]["Row"]["type"];
@@ -13,11 +14,32 @@ export type NotificationWriteInput = {
 };
 
 function sanitizeNotificationLink(link?: string | null): string | null {
-  if (!link || !link.startsWith("/") || link.startsWith("//")) {
+  if (!link) {
     return null;
   }
 
-  return link;
+  const sanitized = sanitizeInternalPathValue(link, "");
+  return sanitized || null;
+}
+
+function sanitizeNotificationText(value: string, maxLength: number): string {
+  const trimmed = value.trim();
+  return trimmed.length > maxLength ? trimmed.slice(0, maxLength) : trimmed;
+}
+
+function sanitizeNotificationPayload(payload: Json | undefined): Json {
+  const safePayload = payload ?? {};
+
+  try {
+    const serialized = JSON.stringify(safePayload);
+    if (serialized.length > 4000) {
+      return {};
+    }
+  } catch {
+    return {};
+  }
+
+  return safePayload;
 }
 
 export async function writeInAppNotification(
@@ -27,14 +49,13 @@ export async function writeInAppNotification(
   const { error } = await supabase.from("notifications").insert({
     user_id: input.userId,
     type: input.type,
-    title: input.title,
-    message: input.message,
+    title: sanitizeNotificationText(input.title, 120),
+    message: sanitizeNotificationText(input.message, 500),
     link: sanitizeNotificationLink(input.link),
-    payload: input.payload ?? {},
+    payload: sanitizeNotificationPayload(input.payload),
   });
 
   if (error) {
     console.error("Failed to write in-app notification:", error.message);
   }
 }
-

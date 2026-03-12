@@ -26,7 +26,11 @@ export default async function EventsHomePage() {
       <TopBar
         title="Events"
         subtitle="Curated academic and student-led campus events"
-        actions={[{ label: "List", href: "/events/list" }, { label: "Calendar", href: "/events/calendar" }]}
+        actions={[
+          { label: "Create", href: "/events/create" },
+          { label: "List", href: "/events/list" },
+          { label: "Calendar", href: "/events/calendar" },
+        ]}
       />
 
       <SearchBar placeholder="Search events" />

@@ -9,6 +9,7 @@ import {
 } from "@/lib/actions/helpers";
 import { requireUser } from "@/lib/auth/session";
 import { writeInAppNotification } from "@/lib/notifications/write";
+import { consumeRateLimit } from "@/lib/security/rate-limit";
 import { createClient } from "@/lib/supabase/server";
 import {
   createCommunitySchema,
@@ -22,6 +23,26 @@ async function deleteCommunityOnCreateFailure(
 ) {
   await supabase.from("communities").delete().eq("id", communityId);
 }
+
+const CREATE_COMMUNITY_BURST_LIMIT = {
+  maxHits: 1,
+  windowMs: 10 * 1000,
+};
+
+const CREATE_COMMUNITY_WINDOW_LIMIT = {
+  maxHits: 4,
+  windowMs: 15 * 60 * 1000,
+};
+
+const COMMUNITY_JOIN_LIMIT = {
+  maxHits: 25,
+  windowMs: 10 * 60 * 1000,
+};
+
+const COMMUNITY_REVIEW_LIMIT = {
+  maxHits: 60,
+  windowMs: 10 * 60 * 1000,
+};
 
 export async function createCommunityAction(formData: FormData) {
   const parsed = createCommunitySchema.safeParse({
@@ -40,6 +61,19 @@ export async function createCommunityAction(formData: FormData) {
   }
 
   const user = await requireUser();
+  const burstRateResult = consumeRateLimit(
+    `connect:create-community:burst:${user.id}`,
+    CREATE_COMMUNITY_BURST_LIMIT,
+  );
+  const windowRateResult = consumeRateLimit(
+    `connect:create-community:window:${user.id}`,
+    CREATE_COMMUNITY_WINDOW_LIMIT,
+  );
+
+  if (!burstRateResult.allowed || !windowRateResult.allowed) {
+    redirectWithError("/connect/communities/create", "Too many create attempts. Please wait and try again.");
+  }
+
   const supabase = await createClient();
 
   const { data: community, error: communityInsertError } = await supabase
@@ -106,6 +140,12 @@ export async function joinOrRequestCommunityAction(formData: FormData) {
   }
 
   const user = await requireUser();
+  const joinRateResult = consumeRateLimit(`connect:join-community:${user.id}`, COMMUNITY_JOIN_LIMIT);
+
+  if (!joinRateResult.allowed) {
+    redirectWithError("/connect/communities", "Too many join requests. Please wait and try again.");
+  }
+
   const supabase = await createClient();
 
   const { data: community, error: communityError } = await supabase
@@ -218,6 +258,12 @@ export async function reviewCommunityRequestAction(formData: FormData) {
   }
 
   const user = await requireUser();
+  const reviewRateResult = consumeRateLimit(`connect:review-community:${user.id}`, COMMUNITY_REVIEW_LIMIT);
+
+  if (!reviewRateResult.allowed) {
+    redirectWithError("/connect/communities/requests", "Too many review actions. Please wait and try again.");
+  }
+
   const supabase = await createClient();
 
   const { data: community, error: communityError } = await supabase

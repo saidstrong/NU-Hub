@@ -4,6 +4,13 @@ import type { Database } from "@/types/database";
 
 export type EventRow = Database["public"]["Tables"]["events"]["Row"];
 export type EventParticipationStatus = Database["public"]["Tables"]["event_participants"]["Row"]["status"];
+export type EventCardSource = Pick<
+  EventRow,
+  "id" | "title" | "starts_at" | "ends_at" | "location" | "category"
+>;
+export type EventCreatedCardSource = EventCardSource & {
+  is_published: boolean;
+};
 
 export type EventCardData = {
   id: string;
@@ -18,6 +25,8 @@ type OrganizerProfile = Pick<
   Database["public"]["Tables"]["profiles"]["Row"],
   "user_id" | "full_name" | "school" | "major" | "year_label"
 >;
+const EVENT_CARD_SELECT = "id, title, starts_at, ends_at, location, category";
+const EVENT_CREATED_CARD_SELECT = `${EVENT_CARD_SELECT}, is_published`;
 
 function formatDayMonth(date: Date): string {
   return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(date);
@@ -46,7 +55,7 @@ export function formatEventDate(startsAt: string, endsAt: string | null): string
 }
 
 export function toEventCardData(
-  event: EventRow,
+  event: EventCardSource,
   options: { status?: string } = {},
 ): EventCardData {
   return {
@@ -63,12 +72,12 @@ export function formatParticipationLabel(status: EventParticipationStatus): stri
   return status === "joined" ? "Joined" : "Interested";
 }
 
-export async function getPublishedEvents(limit = 24): Promise<EventRow[]> {
+export async function getPublishedEvents(limit = 24): Promise<EventCardSource[]> {
   const supabase = await createClient();
 
   const { data, error } = await supabase
     .from("events")
-    .select("*")
+    .select(EVENT_CARD_SELECT)
     .eq("is_published", true)
     .order("starts_at", { ascending: true })
     .limit(limit);
@@ -80,7 +89,7 @@ export async function getPublishedEvents(limit = 24): Promise<EventRow[]> {
   return data;
 }
 
-export async function getSavedEvents(): Promise<EventRow[]> {
+export async function getSavedEvents(): Promise<EventCardSource[]> {
   const user = await requireUser();
   const supabase = await createClient();
 
@@ -101,7 +110,7 @@ export async function getSavedEvents(): Promise<EventRow[]> {
   const eventIds = savedRows.map((row) => row.event_id);
   const { data: events, error: eventsError } = await supabase
     .from("events")
-    .select("*")
+    .select(EVENT_CARD_SELECT)
     .in("id", eventIds)
     .eq("is_published", true);
 
@@ -113,12 +122,12 @@ export async function getSavedEvents(): Promise<EventRow[]> {
 
   return eventIds
     .map((id) => eventsById.get(id))
-    .filter((event): event is EventRow => Boolean(event));
+    .filter((event): event is EventCardSource => Boolean(event));
 }
 
 export async function getMyEvents(
   status: EventParticipationStatus = "interested",
-): Promise<EventRow[]> {
+): Promise<EventCardSource[]> {
   const user = await requireUser();
   const supabase = await createClient();
 
@@ -140,7 +149,7 @@ export async function getMyEvents(
   const eventIds = participantRows.map((row) => row.event_id);
   const { data: events, error: eventsError } = await supabase
     .from("events")
-    .select("*")
+    .select(EVENT_CARD_SELECT)
     .in("id", eventIds)
     .eq("is_published", true);
 
@@ -152,13 +161,32 @@ export async function getMyEvents(
 
   return eventIds
     .map((id) => eventsById.get(id))
-    .filter((event): event is EventRow => Boolean(event));
+    .filter((event): event is EventCardSource => Boolean(event));
+}
+
+export async function getMyCreatedEvents(limit = 50): Promise<EventCreatedCardSource[]> {
+  const user = await requireUser();
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("events")
+    .select(EVENT_CREATED_CARD_SELECT)
+    .eq("created_by", user.id)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    throw new Error("Failed to load your created events.");
+  }
+
+  return data;
 }
 
 export async function getEventDetail(eventId: string): Promise<{
   event: EventRow | null;
   organizer: OrganizerProfile | null;
   isSaved: boolean;
+  isOwner: boolean;
   participationStatus: EventParticipationStatus | null;
 }> {
   const user = await requireUser();
@@ -168,7 +196,6 @@ export async function getEventDetail(eventId: string): Promise<{
     .from("events")
     .select("*")
     .eq("id", eventId)
-    .eq("is_published", true)
     .maybeSingle();
 
   if (eventError) {
@@ -180,6 +207,18 @@ export async function getEventDetail(eventId: string): Promise<{
       event: null,
       organizer: null,
       isSaved: false,
+      isOwner: false,
+      participationStatus: null,
+    };
+  }
+
+  const isOwner = event.created_by === user.id;
+  if (!event.is_published && !isOwner) {
+    return {
+      event: null,
+      organizer: null,
+      isSaved: false,
+      isOwner: false,
       participationStatus: null,
     };
   }
@@ -222,6 +261,7 @@ export async function getEventDetail(eventId: string): Promise<{
     event,
     organizer: organizerResult.data,
     isSaved: Boolean(savedResult.data),
+    isOwner,
     participationStatus: participantResult.data?.status ?? null,
   };
 }

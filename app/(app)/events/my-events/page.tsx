@@ -4,6 +4,7 @@ import { TabRow } from "@/components/ui/TabRow";
 import { TopBar } from "@/components/ui/TopBar";
 import {
   formatParticipationLabel,
+  getMyCreatedEvents,
   getMyEvents,
   toEventCardData,
 } from "@/lib/events/data";
@@ -28,15 +29,20 @@ export default async function MyEventsPage({ searchParams }: MyEventsPageProps) 
       ? formatParticipationLabel("joined")
       : formatParticipationLabel("interested");
 
-  let events: Awaited<ReturnType<typeof getMyEvents>> = [];
+  let events: Array<
+    | Awaited<ReturnType<typeof getMyEvents>>[number]
+    | Awaited<ReturnType<typeof getMyCreatedEvents>>[number]
+  > = [];
   let loadError: string | null = null;
 
-  if (selectedStatus !== "created") {
-    try {
+  try {
+    if (selectedStatus === "created") {
+      events = await getMyCreatedEvents();
+    } else {
       events = await getMyEvents(selectedStatus);
-    } catch (error) {
-      loadError = error instanceof Error ? error.message : "Failed to load your events.";
     }
+  } catch (error) {
+    loadError = error instanceof Error ? error.message : "Failed to load your events.";
   }
 
   return (
@@ -67,19 +73,26 @@ export default async function MyEventsPage({ searchParams }: MyEventsPageProps) 
           {events.map((event) => (
             <EventCard
               key={event.id}
-              event={toEventCardData(event, { status: participationLabel })}
+              event={toEventCardData(event, {
+                status:
+                  selectedStatus === "created"
+                    ? "is_published" in event && event.is_published
+                      ? "Published"
+                      : "Draft"
+                    : participationLabel,
+              })}
               href={`/events/${event.id}`}
             />
           ))}
         </div>
       ) : null}
 
-      {selectedStatus === "created" ? (
+      {selectedStatus === "created" && events.length === 0 && !loadError ? (
         <EmptyState
-          title="Created events are not enabled yet"
-          description="Event creation is outside this MVP slice and will be added later."
-          actionLabel="Back to events"
-          actionHref="/events"
+          title="No created events yet"
+          description="Create your first event and it will appear here."
+          actionLabel="Create event"
+          actionHref="/events/create"
         />
       ) : events.length === 0 && !loadError ? (
         <EmptyState

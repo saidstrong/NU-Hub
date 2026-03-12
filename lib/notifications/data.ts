@@ -3,14 +3,18 @@ import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/database";
 
 export type NotificationRow = Database["public"]["Tables"]["notifications"]["Row"];
+export type NotificationListRow = Pick<
+  NotificationRow,
+  "id" | "type" | "title" | "message" | "link" | "is_read" | "created_at"
+>;
 
-export async function getMyNotifications(limit = 50): Promise<NotificationRow[]> {
+export async function getMyNotifications(limit = 50): Promise<NotificationListRow[]> {
   const user = await requireUser();
   const supabase = await createClient();
 
   const { data, error } = await supabase
     .from("notifications")
-    .select("*")
+    .select("id, type, title, message, link, is_read, created_at")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false })
     .limit(limit);
@@ -32,4 +36,3 @@ export function formatNotificationTime(createdAt: string): string {
     minute: "2-digit",
   }).format(date);
 }
-

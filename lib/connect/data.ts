@@ -5,6 +5,27 @@ import type { Database } from "@/types/database";
 export type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
 export type CommunityRow = Database["public"]["Tables"]["communities"]["Row"];
 export type CommunityMemberRow = Database["public"]["Tables"]["community_members"]["Row"];
+type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
+export type CommunityCardSource = Pick<
+  CommunityRow,
+  "id" | "name" | "description" | "tags" | "join_type"
+>;
+export type PersonProfileDetail = Pick<
+  ProfileRow,
+  | "user_id"
+  | "full_name"
+  | "school"
+  | "major"
+  | "year_label"
+  | "bio"
+  | "interests"
+  | "goals"
+  | "looking_for"
+  | "skills"
+  | "projects"
+  | "resume_url"
+  | "links"
+>;
 
 export type PeopleDiscoveryItem = {
   user_id: string;
@@ -17,9 +38,6 @@ export type PeopleDiscoveryItem = {
   goals: string[];
   looking_for: string[];
   skills: string[];
-  projects: Database["public"]["Tables"]["profiles"]["Row"]["projects"];
-  resume_url: string | null;
-  links: Database["public"]["Tables"]["profiles"]["Row"]["links"];
 };
 
 export type CommunityCardData = {
@@ -78,7 +96,7 @@ export function toPersonCardData(profile: PeopleDiscoveryItem): PersonCardData {
 }
 
 export function toCommunityCardData(
-  community: CommunityRow,
+  community: CommunityCardSource,
   memberCount: number,
   options: { status?: string } = {},
 ): CommunityCardData {
@@ -94,12 +112,12 @@ export function toCommunityCardData(
 }
 
 async function getJoinedMemberCounts(
+  supabase: SupabaseServerClient,
   communityIds: string[],
 ): Promise<Map<string, number>> {
   const counts = new Map<string, number>();
   if (communityIds.length === 0) return counts;
 
-  const supabase = await createClient();
   const { data, error } = await supabase
     .from("community_members")
     .select("community_id")
@@ -124,7 +142,7 @@ export async function getPeopleDiscovery(limit = 16): Promise<PeopleDiscoveryIte
   const { data, error } = await supabase
     .from("profiles")
     .select(
-      "user_id, full_name, school, major, year_label, bio, interests, goals, looking_for, skills, projects, resume_url, links",
+      "user_id, full_name, school, major, year_label, bio, interests, goals, looking_for, skills",
     )
     .neq("user_id", user.id)
     .eq("onboarding_completed", true)
@@ -138,7 +156,7 @@ export async function getPeopleDiscovery(limit = 16): Promise<PeopleDiscoveryIte
   return data;
 }
 
-export async function getPersonProfile(personId: string): Promise<PeopleDiscoveryItem | null> {
+export async function getPersonProfile(personId: string): Promise<PersonProfileDetail | null> {
   const supabase = await createClient();
 
   const { data, error } = await supabase
@@ -158,14 +176,14 @@ export async function getPersonProfile(personId: string): Promise<PeopleDiscover
 }
 
 export async function getCommunities(limit = 24): Promise<Array<{
-  community: CommunityRow;
+  community: CommunityCardSource;
   memberCount: number;
 }>> {
   const supabase = await createClient();
 
   const { data, error } = await supabase
     .from("communities")
-    .select("*")
+    .select("id, name, description, tags, join_type")
     .order("created_at", { ascending: false })
     .limit(limit);
 
@@ -174,7 +192,7 @@ export async function getCommunities(limit = 24): Promise<Array<{
   }
 
   const communityIds = data.map((community) => community.id);
-  const memberCounts = await getJoinedMemberCounts(communityIds);
+  const memberCounts = await getJoinedMemberCounts(supabase, communityIds);
 
   return data.map((community) => ({
     community,
@@ -199,7 +217,7 @@ export async function getCommunityDetail(communityId: string): Promise<Community
   if (!community) return null;
 
   const [memberCountMap, membershipResult, ownerResult] = await Promise.all([
-    getJoinedMemberCounts([community.id]),
+    getJoinedMemberCounts(supabase, [community.id]),
     supabase
       .from("community_members")
       .select("*")
@@ -231,14 +249,14 @@ export async function getCommunityDetail(communityId: string): Promise<Community
 
 export async function getMyCommunities(
   view: "joined" | "created" | "pending" = "joined",
-): Promise<Array<{ community: CommunityRow; memberCount: number; status?: string }>> {
+): Promise<Array<{ community: CommunityCardSource; memberCount: number; status?: string }>> {
   const user = await requireUser();
   const supabase = await createClient();
 
   if (view === "created") {
     const { data, error } = await supabase
       .from("communities")
-      .select("*")
+      .select("id, name, description, tags, join_type")
       .eq("created_by", user.id)
       .order("created_at", { ascending: false });
 
@@ -246,7 +264,10 @@ export async function getMyCommunities(
       throw new Error("Failed to load your created communities.");
     }
 
-    const memberCounts = await getJoinedMemberCounts(data.map((community) => community.id));
+    const memberCounts = await getJoinedMemberCounts(
+      supabase,
+      data.map((community) => community.id),
+    );
     return data.map((community) => ({
       community,
       memberCount: memberCounts.get(community.id) ?? 0,
@@ -271,7 +292,7 @@ export async function getMyCommunities(
   const communityIds = memberships.map((membership) => membership.community_id);
   const { data: communities, error: communitiesError } = await supabase
     .from("communities")
-    .select("*")
+    .select("id, name, description, tags, join_type")
     .in("id", communityIds);
 
   if (communitiesError) {
@@ -279,10 +300,10 @@ export async function getMyCommunities(
   }
 
   const communityMap = new Map(communities.map((community) => [community.id, community]));
-  const memberCounts = await getJoinedMemberCounts(communityIds);
+  const memberCounts = await getJoinedMemberCounts(supabase, communityIds);
 
   const resolvedCommunities: Array<{
-    community: CommunityRow;
+    community: CommunityCardSource;
     memberCount: number;
     status?: string;
   }> = [];
@@ -325,7 +346,7 @@ export async function getOwnerPendingCommunityRequests(): Promise<CommunityReque
 
   const { data: requestRows, error: requestError } = await supabase
     .from("community_members")
-    .select("community_id, user_id, status")
+    .select("community_id, user_id")
     .in("community_id", ownedCommunityIds)
     .eq("status", "pending")
     .order("created_at", { ascending: false });

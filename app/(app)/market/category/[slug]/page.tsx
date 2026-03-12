@@ -3,7 +3,7 @@ import { FilterRow } from "@/components/ui/FilterRow";
 import { ListingCard } from "@/components/ui/ListingCard";
 import { SearchBar } from "@/components/ui/SearchBar";
 import { TopBar } from "@/components/ui/TopBar";
-import { getActiveListings, toListingCardData } from "@/lib/market/data";
+import { getActiveListingsByCategory, toListingCardData } from "@/lib/market/data";
 
 type MarketCategoryPageProps = {
   params: Promise<{ slug: string }>;
@@ -17,12 +17,11 @@ export default async function MarketCategoryPage({ params }: MarketCategoryPageP
     .replace(/\s+/g, " ")
     .trim()
     .replace(/\b\w/g, (char) => char.toUpperCase());
-  let listings: Awaited<ReturnType<typeof getActiveListings>> = [];
+  let listings: Awaited<ReturnType<typeof getActiveListingsByCategory>> = [];
   let loadError: string | null = null;
 
   try {
-    const allListings = await getActiveListings(100);
-    listings = allListings.filter((listing) => listing.category.toLowerCase() === categoryTitle.toLowerCase());
+    listings = await getActiveListingsByCategory(categoryTitle, 100);
   } catch (error) {
     loadError = error instanceof Error ? error.message : "Failed to load category listings.";
   }

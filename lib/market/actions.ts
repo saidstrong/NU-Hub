@@ -9,6 +9,7 @@ import {
 } from "@/lib/actions/helpers";
 import { requireUser } from "@/lib/auth/session";
 import { getCurrentProfile } from "@/lib/profile/data";
+import { consumeRateLimit } from "@/lib/security/rate-limit";
 import { createClient } from "@/lib/supabase/server";
 import {
   LISTING_IMAGE_ALLOWED_MIME_TYPES,
@@ -19,6 +20,14 @@ import {
 } from "@/lib/validation/market";
 
 const LISTING_IMAGES_BUCKET = "listing-images";
+const CREATE_LISTING_BURST_LIMIT = {
+  maxHits: 1,
+  windowMs: 10 * 1000,
+};
+const CREATE_LISTING_WINDOW_LIMIT = {
+  maxHits: 12,
+  windowMs: 15 * 60 * 1000,
+};
 
 function getFileValue(formData: FormData, key: string): File[] {
   return formData
@@ -43,6 +52,44 @@ function getImageExtension(file: File): string {
   if (file.type === "image/png") return "png";
   if (file.type === "image/webp") return "webp";
   return "jpg";
+}
+
+async function hasMatchingImageSignature(file: File): Promise<boolean> {
+  const signature = new Uint8Array(await file.slice(0, 12).arrayBuffer());
+
+  if (file.type === "image/jpeg") {
+    return signature.length >= 3 && signature[0] === 0xff && signature[1] === 0xd8 && signature[2] === 0xff;
+  }
+
+  if (file.type === "image/png") {
+    return (
+      signature.length >= 8 &&
+      signature[0] === 0x89 &&
+      signature[1] === 0x50 &&
+      signature[2] === 0x4e &&
+      signature[3] === 0x47 &&
+      signature[4] === 0x0d &&
+      signature[5] === 0x0a &&
+      signature[6] === 0x1a &&
+      signature[7] === 0x0a
+    );
+  }
+
+  if (file.type === "image/webp") {
+    return (
+      signature.length >= 12 &&
+      signature[0] === 0x52 &&
+      signature[1] === 0x49 &&
+      signature[2] === 0x46 &&
+      signature[3] === 0x46 &&
+      signature[8] === 0x57 &&
+      signature[9] === 0x45 &&
+      signature[10] === 0x42 &&
+      signature[11] === 0x50
+    );
+  }
+
+  return false;
 }
 
 async function cleanupFailedListingWithImages(
@@ -80,6 +127,20 @@ async function createListingWithStatus(formData: FormData, status: "draft" | "ac
     redirectWithError("/market/post", parsed.error.issues[0]?.message ?? "Invalid listing input.");
   }
 
+  const user = await requireUser();
+  const burstRateResult = consumeRateLimit(
+    `market:create-listing:burst:${user.id}`,
+    CREATE_LISTING_BURST_LIMIT,
+  );
+  const windowRateResult = consumeRateLimit(
+    `market:create-listing:window:${user.id}`,
+    CREATE_LISTING_WINDOW_LIMIT,
+  );
+
+  if (!burstRateResult.allowed || !windowRateResult.allowed) {
+    redirectWithError("/market/post", "Too many listing submissions. Please wait and try again.");
+  }
+
   const imageFiles = getFileValue(formData, "images");
   const parsedImageCount = listingImageCountSchema.safeParse(imageFiles.length);
 
@@ -100,6 +161,11 @@ async function createListingWithStatus(formData: FormData, status: "draft" | "ac
 
     if (!LISTING_IMAGE_ALLOWED_MIME_TYPES.includes(parsedImageMeta.data.type)) {
       redirectWithError("/market/post", "Only JPEG, PNG, and WEBP images are allowed.");
+    }
+
+    const hasValidSignature = await hasMatchingImageSignature(file);
+    if (!hasValidSignature) {
+      redirectWithError("/market/post", "Invalid image content. Upload JPEG, PNG, or WEBP files only.");
     }
   }
 
@@ -244,6 +310,14 @@ export async function toggleSavedListingAction(formData: FormData) {
         user_id: user.id,
         listing_id: parsed.data.listingId,
       });
+
+    if (insertError?.code === "23505") {
+      const redirectTo = sanitizeInternalPath(
+        parsed.data.redirectTo,
+        `/market/item/${parsed.data.listingId}`,
+      );
+      redirect(redirectTo);
+    }
 
     if (insertError) {
       redirectWithError("/market", "Failed to save listing.");
