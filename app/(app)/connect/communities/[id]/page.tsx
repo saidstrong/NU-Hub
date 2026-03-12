@@ -8,6 +8,7 @@ import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/auth/session";
 import { joinOrRequestCommunityAction } from "@/lib/connect/actions";
 import { getCommunityDetail } from "@/lib/connect/data";
+import { toPublicStorageUrl } from "@/lib/validation/media";
 import { isUuid } from "@/lib/validation/uuid";
 
 type CommunityProfilePageProps = {
@@ -90,7 +91,8 @@ export default async function CommunityProfilePage({
         ? "Your previous request was rejected by the owner."
         : membership?.status === "left"
           ? "You have left this community."
-          : null;
+        : null;
+  const avatarUrl = toPublicStorageUrl("avatars", community.avatar_path);
 
   return (
     <main>
@@ -118,7 +120,19 @@ export default async function CommunityProfilePage({
 
       <section className="wire-panel">
         <div className="mb-3 flex items-center justify-between gap-3">
-          <h2 className="text-[17px] font-semibold tracking-tight text-wire-100">{community.name}</h2>
+          <div className="flex min-w-0 items-center gap-3">
+            {avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={avatarUrl}
+                alt={`${community.name} avatar`}
+                className="h-12 w-12 shrink-0 rounded-full border border-wire-700 bg-wire-900 object-cover"
+              />
+            ) : (
+              <div className="h-12 w-12 shrink-0 rounded-full border border-dashed border-wire-600 bg-wire-900" />
+            )}
+            <h2 className="truncate text-[17px] font-semibold tracking-tight text-wire-100">{community.name}</h2>
+          </div>
           <span className="rounded-xl border border-wire-600 bg-wire-800 px-2 py-1 text-[12px] text-wire-300">
             {community.join_type === "open" ? "Open" : "Request"}
           </span>

@@ -19,6 +19,15 @@ import {
   parseCommaList,
   parseProjects,
 } from "@/lib/validation/profile";
+import {
+  AVATAR_MAX_SIZE_BYTES,
+  createMediaFilename,
+  hasValidImageSignature,
+  removeStorageObjectBestEffort,
+  validateImageFileMeta,
+} from "@/lib/validation/media";
+
+const AVATARS_BUCKET = "avatars";
 
 async function updateProfile(
   userId: string,
@@ -46,6 +55,15 @@ function toLinksObject(values: {
     ...(values.linkedinUrl ? { linkedin: values.linkedinUrl } : {}),
     ...(values.portfolioUrl ? { portfolio: values.portfolioUrl } : {}),
   };
+}
+
+function getOptionalFile(formData: FormData, key: string): File | null {
+  const value = formData.get(key);
+  if (!(value instanceof File) || value.size <= 0) {
+    return null;
+  }
+
+  return value;
 }
 
 export async function updateOnboardingProfileAction(formData: FormData) {
@@ -222,27 +240,81 @@ export async function updateProfileAction(formData: FormData) {
   }
 
   const user = await requireUser();
+  const avatarFile = getOptionalFile(formData, "avatar");
+  const profilePayload: Database["public"]["Tables"]["profiles"]["Update"] = {
+    full_name: parsed.data.fullName,
+    school: parsed.data.school,
+    major: parsed.data.major,
+    year_label: parsed.data.yearLabel,
+    bio: parsed.data.bio,
+    interests: parseCommaList(parsed.data.interestsInput, 20),
+    goals: parseCommaList(parsed.data.goalsInput, 20),
+    looking_for: parseCommaList(parsed.data.lookingForInput, 20),
+    skills: parseCommaList(parsed.data.skillsInput, 20),
+    projects: parseProjects(parsed.data.projectsInput),
+    resume_url: parsed.data.resumeUrl,
+    links: toLinksObject(parsed.data),
+    onboarding_step: "completed",
+    onboarding_completed: true,
+  };
 
-  await updateProfile(
-    user.id,
-    {
-      full_name: parsed.data.fullName,
-      school: parsed.data.school,
-      major: parsed.data.major,
-      year_label: parsed.data.yearLabel,
-      bio: parsed.data.bio,
-      interests: parseCommaList(parsed.data.interestsInput, 20),
-      goals: parseCommaList(parsed.data.goalsInput, 20),
-      looking_for: parseCommaList(parsed.data.lookingForInput, 20),
-      skills: parseCommaList(parsed.data.skillsInput, 20),
-      projects: parseProjects(parsed.data.projectsInput),
-      resume_url: parsed.data.resumeUrl,
-      links: toLinksObject(parsed.data),
-      onboarding_step: "completed",
-      onboarding_completed: true,
-    },
-    "/profile/edit",
-  );
+  let uploadedAvatarPath: string | null = null;
+  let previousAvatarPath: string | null = null;
+  const supabase = await createClient();
+
+  if (avatarFile) {
+    const imageMetaError = validateImageFileMeta(avatarFile, AVATAR_MAX_SIZE_BYTES);
+    if (imageMetaError) {
+      redirectWithError("/profile/edit", imageMetaError);
+    }
+
+    const hasValidSignature = await hasValidImageSignature(avatarFile);
+    if (!hasValidSignature) {
+      redirectWithError("/profile/edit", "Invalid image content. Upload JPEG, PNG, or WEBP files only.");
+    }
+
+    const { data: existingProfile, error: existingProfileError } = await supabase
+      .from("profiles")
+      .select("avatar_path")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (existingProfileError) {
+      redirectWithError("/profile/edit", "Failed to load current avatar.");
+    }
+
+    previousAvatarPath = existingProfile?.avatar_path ?? null;
+    uploadedAvatarPath = `${user.id}/profile/${createMediaFilename("avatar", avatarFile)}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from(AVATARS_BUCKET)
+      .upload(uploadedAvatarPath, avatarFile, {
+        upsert: false,
+        contentType: avatarFile.type,
+      });
+
+    if (uploadError) {
+      redirectWithError("/profile/edit", "Failed to upload avatar.");
+    }
+
+    profilePayload.avatar_path = uploadedAvatarPath;
+  }
+
+  const { error: updateError } = await supabase
+    .from("profiles")
+    .update(profilePayload)
+    .eq("user_id", user.id);
+
+  if (updateError) {
+    if (uploadedAvatarPath) {
+      await removeStorageObjectBestEffort(supabase, AVATARS_BUCKET, uploadedAvatarPath);
+    }
+    redirectWithError("/profile/edit", "Failed to save profile updates. Please try again.");
+  }
+
+  if (uploadedAvatarPath && previousAvatarPath && previousAvatarPath !== uploadedAvatarPath) {
+    await removeStorageObjectBestEffort(supabase, AVATARS_BUCKET, previousAvatarPath);
+  }
 
   revalidatePath("/profile");
   revalidatePath("/profile/edit");

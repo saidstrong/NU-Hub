@@ -1,12 +1,12 @@
 import { z } from "zod";
+import {
+  IMAGE_ALLOWED_MIME_TYPES,
+  LISTING_IMAGE_MAX_SIZE_BYTES as SHARED_LISTING_IMAGE_MAX_SIZE_BYTES,
+} from "@/lib/validation/media";
 
 export const LISTING_IMAGE_MAX_COUNT = 4;
-export const LISTING_IMAGE_MAX_SIZE_BYTES = 10 * 1024 * 1024;
-export const LISTING_IMAGE_ALLOWED_MIME_TYPES = [
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-] as const;
+export const LISTING_IMAGE_MAX_SIZE_BYTES = SHARED_LISTING_IMAGE_MAX_SIZE_BYTES;
+export const LISTING_IMAGE_ALLOWED_MIME_TYPES = IMAGE_ALLOWED_MIME_TYPES;
 
 const listingBaseSchema = z.object({
   title: z

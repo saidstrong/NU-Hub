@@ -262,6 +262,7 @@ type DatabaseSchema = {
           description: string;
           tags: string[];
           category: string | null;
+          avatar_path: string | null;
           join_type: "open" | "request";
           created_at: string;
           updated_at: string;
@@ -273,6 +274,7 @@ type DatabaseSchema = {
           description: string;
           tags?: string[];
           category?: string | null;
+          avatar_path?: string | null;
           join_type?: "open" | "request";
           created_at?: string;
           updated_at?: string;
@@ -284,6 +286,7 @@ type DatabaseSchema = {
           description?: string;
           tags?: string[];
           category?: string | null;
+          avatar_path?: string | null;
           join_type?: "open" | "request";
           created_at?: string;
           updated_at?: string;

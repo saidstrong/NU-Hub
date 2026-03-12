@@ -1,4 +1,5 @@
 import { FormSection } from "@/components/ui/FormSection";
+import { ImageUploadPreview } from "@/components/ui/ImageUploadPreview";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import { TopBar } from "@/components/ui/TopBar";
 import { WireField, WireTextarea } from "@/components/ui/WireField";
@@ -36,22 +37,12 @@ export default async function MarketPostPage({ searchParams }: MarketPostPagePro
       >
         <section className="wire-panel">
           <h3 className="mb-2 text-sm font-semibold text-wire-100">Upload images</h3>
-          <div className="mb-3 grid grid-cols-3 gap-2">
-            <div className="wire-placeholder h-20" />
-            <div className="wire-placeholder h-20" />
-            <div className="wire-placeholder h-20" />
-          </div>
-          <label className="block space-y-2">
-            <span className="wire-label">Listing images (optional)</span>
-            <input
-              name="images"
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              multiple
-              className="wire-input-field py-2.5"
-            />
-          </label>
-          <p className="mt-2 wire-meta">Up to 4 images. JPEG, PNG, WEBP. Upload order sets cover image.</p>
+          <ImageUploadPreview
+            name="images"
+            label="Listing images (optional)"
+            helperText="Up to 4 images. JPEG, PNG, WEBP. Upload order sets cover image."
+            maxPreviewCount={4}
+          />
         </section>
 
         <FormSection title="Item title">

@@ -38,7 +38,20 @@ export default async function CreateCommunityPage({
         </div>
       ) : null}
 
-      <form action={createCommunityAction} className="flex flex-col gap-5">
+      <form action={createCommunityAction} className="flex flex-col gap-5" encType="multipart/form-data">
+        <FormSection title="Avatar (optional)">
+          <label className="block space-y-2">
+            <span className="wire-label">Community avatar</span>
+            <input
+              name="avatar"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="wire-input-field py-2.5"
+            />
+          </label>
+          <p className="wire-meta">JPEG, PNG, WEBP. Max 5MB.</p>
+        </FormSection>
+
         <FormSection title="Community name">
           <WireField
             label="Name"

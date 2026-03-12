@@ -23,6 +23,13 @@ import {
   nuLocalDateTimeToUtcIso,
   toggleSavedEventSchema,
 } from "@/lib/validation/events";
+import {
+  EVENT_COVER_MAX_SIZE_BYTES,
+  createMediaFilename,
+  hasValidImageSignature,
+  removeStorageObjectBestEffort,
+  validateImageFileMeta,
+} from "@/lib/validation/media";
 
 const CREATE_EVENT_BURST_LIMIT = {
   maxHits: 1,
@@ -53,6 +60,7 @@ const EVENT_PARTICIPATION_LIMIT = {
   maxHits: 40,
   windowMs: 10 * 60 * 1000,
 };
+const EVENT_IMAGES_BUCKET = "event-images";
 
 function mapCreateEventErrorMessage(errorCode?: string): string {
   if (errorCode === "23503") {
@@ -95,6 +103,24 @@ function revalidateEventPaths(eventId: string) {
   revalidatePath(`/events/${eventId}/edit`);
 }
 
+function getOptionalFile(formData: FormData, key: string): File | null {
+  const value = formData.get(key);
+  if (!(value instanceof File) || value.size <= 0) {
+    return null;
+  }
+
+  return value;
+}
+
+async function cleanupFailedEventCreate(
+  supabase: SupabaseServerClient,
+  eventId: string,
+  uploadedCoverPath: string | null = null,
+) {
+  await removeStorageObjectBestEffort(supabase, EVENT_IMAGES_BUCKET, uploadedCoverPath);
+  await supabase.from("events").delete().eq("id", eventId);
+}
+
 async function verifyEventOwnershipOrRedirect(
   supabase: SupabaseServerClient,
   eventId: string,
@@ -104,7 +130,7 @@ async function verifyEventOwnershipOrRedirect(
 ) {
   const { data: event, error } = await supabase
     .from("events")
-    .select("id, created_by")
+    .select("id, created_by, cover_path")
     .eq("id", eventId)
     .maybeSingle();
 
@@ -125,6 +151,8 @@ async function verifyEventOwnershipOrRedirect(
     });
     redirectWithError(onErrorPath, "You can only manage your own events.");
   }
+
+  return event;
 }
 
 export async function createEventAction(formData: FormData) {
@@ -144,6 +172,20 @@ export async function createEventAction(formData: FormData) {
   }
 
   const user = await requireUser();
+  const coverFile = getOptionalFile(formData, "coverImage");
+
+  if (coverFile) {
+    const imageMetaError = validateImageFileMeta(coverFile, EVENT_COVER_MAX_SIZE_BYTES);
+    if (imageMetaError) {
+      redirectWithError("/events/create", imageMetaError);
+    }
+
+    const hasValidSignature = await hasValidImageSignature(coverFile);
+    if (!hasValidSignature) {
+      redirectWithError("/events/create", "Invalid image content. Upload JPEG, PNG, or WEBP files only.");
+    }
+  }
+
   const burstRateResult = consumeRateLimit(
     `events:create:burst:${user.id}`,
     CREATE_EVENT_BURST_LIMIT,
@@ -207,6 +249,32 @@ export async function createEventAction(formData: FormData) {
     redirectWithError("/events/create", mapCreateEventErrorMessage(error?.code));
   }
 
+  if (coverFile) {
+    const coverPath = `${user.id}/${created.id}/${createMediaFilename("cover", coverFile)}`;
+    const { error: coverUploadError } = await supabase.storage
+      .from(EVENT_IMAGES_BUCKET)
+      .upload(coverPath, coverFile, {
+        upsert: false,
+        contentType: coverFile.type,
+      });
+
+    if (coverUploadError) {
+      await cleanupFailedEventCreate(supabase, created.id);
+      redirectWithError("/events/create", "Failed to upload event cover.");
+    }
+
+    const { error: coverPathUpdateError } = await supabase
+      .from("events")
+      .update({ cover_path: coverPath })
+      .eq("id", created.id)
+      .eq("created_by", user.id);
+
+    if (coverPathUpdateError) {
+      await cleanupFailedEventCreate(supabase, created.id, coverPath);
+      redirectWithError("/events/create", "Failed to save event cover.");
+    }
+  }
+
   revalidateEventPaths(created.id);
 
   const successMessage = created.is_published ? "Event published." : "Draft saved.";
@@ -246,6 +314,20 @@ export async function updateEventAction(formData: FormData) {
   }
 
   const user = await requireUser();
+  const coverFile = getOptionalFile(formData, "coverImage");
+
+  if (coverFile) {
+    const imageMetaError = validateImageFileMeta(coverFile, EVENT_COVER_MAX_SIZE_BYTES);
+    if (imageMetaError) {
+      redirectWithError(editPath, imageMetaError);
+    }
+
+    const hasValidSignature = await hasValidImageSignature(coverFile);
+    if (!hasValidSignature) {
+      redirectWithError(editPath, "Invalid image content. Upload JPEG, PNG, or WEBP files only.");
+    }
+  }
+
   const updateRateResult = consumeRateLimit(`events:update:${user.id}`, UPDATE_EVENT_LIMIT);
 
   if (!updateRateResult.allowed) {
@@ -273,7 +355,28 @@ export async function updateEventAction(formData: FormData) {
   }
 
   const supabase = await createClient();
-  await verifyEventOwnershipOrRedirect(supabase, eventId, user.id, editPath, requestContext);
+  const ownedEvent = await verifyEventOwnershipOrRedirect(
+    supabase,
+    eventId,
+    user.id,
+    editPath,
+    requestContext,
+  );
+
+  let uploadedCoverPath: string | null = null;
+  if (coverFile) {
+    uploadedCoverPath = `${user.id}/${eventId}/${createMediaFilename("cover", coverFile)}`;
+    const { error: coverUploadError } = await supabase.storage
+      .from(EVENT_IMAGES_BUCKET)
+      .upload(uploadedCoverPath, coverFile, {
+        upsert: false,
+        contentType: coverFile.type,
+      });
+
+    if (coverUploadError) {
+      redirectWithError(editPath, "Failed to upload event cover.");
+    }
+  }
 
   const { data: updated, error: updateError } = await supabase
     .from("events")
@@ -285,6 +388,7 @@ export async function updateEventAction(formData: FormData) {
       ends_at: endsAt,
       location: parsed.data.location,
       is_published: parsed.data.isPublishedInput,
+      cover_path: uploadedCoverPath ?? ownedEvent.cover_path,
     })
     .eq("id", eventId)
     .eq("created_by", user.id)
@@ -292,6 +396,9 @@ export async function updateEventAction(formData: FormData) {
     .maybeSingle();
 
   if (updateError) {
+    if (uploadedCoverPath) {
+      await removeStorageObjectBestEffort(supabase, EVENT_IMAGES_BUCKET, uploadedCoverPath);
+    }
     logAppError(
       "events",
       "event_update_failed",
@@ -309,12 +416,19 @@ export async function updateEventAction(formData: FormData) {
   }
 
   if (!updated) {
+    if (uploadedCoverPath) {
+      await removeStorageObjectBestEffort(supabase, EVENT_IMAGES_BUCKET, uploadedCoverPath);
+    }
     logWarn("events", "event_update_missing_row", {
       ...requestContext,
       userId: user.id,
       eventId,
     });
     redirectWithError(editPath, "Event not found.");
+  }
+
+  if (uploadedCoverPath && ownedEvent.cover_path && ownedEvent.cover_path !== uploadedCoverPath) {
+    await removeStorageObjectBestEffort(supabase, EVENT_IMAGES_BUCKET, ownedEvent.cover_path);
   }
 
   revalidateEventPaths(eventId);
@@ -352,7 +466,13 @@ export async function deleteEventAction(formData: FormData) {
   }
 
   const supabase = await createClient();
-  await verifyEventOwnershipOrRedirect(supabase, eventId, user.id, editPath, requestContext);
+  const ownedEvent = await verifyEventOwnershipOrRedirect(
+    supabase,
+    eventId,
+    user.id,
+    editPath,
+    requestContext,
+  );
 
   const { data: deleted, error: deleteError } = await supabase
     .from("events")
@@ -387,6 +507,8 @@ export async function deleteEventAction(formData: FormData) {
     });
     redirectWithError(editPath, "Event not found.");
   }
+
+  await removeStorageObjectBestEffort(supabase, EVENT_IMAGES_BUCKET, ownedEvent.cover_path);
 
   revalidateEventPaths(eventId);
   logInfo("events", "event_deleted", {

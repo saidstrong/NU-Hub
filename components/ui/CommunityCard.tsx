@@ -9,6 +9,7 @@ export type CommunityCardItem = {
   joinType: string;
   tags: string[];
   status?: string;
+  avatarUrl?: string;
 };
 
 type CommunityCardProps = {
@@ -20,7 +21,19 @@ export function CommunityCard({ community, href }: CommunityCardProps) {
   const content = (
     <div className="wire-card wire-hover">
       <div className="mb-2 flex items-center justify-between gap-3">
-        <p className="text-sm font-semibold tracking-tight">{community.name}</p>
+        <div className="flex min-w-0 items-center gap-2">
+          {community.avatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={community.avatarUrl}
+              alt={`${community.name} avatar`}
+              className="h-8 w-8 shrink-0 rounded-full border border-wire-700 bg-wire-900 object-cover"
+            />
+          ) : (
+            <div className="h-8 w-8 shrink-0 rounded-full border border-dashed border-wire-600 bg-wire-900" />
+          )}
+          <p className="truncate text-sm font-semibold tracking-tight">{community.name}</p>
+        </div>
         <span className="rounded-xl border border-wire-600 bg-wire-900 px-2 py-1 text-[12px] text-wire-300">
           {community.joinType}
         </span>

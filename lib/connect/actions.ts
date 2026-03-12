@@ -22,11 +22,24 @@ import {
   communityRequestReviewSchema,
   updateCommunitySchema,
 } from "@/lib/validation/connect";
+import {
+  AVATAR_MAX_SIZE_BYTES,
+  createMediaFilename,
+  hasValidImageSignature,
+  removeStorageObjectBestEffort,
+  validateImageFileMeta,
+} from "@/lib/validation/media";
+
+const AVATARS_BUCKET = "avatars";
 
 async function deleteCommunityOnCreateFailure(
   supabase: Awaited<ReturnType<typeof createClient>>,
   communityId: string,
+  uploadedAvatarPath: string | null = null,
 ) {
+  if (uploadedAvatarPath) {
+    await removeStorageObjectBestEffort(supabase, AVATARS_BUCKET, uploadedAvatarPath);
+  }
   await supabase.from("communities").delete().eq("id", communityId);
 }
 
@@ -88,6 +101,15 @@ function revalidateCommunityPaths(communityId: string) {
   revalidatePath("/profile/notifications");
 }
 
+function getOptionalFile(formData: FormData, key: string): File | null {
+  const value = formData.get(key);
+  if (!(value instanceof File) || value.size <= 0) {
+    return null;
+  }
+
+  return value;
+}
+
 async function verifyCommunityOwnershipOrRedirect(
   supabase: SupabaseServerClient,
   communityId: string,
@@ -97,7 +119,7 @@ async function verifyCommunityOwnershipOrRedirect(
 ) {
   const { data: community, error } = await supabase
     .from("communities")
-    .select("id, created_by")
+    .select("id, created_by, avatar_path")
     .eq("id", communityId)
     .maybeSingle();
 
@@ -118,6 +140,8 @@ async function verifyCommunityOwnershipOrRedirect(
     });
     redirectWithError(onErrorPath, "You can only manage your own community.");
   }
+
+  return community;
 }
 
 export async function createCommunityAction(formData: FormData) {
@@ -138,6 +162,23 @@ export async function createCommunityAction(formData: FormData) {
   }
 
   const user = await requireUser();
+  const avatarFile = getOptionalFile(formData, "avatar");
+
+  if (avatarFile) {
+    const imageMetaError = validateImageFileMeta(avatarFile, AVATAR_MAX_SIZE_BYTES);
+    if (imageMetaError) {
+      redirectWithError("/connect/communities/create", imageMetaError);
+    }
+
+    const hasValidSignature = await hasValidImageSignature(avatarFile);
+    if (!hasValidSignature) {
+      redirectWithError(
+        "/connect/communities/create",
+        "Invalid image content. Upload JPEG, PNG, or WEBP files only.",
+      );
+    }
+  }
+
   const burstRateResult = consumeRateLimit(
     `connect:create-community:burst:${user.id}`,
     CREATE_COMMUNITY_BURST_LIMIT,
@@ -187,6 +228,33 @@ export async function createCommunityAction(formData: FormData) {
     redirectWithError("/connect/communities/create", "Failed to create community.");
   }
 
+  let uploadedAvatarPath: string | null = null;
+  if (avatarFile) {
+    uploadedAvatarPath = `${user.id}/communities/${community.id}/${createMediaFilename("avatar", avatarFile)}`;
+    const { error: avatarUploadError } = await supabase.storage
+      .from(AVATARS_BUCKET)
+      .upload(uploadedAvatarPath, avatarFile, {
+        upsert: false,
+        contentType: avatarFile.type,
+      });
+
+    if (avatarUploadError) {
+      await deleteCommunityOnCreateFailure(supabase, community.id);
+      redirectWithError("/connect/communities/create", "Failed to upload community avatar.");
+    }
+
+    const { error: avatarPathUpdateError } = await supabase
+      .from("communities")
+      .update({ avatar_path: uploadedAvatarPath })
+      .eq("id", community.id)
+      .eq("created_by", user.id);
+
+    if (avatarPathUpdateError) {
+      await deleteCommunityOnCreateFailure(supabase, community.id, uploadedAvatarPath);
+      redirectWithError("/connect/communities/create", "Failed to save community avatar.");
+    }
+  }
+
   const { error: memberInsertError } = await supabase
     .from("community_members")
     .insert({
@@ -210,7 +278,7 @@ export async function createCommunityAction(formData: FormData) {
       }),
       requestContext,
     );
-    await deleteCommunityOnCreateFailure(supabase, community.id);
+    await deleteCommunityOnCreateFailure(supabase, community.id, uploadedAvatarPath);
     redirectWithError("/connect/communities/create", "Failed to initialize community owner access.");
   }
 
@@ -237,7 +305,7 @@ export async function createCommunityAction(formData: FormData) {
       }),
       requestContext,
     );
-    await deleteCommunityOnCreateFailure(supabase, community.id);
+    await deleteCommunityOnCreateFailure(supabase, community.id, uploadedAvatarPath);
     redirectWithError("/connect/communities/create", "Failed to finalize community owner access.");
   }
 
@@ -282,6 +350,20 @@ export async function updateCommunityAction(formData: FormData) {
   }
 
   const user = await requireUser();
+  const avatarFile = getOptionalFile(formData, "avatar");
+
+  if (avatarFile) {
+    const imageMetaError = validateImageFileMeta(avatarFile, AVATAR_MAX_SIZE_BYTES);
+    if (imageMetaError) {
+      redirectWithError(editPath, imageMetaError);
+    }
+
+    const hasValidSignature = await hasValidImageSignature(avatarFile);
+    if (!hasValidSignature) {
+      redirectWithError(editPath, "Invalid image content. Upload JPEG, PNG, or WEBP files only.");
+    }
+  }
+
   const updateRateResult = consumeRateLimit(`connect:update-community:${user.id}`, COMMUNITY_UPDATE_LIMIT);
 
   if (!updateRateResult.allowed) {
@@ -295,7 +377,28 @@ export async function updateCommunityAction(formData: FormData) {
   }
 
   const supabase = await createClient();
-  await verifyCommunityOwnershipOrRedirect(supabase, communityId, user.id, editPath, requestContext);
+  const ownedCommunity = await verifyCommunityOwnershipOrRedirect(
+    supabase,
+    communityId,
+    user.id,
+    editPath,
+    requestContext,
+  );
+
+  let uploadedAvatarPath: string | null = null;
+  if (avatarFile) {
+    uploadedAvatarPath = `${user.id}/communities/${communityId}/${createMediaFilename("avatar", avatarFile)}`;
+    const { error: avatarUploadError } = await supabase.storage
+      .from(AVATARS_BUCKET)
+      .upload(uploadedAvatarPath, avatarFile, {
+        upsert: false,
+        contentType: avatarFile.type,
+      });
+
+    if (avatarUploadError) {
+      redirectWithError(editPath, "Failed to upload community avatar.");
+    }
+  }
 
   const { data: updated, error: updateError } = await supabase
     .from("communities")
@@ -305,6 +408,7 @@ export async function updateCommunityAction(formData: FormData) {
       category: parsed.data.category,
       tags: parsed.data.tagsInput,
       join_type: parsed.data.joinType,
+      avatar_path: uploadedAvatarPath ?? ownedCommunity.avatar_path,
     })
     .eq("id", communityId)
     .eq("created_by", user.id)
@@ -312,6 +416,9 @@ export async function updateCommunityAction(formData: FormData) {
     .maybeSingle();
 
   if (updateError) {
+    if (uploadedAvatarPath) {
+      await removeStorageObjectBestEffort(supabase, AVATARS_BUCKET, uploadedAvatarPath);
+    }
     logAppError(
       "connect",
       "community_update_failed",
@@ -329,12 +436,19 @@ export async function updateCommunityAction(formData: FormData) {
   }
 
   if (!updated) {
+    if (uploadedAvatarPath) {
+      await removeStorageObjectBestEffort(supabase, AVATARS_BUCKET, uploadedAvatarPath);
+    }
     logWarn("connect", "community_update_missing_row", {
       ...requestContext,
       userId: user.id,
       communityId,
     });
     redirectWithError(editPath, "Community not found.");
+  }
+
+  if (uploadedAvatarPath && ownedCommunity.avatar_path && ownedCommunity.avatar_path !== uploadedAvatarPath) {
+    await removeStorageObjectBestEffort(supabase, AVATARS_BUCKET, ownedCommunity.avatar_path);
   }
 
   revalidateCommunityPaths(communityId);
@@ -372,7 +486,13 @@ export async function deleteCommunityAction(formData: FormData) {
   }
 
   const supabase = await createClient();
-  await verifyCommunityOwnershipOrRedirect(supabase, communityId, user.id, editPath, requestContext);
+  const ownedCommunity = await verifyCommunityOwnershipOrRedirect(
+    supabase,
+    communityId,
+    user.id,
+    editPath,
+    requestContext,
+  );
 
   const { data: deleted, error: deleteError } = await supabase
     .from("communities")
@@ -407,6 +527,8 @@ export async function deleteCommunityAction(formData: FormData) {
     });
     redirectWithError(editPath, "Community not found.");
   }
+
+  await removeStorageObjectBestEffort(supabase, AVATARS_BUCKET, ownedCommunity.avatar_path);
 
   revalidateCommunityPaths(communityId);
   logInfo("connect", "community_deleted", {

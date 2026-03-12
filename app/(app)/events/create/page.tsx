@@ -27,7 +27,20 @@ export default async function CreateEventPage({ searchParams }: CreateEventPageP
         </div>
       ) : null}
 
-      <form action={createEventAction} className="flex flex-col gap-5">
+      <form action={createEventAction} className="flex flex-col gap-5" encType="multipart/form-data">
+        <FormSection title="Cover image (optional)">
+          <label className="block space-y-2">
+            <span className="wire-label">Event cover</span>
+            <input
+              name="coverImage"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="wire-input-field py-2.5"
+            />
+          </label>
+          <p className="wire-meta">JPEG, PNG, WEBP. Max 10MB.</p>
+        </FormSection>
+
         <FormSection title="Event title">
           <WireField
             label="Title"

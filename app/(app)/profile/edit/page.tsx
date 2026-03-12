@@ -57,11 +57,21 @@ export default async function EditProfilePage({ searchParams }: EditProfilePageP
         </div>
       ) : null}
 
-      <form action={updateProfileAction} className="flex flex-col gap-5">
+      <form action={updateProfileAction} className="flex flex-col gap-5" encType="multipart/form-data">
         <FormSection
           title="Basic info"
           description="Core identity details visible in your student profile."
         >
+          <label className="block space-y-2">
+            <span className="wire-label">Avatar (optional)</span>
+            <input
+              name="avatar"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="wire-input-field py-2.5"
+            />
+            <p className="wire-meta">JPEG, PNG, WEBP. Max 5MB.</p>
+          </label>
           <WireField
             label="Name"
             name="fullName"

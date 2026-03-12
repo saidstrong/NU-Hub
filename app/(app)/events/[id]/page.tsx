@@ -10,6 +10,7 @@ import {
   formatEventDate,
   getEventDetail,
 } from "@/lib/events/data";
+import { toPublicStorageUrl } from "@/lib/validation/media";
 import { isUuid } from "@/lib/validation/uuid";
 
 type EventDetailPageProps = {
@@ -67,6 +68,7 @@ export default async function EventDetailPage({ params, searchParams }: EventDet
     .map((value) => value?.trim())
     .filter(Boolean)
     .join(" - ");
+  const coverUrl = toPublicStorageUrl("event-images", event.cover_path);
 
   return (
     <main>
@@ -87,7 +89,18 @@ export default async function EventDetailPage({ params, searchParams }: EventDet
         </div>
       ) : null}
 
-      <div className="wire-placeholder h-40" />
+      {coverUrl ? (
+        <section className="wire-panel">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={coverUrl}
+            alt={event.title}
+            className="h-44 w-full rounded-xl border border-wire-700 bg-wire-900 object-cover"
+          />
+        </section>
+      ) : (
+        <div className="wire-placeholder h-40" />
+      )}
 
       <section className="wire-panel">
         <h2 className="text-[18px] font-semibold tracking-tight text-wire-100">{event.title}</h2>

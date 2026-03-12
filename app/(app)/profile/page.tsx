@@ -5,6 +5,7 @@ import { SectionCard } from "@/components/ui/SectionCard";
 import { TagChip } from "@/components/ui/TagChip";
 import { TopBar } from "@/components/ui/TopBar";
 import { getCurrentProfile } from "@/lib/profile/data";
+import { toPublicStorageUrl } from "@/lib/validation/media";
 
 const quickAccessItems = [
   { label: "My Listings", href: "/market/my-listings", meta: "Active and sold posts" },
@@ -72,6 +73,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
   const subtitle = joinLine([profile.school, profile.major, profile.year_label]);
   const projects = parseProjects(profile.projects);
   const links = parseLinks(profile.links);
+  const avatarUrl = toPublicStorageUrl("avatars", profile.avatar_path);
 
   return (
     <main>
@@ -91,6 +93,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
         subtitle={subtitle}
         contextLabel="Campus profile"
         tags={profile.interests.slice(0, 3)}
+        avatarUrl={avatarUrl}
         actions={[{ label: "Edit profile", href: "/profile/edit" }]}
       />
 

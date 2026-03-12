@@ -86,8 +86,21 @@ export default async function EditCommunityPage({ params, searchParams }: EditCo
         </div>
       ) : null}
 
-      <form action={updateCommunityAction} className="flex flex-col gap-5">
+      <form action={updateCommunityAction} className="flex flex-col gap-5" encType="multipart/form-data">
         <input type="hidden" name="communityId" value={community.id} />
+
+        <FormSection title="Avatar (optional)">
+          <label className="block space-y-2">
+            <span className="wire-label">Replace community avatar</span>
+            <input
+              name="avatar"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="wire-input-field py-2.5"
+            />
+          </label>
+          <p className="wire-meta">Leave empty to keep the current avatar. Max 5MB.</p>
+        </FormSection>
 
         <FormSection title="Community name">
           <WireField

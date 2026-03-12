@@ -80,8 +80,21 @@ export default async function EditEventPage({ params, searchParams }: EditEventP
         </div>
       ) : null}
 
-      <form action={updateEventAction} className="flex flex-col gap-5">
+      <form action={updateEventAction} className="flex flex-col gap-5" encType="multipart/form-data">
         <input type="hidden" name="eventId" value={event.id} />
+
+        <FormSection title="Cover image (optional)">
+          <label className="block space-y-2">
+            <span className="wire-label">Replace event cover</span>
+            <input
+              name="coverImage"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="wire-input-field py-2.5"
+            />
+          </label>
+          <p className="wire-meta">Leave empty to keep current cover. Max 10MB.</p>
+        </FormSection>
 
         <FormSection title="Event title">
           <WireField

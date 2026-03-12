@@ -11,6 +11,7 @@ type ProfileHeaderProps = {
   subtitle: string;
   tags?: string[];
   contextLabel?: string;
+  avatarUrl?: string | null;
   actions?: ProfileHeaderAction[];
 };
 
@@ -19,13 +20,23 @@ export function ProfileHeader({
   subtitle,
   tags = [],
   contextLabel,
+  avatarUrl,
   actions = [],
 }: ProfileHeaderProps) {
   return (
     <div className="wire-panel">
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-3">
-          <div className="h-14 w-14 shrink-0 rounded-full border border-dashed border-wire-600 bg-wire-900" />
+          {avatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={avatarUrl}
+              alt={`${name} avatar`}
+              className="h-14 w-14 shrink-0 rounded-full border border-wire-700 bg-wire-900 object-cover"
+            />
+          ) : (
+            <div className="h-14 w-14 shrink-0 rounded-full border border-dashed border-wire-600 bg-wire-900" />
+          )}
           <div className="min-w-0">
             {contextLabel ? (
               <p className="mb-1 wire-label">{contextLabel}</p>

@@ -18,6 +18,7 @@ import { consumeRateLimit } from "@/lib/security/rate-limit";
 import { createClient } from "@/lib/supabase/server";
 import {
   LISTING_IMAGE_ALLOWED_MIME_TYPES,
+  LISTING_IMAGE_MAX_SIZE_BYTES,
   listingImageCountSchema,
   listingImageMetaSchema,
   listingCreateSchema,
@@ -25,6 +26,12 @@ import {
   listingUpdateSchema,
   toggleSavedListingSchema,
 } from "@/lib/validation/market";
+import {
+  createMediaFilename,
+  hasValidImageSignature,
+  removeStorageObjectBestEffort,
+  validateImageFileMeta,
+} from "@/lib/validation/media";
 
 const LISTING_IMAGES_BUCKET = "listing-images";
 const CREATE_LISTING_BURST_LIMIT = {
@@ -117,62 +124,15 @@ async function verifyListingOwnershipOrRedirect(
   }
 }
 
-function getImageExtension(file: File): string {
-  const filenameExtension = file.name.split(".").pop()?.toLowerCase();
-  if (filenameExtension === "jpg" || filenameExtension === "jpeg") return "jpg";
-  if (filenameExtension === "png") return "png";
-  if (filenameExtension === "webp") return "webp";
-
-  if (file.type === "image/png") return "png";
-  if (file.type === "image/webp") return "webp";
-  return "jpg";
-}
-
-async function hasMatchingImageSignature(file: File): Promise<boolean> {
-  const signature = new Uint8Array(await file.slice(0, 12).arrayBuffer());
-
-  if (file.type === "image/jpeg") {
-    return signature.length >= 3 && signature[0] === 0xff && signature[1] === 0xd8 && signature[2] === 0xff;
-  }
-
-  if (file.type === "image/png") {
-    return (
-      signature.length >= 8 &&
-      signature[0] === 0x89 &&
-      signature[1] === 0x50 &&
-      signature[2] === 0x4e &&
-      signature[3] === 0x47 &&
-      signature[4] === 0x0d &&
-      signature[5] === 0x0a &&
-      signature[6] === 0x1a &&
-      signature[7] === 0x0a
-    );
-  }
-
-  if (file.type === "image/webp") {
-    return (
-      signature.length >= 12 &&
-      signature[0] === 0x52 &&
-      signature[1] === 0x49 &&
-      signature[2] === 0x46 &&
-      signature[3] === 0x46 &&
-      signature[8] === 0x57 &&
-      signature[9] === 0x45 &&
-      signature[10] === 0x42 &&
-      signature[11] === 0x50
-    );
-  }
-
-  return false;
-}
-
 async function cleanupFailedListingWithImages(
   supabase: Awaited<ReturnType<typeof createClient>>,
   listingId: string,
   uploadedPaths: string[],
 ) {
   if (uploadedPaths.length > 0) {
-    await supabase.storage.from(LISTING_IMAGES_BUCKET).remove(uploadedPaths);
+    for (const path of uploadedPaths) {
+      await removeStorageObjectBestEffort(supabase, LISTING_IMAGES_BUCKET, path);
+    }
   }
 
   await supabase
@@ -237,6 +197,11 @@ async function createListingWithStatus(formData: FormData, status: "draft" | "ac
   }
 
   for (const file of imageFiles) {
+    const imageMetaError = validateImageFileMeta(file, LISTING_IMAGE_MAX_SIZE_BYTES);
+    if (imageMetaError) {
+      redirectWithError("/market/post", imageMetaError);
+    }
+
     const parsedImageMeta = listingImageMetaSchema.safeParse({
       name: file.name,
       type: file.type,
@@ -260,7 +225,7 @@ async function createListingWithStatus(formData: FormData, status: "draft" | "ac
       redirectWithError("/market/post", "Only JPEG, PNG, and WEBP images are allowed.");
     }
 
-    const hasValidSignature = await hasMatchingImageSignature(file);
+    const hasValidSignature = await hasValidImageSignature(file);
     if (!hasValidSignature) {
       logSecurityEvent("listing_upload_signature_mismatch", {
         ...requestContext,
@@ -334,8 +299,7 @@ async function createListingWithStatus(formData: FormData, status: "draft" | "ac
     }> = [];
 
     for (const [index, file] of imageFiles.entries()) {
-      const extension = getImageExtension(file);
-      const storagePath = `${sellerId}/${created.id}/${crypto.randomUUID()}.${extension}`;
+      const storagePath = `${sellerId}/${created.id}/${createMediaFilename("listing", file)}`;
       const { error: uploadError } = await supabase.storage
         .from(LISTING_IMAGES_BUCKET)
         .upload(storagePath, file, {

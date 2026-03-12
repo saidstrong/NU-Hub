@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { requireUser } from "@/lib/auth/session";
 import { isCommunityOwner } from "@/lib/connect/ownership";
 import { createPaginationWindow, splitPaginatedRows } from "@/lib/pagination";
+import { toPublicStorageUrl } from "@/lib/validation/media";
 import type { Database } from "@/types/database";
 
 export type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
@@ -10,11 +11,11 @@ export type CommunityMemberRow = Database["public"]["Tables"]["community_members
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
 export type CommunityCardSource = Pick<
   CommunityRow,
-  "id" | "name" | "description" | "tags" | "join_type"
+  "id" | "name" | "description" | "tags" | "join_type" | "avatar_path"
 >;
 export type CommunityEditSource = Pick<
   CommunityRow,
-  "id" | "created_by" | "name" | "description" | "category" | "tags" | "join_type"
+  "id" | "created_by" | "name" | "description" | "category" | "tags" | "join_type" | "avatar_path"
 >;
 export type PersonProfileDetail = Pick<
   ProfileRow,
@@ -54,6 +55,7 @@ export type CommunityCardData = {
   joinType: string;
   tags: string[];
   status?: string;
+  avatarUrl?: string;
 };
 
 export type PersonCardData = {
@@ -117,6 +119,8 @@ export function toCommunityCardData(
   memberCount: number,
   options: { status?: string } = {},
 ): CommunityCardData {
+  const avatarUrl = toPublicStorageUrl("avatars", community.avatar_path);
+
   return {
     id: community.id,
     name: community.name,
@@ -125,6 +129,7 @@ export function toCommunityCardData(
     joinType: formatJoinType(community.join_type),
     tags: community.tags,
     status: options.status,
+    avatarUrl: avatarUrl ?? undefined,
   };
 }
 
@@ -214,7 +219,7 @@ export async function getCommunitiesPage(
 
   const { data, error } = await supabase
     .from("communities")
-    .select("id, name, description, tags, join_type")
+    .select("id, name, description, tags, join_type, avatar_path")
     .order("created_at", { ascending: false })
     .order("id", { ascending: false })
     .range(from, to);
@@ -307,7 +312,7 @@ export async function getMyCommunitiesPage(
   if (view === "created") {
     const { data, error } = await supabase
       .from("communities")
-      .select("id, name, description, tags, join_type")
+      .select("id, name, description, tags, join_type, avatar_path")
       .eq("created_by", user.id)
       .order("created_at", { ascending: false })
       .order("id", { ascending: false })
@@ -361,7 +366,7 @@ export async function getMyCommunitiesPage(
   const communityIds = pagedMemberships.rows.map((membership) => membership.community_id);
   const { data: communities, error: communitiesError } = await supabase
     .from("communities")
-    .select("id, name, description, tags, join_type")
+    .select("id, name, description, tags, join_type, avatar_path")
     .in("id", communityIds);
 
   if (communitiesError) {
@@ -398,7 +403,7 @@ export async function getOwnedCommunityForEdit(
 
   const { data: community, error } = await supabase
     .from("communities")
-    .select("id, created_by, name, description, category, tags, join_type")
+    .select("id, created_by, name, description, category, tags, join_type, avatar_path")
     .eq("id", communityId)
     .maybeSingle();
 
