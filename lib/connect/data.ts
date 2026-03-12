@@ -32,6 +32,12 @@ export type PersonProfileDetail = Pick<
   | "projects"
   | "resume_url"
   | "links"
+  | "avatar_path"
+>;
+
+export type CommunityMemberProfilePreview = Pick<
+  ProfileRow,
+  "user_id" | "full_name" | "major" | "year_label" | "avatar_path"
 >;
 
 export type PeopleDiscoveryItem = {
@@ -72,6 +78,7 @@ export type CommunityDetail = {
   memberCount: number;
   membership: CommunityMemberRow | null;
   ownerProfile: Pick<ProfileRow, "user_id" | "full_name" | "school" | "major" | "year_label"> | null;
+  joinedMemberPreview: CommunityMemberProfilePreview[];
 };
 
 export type CommunityRequestItem = {
@@ -93,6 +100,8 @@ export type PaginatedCommunityResult<TItem> = {
   items: TItem[];
   hasMore: boolean;
 };
+
+const COMMUNITY_MEMBER_PREVIEW_LIMIT = 10;
 
 function formatJoinType(joinType: CommunityRow["join_type"]): string {
   return joinType === "open" ? "Open" : "Request";
@@ -184,10 +193,9 @@ export async function getPersonProfile(personId: string): Promise<PersonProfileD
   const { data, error } = await supabase
     .from("profiles")
     .select(
-      "user_id, full_name, school, major, year_label, bio, interests, goals, looking_for, skills, projects, resume_url, links",
+      "user_id, full_name, school, major, year_label, bio, interests, goals, looking_for, skills, projects, resume_url, links, avatar_path",
     )
     .eq("user_id", personId)
-    .eq("onboarding_completed", true)
     .maybeSingle();
 
   if (error) {
@@ -257,7 +265,7 @@ export async function getCommunityDetail(communityId: string): Promise<Community
 
   if (!community) return null;
 
-  const [memberCountMap, membershipResult, ownerResult] = await Promise.all([
+  const [memberCountMap, membershipResult, ownerResult, joinedMembersResult] = await Promise.all([
     getJoinedMemberCounts(supabase, [community.id]),
     supabase
       .from("community_members")
@@ -270,6 +278,13 @@ export async function getCommunityDetail(communityId: string): Promise<Community
       .select("user_id, full_name, school, major, year_label")
       .eq("user_id", community.created_by)
       .maybeSingle(),
+    supabase
+      .from("community_members")
+      .select("profiles!inner(user_id, full_name, major, year_label, avatar_path)")
+      .eq("community_id", community.id)
+      .eq("status", "joined")
+      .order("created_at", { ascending: true })
+      .limit(COMMUNITY_MEMBER_PREVIEW_LIMIT),
   ]);
 
   if (membershipResult.error) {
@@ -280,11 +295,30 @@ export async function getCommunityDetail(communityId: string): Promise<Community
     throw new Error("Failed to load community owner profile.");
   }
 
+  if (joinedMembersResult.error) {
+    throw new Error("Failed to load community members.");
+  }
+
+  const joinedMemberPreview = (joinedMembersResult.data ?? [])
+    .map((row) => {
+      const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
+      if (!profile) return null;
+      return {
+        user_id: profile.user_id,
+        full_name: profile.full_name,
+        major: profile.major,
+        year_label: profile.year_label,
+        avatar_path: profile.avatar_path,
+      };
+    })
+    .filter((member): member is CommunityMemberProfilePreview => member !== null);
+
   return {
     community,
     memberCount: memberCountMap.get(community.id) ?? 0,
     membership: membershipResult.data,
     ownerProfile: ownerResult.data,
+    joinedMemberPreview,
   };
 }
 

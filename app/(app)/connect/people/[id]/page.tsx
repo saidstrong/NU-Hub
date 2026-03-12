@@ -5,6 +5,7 @@ import { TagChip } from "@/components/ui/TagChip";
 import { TopBar } from "@/components/ui/TopBar";
 import { notFound } from "next/navigation";
 import { getPersonProfile, toPersonCardData } from "@/lib/connect/data";
+import { toPublicStorageUrl } from "@/lib/validation/media";
 import { isUuid } from "@/lib/validation/uuid";
 
 type PersonProfilePageProps = {
@@ -52,6 +53,7 @@ export default async function PersonProfilePage({ params }: PersonProfilePagePro
 
   const personCard = toPersonCardData(person);
   const subtitle = `${personCard.major} - ${personCard.year}`;
+  const avatarUrl = toPublicStorageUrl("avatars", person.avatar_path);
   const links =
     person.links && typeof person.links === "object" && !Array.isArray(person.links)
       ? (person.links as Record<string, unknown>)
@@ -69,6 +71,7 @@ export default async function PersonProfilePage({ params }: PersonProfilePagePro
         subtitle={subtitle}
         tags={personCard.interests}
         contextLabel="Campus profile"
+        avatarUrl={avatarUrl}
       />
 
       <FormSection title="Bio" description="Snapshot of academic and collaboration context.">

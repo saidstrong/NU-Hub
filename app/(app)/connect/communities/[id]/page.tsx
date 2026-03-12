@@ -64,7 +64,7 @@ export default async function CommunityProfilePage({
     );
   }
 
-  const { community, memberCount, membership, ownerProfile } = detail;
+  const { community, memberCount, membership, ownerProfile, joinedMemberPreview } = detail;
   const user = await requireUser();
   const isOwner = community.created_by === user.id;
   const ownerName = ownerProfile?.full_name?.trim() || "Community owner";
@@ -149,8 +149,59 @@ export default async function CommunityProfilePage({
         <p className="text-[13px] text-wire-200">{community.description}</p>
       </FormSection>
 
+      <FormSection title="Members" description="Joined members in this community.">
+        {joinedMemberPreview.length > 0 ? (
+          <div className="space-y-2">
+            {joinedMemberPreview.map((member) => {
+              const memberAvatarUrl = toPublicStorageUrl("avatars", member.avatar_path);
+              const memberMeta = [member.major, member.year_label]
+                .map((value) => value?.trim())
+                .filter(Boolean)
+                .join(" - ");
+
+              return (
+                <Link
+                  key={member.user_id}
+                  href={`/connect/people/${member.user_id}`}
+                  className="flex items-center gap-3 rounded-xl border border-wire-700 bg-wire-800 px-3 py-2 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/40"
+                >
+                  {memberAvatarUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={memberAvatarUrl}
+                      alt={`${member.full_name || "Member"} avatar`}
+                      className="h-9 w-9 shrink-0 rounded-full border border-wire-700 bg-wire-900 object-cover"
+                    />
+                  ) : (
+                    <div className="h-9 w-9 shrink-0 rounded-full border border-dashed border-wire-600 bg-wire-900" />
+                  )}
+                  <div className="min-w-0">
+                    <p className="truncate text-[13px] text-wire-100">
+                      {member.full_name || "NU student"}
+                    </p>
+                    <p className="wire-meta">{memberMeta || "Campus member"}</p>
+                  </div>
+                </Link>
+              );
+            })}
+            {memberCount > joinedMemberPreview.length ? (
+              <p className="wire-meta">
+                Showing {joinedMemberPreview.length} of {memberCount} joined members.
+              </p>
+            ) : null}
+          </div>
+        ) : (
+          <p className="text-[13px] text-wire-300">No joined members yet.</p>
+        )}
+      </FormSection>
+
       <FormSection title="Owner" description="Community owner profile context.">
-        <p className="text-[13px] text-wire-200">{ownerName}</p>
+        <Link
+          href={`/connect/people/${community.created_by}`}
+          className="text-[13px] text-wire-200 underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/40"
+        >
+          {ownerName}
+        </Link>
         {ownerMeta ? <p className="mt-1 wire-meta">{ownerMeta}</p> : null}
       </FormSection>
 

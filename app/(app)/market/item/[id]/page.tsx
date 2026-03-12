@@ -10,6 +10,7 @@ import {
   formatStatusLabel,
   getListingDetail,
 } from "@/lib/market/data";
+import { toPublicStorageUrl } from "@/lib/validation/media";
 import { isUuid } from "@/lib/validation/uuid";
 
 type MarketItemDetailPageProps = {
@@ -67,6 +68,7 @@ export default async function MarketItemDetailPage({
     .map((value) => value?.trim())
     .filter(Boolean)
     .join(" - ");
+  const sellerAvatarUrl = toPublicStorageUrl("avatars", seller?.avatar_path);
 
   return (
     <main>
@@ -125,13 +127,26 @@ export default async function MarketItemDetailPage({
 
       <div className="wire-panel">
         <h3 className="mb-2 text-sm font-semibold text-wire-100">Seller</h3>
-        <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-full border border-dashed border-wire-600 bg-wire-900" />
-          <div>
-            <p className="text-sm text-wire-100">{seller?.full_name || "NU student"}</p>
-            <p className="wire-meta">{sellerMeta || "Campus seller profile"}</p>
+        <Link
+          href={`/connect/people/${listing.seller_id}`}
+          className="block rounded-xl px-1 py-1 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/40"
+        >
+          <div className="flex items-center gap-3">
+            {sellerAvatarUrl ? (
+              <img
+                src={sellerAvatarUrl}
+                alt={`${seller?.full_name || "Seller"} avatar`}
+                className="h-10 w-10 rounded-full border border-wire-700 bg-wire-900 object-cover"
+              />
+            ) : (
+              <div className="h-10 w-10 rounded-full border border-dashed border-wire-600 bg-wire-900" />
+            )}
+            <div>
+              <p className="text-sm text-wire-100">{seller?.full_name || "NU student"}</p>
+              <p className="wire-meta">{sellerMeta || "Campus seller profile"}</p>
+            </div>
           </div>
-        </div>
+        </Link>
       </div>
 
       <div className="wire-action-row">

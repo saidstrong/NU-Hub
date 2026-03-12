@@ -19,7 +19,7 @@ export type ListingEditSource = Pick<
 
 export type ListingSeller = Pick<
   Database["public"]["Tables"]["profiles"]["Row"],
-  "user_id" | "full_name" | "school" | "major" | "year_label"
+  "user_id" | "full_name" | "school" | "major" | "year_label" | "avatar_path"
 >;
 
 export type ListingCardData = {
@@ -376,7 +376,7 @@ export async function getListingDetail(listingId: string): Promise<{
   const [{ data: seller, error: sellerError }, { data: savedRow, error: savedRowError }, imageUrls] = await Promise.all([
     supabase
       .from("profiles")
-      .select("user_id, full_name, school, major, year_label")
+      .select("user_id, full_name, school, major, year_label, avatar_path")
       .eq("user_id", listing.seller_id)
       .maybeSingle(),
     supabase
