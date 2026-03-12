@@ -26,12 +26,23 @@ function hasAllowedFileExtension(fileName: string): boolean {
 }
 
 export function DirectListingImageUpload() {
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const [uploadedPaths, setUploadedPaths] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const previousPreviewUrlsRef = useRef<string[]>([]);
-  const previousUploadedPathsRef = useRef<string[]>([]);
+
+  useEffect(() => {
+    const nextPreviewUrls = selectedFiles.map((file) => URL.createObjectURL(file));
+
+    for (const previewUrl of previousPreviewUrlsRef.current) {
+      URL.revokeObjectURL(previewUrl);
+    }
+
+    previousPreviewUrlsRef.current = nextPreviewUrls;
+    setPreviewUrls(nextPreviewUrls);
+  }, [selectedFiles]);
 
   useEffect(() => {
     return () => {
@@ -48,27 +59,40 @@ export function DirectListingImageUpload() {
   }
 
   async function handleFileSelection(event: ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(event.currentTarget.files ?? []);
+    const nextPickedFiles = Array.from(event.currentTarget.files ?? []);
+    event.currentTarget.value = "";
 
-    for (const previewUrl of previousPreviewUrlsRef.current) {
-      URL.revokeObjectURL(previewUrl);
-    }
-
-    if (files.length === 0) {
-      previousPreviewUrlsRef.current = [];
-      setPreviewUrls([]);
-      setUploadedPaths([]);
-      setError(null);
+    if (nextPickedFiles.length === 0) {
       return;
     }
 
-    const parsedCount = listingImageCountSchema.safeParse(files.length);
+    const existingFileKeys = new Set(
+      selectedFiles.map((file) => `${file.name}:${file.size}:${file.lastModified}`),
+    );
+    const uniquePickedFiles = nextPickedFiles.filter(
+      (file) => !existingFileKeys.has(`${file.name}:${file.size}:${file.lastModified}`),
+    );
+
+    const remainingSlots = LISTING_IMAGE_MAX_COUNT - selectedFiles.length;
+
+    if (remainingSlots <= 0) {
+      setError(`You can upload up to ${LISTING_IMAGE_MAX_COUNT} images.`);
+      return;
+    }
+
+    const filesToAdd = uniquePickedFiles.slice(0, remainingSlots);
+    if (filesToAdd.length === 0) {
+      setError("Duplicate images were skipped.");
+      return;
+    }
+
+    const parsedCount = listingImageCountSchema.safeParse(selectedFiles.length + filesToAdd.length);
     if (!parsedCount.success) {
       setError(parsedCount.error.issues[0]?.message ?? "Invalid image count.");
       return;
     }
 
-    for (const file of files) {
+    for (const file of filesToAdd) {
       const imageMetaError = validateImageFileMeta(file, LISTING_IMAGE_MAX_SIZE_BYTES);
       if (imageMetaError) {
         setError(imageMetaError);
@@ -84,10 +108,6 @@ export function DirectListingImageUpload() {
     setError(null);
     setIsUploading(true);
 
-    const nextPreviewUrls = files.map((file) => URL.createObjectURL(file));
-    previousPreviewUrlsRef.current = nextPreviewUrls;
-    setPreviewUrls(nextPreviewUrls);
-
     const supabase = createClient();
     const { data: authData, error: authError } = await supabase.auth.getUser();
 
@@ -101,11 +121,10 @@ export function DirectListingImageUpload() {
     const uploadBatchId = crypto.randomUUID();
     const nextPaths: string[] = [];
 
-    for (const file of files) {
+    for (const file of filesToAdd) {
       const hasValidSignature = await hasValidImageSignature(file);
       if (!hasValidSignature) {
         await removePathsBestEffort(nextPaths);
-        setUploadedPaths([]);
         setIsUploading(false);
         setError("Invalid image content. Upload JPEG, PNG, or WEBP files only.");
         return;
@@ -121,7 +140,6 @@ export function DirectListingImageUpload() {
 
       if (uploadError) {
         await removePathsBestEffort(nextPaths);
-        setUploadedPaths([]);
         setIsUploading(false);
         setError("Failed to upload one or more images. Please try again.");
         return;
@@ -130,21 +148,29 @@ export function DirectListingImageUpload() {
       nextPaths.push(storagePath);
     }
 
-    await removePathsBestEffort(previousUploadedPathsRef.current);
-    previousUploadedPathsRef.current = nextPaths;
-    setUploadedPaths(nextPaths);
+    setSelectedFiles((prev) => [...prev, ...filesToAdd].slice(0, LISTING_IMAGE_MAX_COUNT));
+    setUploadedPaths((prev) => [...prev, ...nextPaths].slice(0, LISTING_IMAGE_MAX_COUNT));
+    const skippedForDuplicates = uniquePickedFiles.length !== nextPickedFiles.length;
+    const skippedForLimit = uniquePickedFiles.length > filesToAdd.length;
+    if (skippedForLimit) {
+      setError(`You can upload up to ${LISTING_IMAGE_MAX_COUNT} images.`);
+    } else if (skippedForDuplicates) {
+      setError("Duplicate images were skipped.");
+    } else {
+      setError(null);
+    }
     setIsUploading(false);
   }
 
   return (
     <div className="space-y-2">
       <div className="mb-3 grid grid-cols-4 gap-2">
-        {previewUrls.length > 0
-          ? previewUrls.map((previewUrl, index) => (
+        {selectedFiles.length > 0
+          ? selectedFiles.map((file, index) => (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                key={`${previewUrl}-${index}`}
-                src={previewUrl}
+                key={`${file.name}-${file.size}-${file.lastModified}-${index}`}
+                src={previewUrls[index]}
                 alt={`Selected image ${index + 1}`}
                 className="h-20 w-full rounded-xl border border-wire-700 bg-wire-900 object-cover"
               />
