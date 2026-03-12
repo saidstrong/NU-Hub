@@ -12,6 +12,7 @@ import {
 type MyEventsPageProps = {
   searchParams: Promise<{
     status?: string;
+    message?: string;
   }>;
 };
 
@@ -21,7 +22,7 @@ function parseStatus(value?: string): "interested" | "joined" | "created" {
 }
 
 export default async function MyEventsPage({ searchParams }: MyEventsPageProps) {
-  const { status } = await searchParams;
+  const { status, message } = await searchParams;
   const selectedStatus = parseStatus(status);
   const activeIndex = selectedStatus === "interested" ? 0 : selectedStatus === "joined" ? 1 : 2;
   const participationLabel =
@@ -52,6 +53,11 @@ export default async function MyEventsPage({ searchParams }: MyEventsPageProps) 
         subtitle="Keep track of interested, joined, and created events"
         backHref="/events"
       />
+      {message ? (
+        <div className="rounded-xl border border-accent/35 bg-accent/10 px-3 py-2 text-[13px] text-wire-100">
+          {message}
+        </div>
+      ) : null}
 
       <TabRow
         tabs={[

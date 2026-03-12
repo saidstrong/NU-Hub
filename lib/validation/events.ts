@@ -4,6 +4,10 @@ const NU_UTC_OFFSET_MINUTES = 5 * 60;
 const DATETIME_LOCAL_PATTERN =
   /^(\d{4})-(\d{2})-(\d{2})T([01]\d|2[0-3]):([0-5]\d)(?::([0-5]\d))?$/;
 
+function pad2(value: number): string {
+  return String(value).padStart(2, "0");
+}
+
 function toNuLocalDateTimeUtcMs(value: string): number | null {
   const normalized = value.trim();
   const match = DATETIME_LOCAL_PATTERN.exec(normalized);
@@ -38,6 +42,26 @@ export function nuLocalDateTimeToUtcIso(value: string): string | null {
   if (utcMs === null) return null;
 
   return new Date(utcMs).toISOString();
+}
+
+export function utcIsoToNuLocalDateTimeInput(value: string): string | null {
+  const normalized = value.trim();
+  if (!normalized) return null;
+
+  const utcDate = new Date(normalized);
+  const utcMs = utcDate.getTime();
+
+  if (Number.isNaN(utcMs)) return null;
+
+  const nuLocal = new Date(utcMs + NU_UTC_OFFSET_MINUTES * 60 * 1000);
+
+  const year = nuLocal.getUTCFullYear();
+  const month = pad2(nuLocal.getUTCMonth() + 1);
+  const day = pad2(nuLocal.getUTCDate());
+  const hours = pad2(nuLocal.getUTCHours());
+  const minutes = pad2(nuLocal.getUTCMinutes());
+
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
 }
 
 const dateTimeLocalSchema = z
@@ -107,6 +131,10 @@ export const eventParticipationSchema = z.object({
   eventId: z.string().uuid("Invalid event id."),
   status: z.enum(["interested", "joined"]),
   redirectTo: z.string().optional(),
+});
+
+export const eventMutationIdSchema = z.object({
+  eventId: z.string().uuid("Invalid event id."),
 });
 
 export type EventCreateInput = z.infer<typeof eventCreateSchema>;

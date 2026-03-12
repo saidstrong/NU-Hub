@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { requireUser } from "@/lib/auth/session";
+import { isEventOwner } from "@/lib/events/ownership";
 import type { Database } from "@/types/database";
 
 export type EventRow = Database["public"]["Tables"]["events"]["Row"];
@@ -11,6 +12,18 @@ export type EventCardSource = Pick<
 export type EventCreatedCardSource = EventCardSource & {
   is_published: boolean;
 };
+export type EventEditSource = Pick<
+  EventRow,
+  | "id"
+  | "created_by"
+  | "title"
+  | "description"
+  | "category"
+  | "starts_at"
+  | "ends_at"
+  | "location"
+  | "is_published"
+>;
 
 export type EventCardData = {
   id: string;
@@ -27,6 +40,8 @@ type OrganizerProfile = Pick<
 >;
 const EVENT_CARD_SELECT = "id, title, starts_at, ends_at, location, category";
 const EVENT_CREATED_CARD_SELECT = `${EVENT_CARD_SELECT}, is_published`;
+const EVENT_EDIT_SELECT =
+  "id, created_by, title, description, category, starts_at, ends_at, location, is_published";
 
 function formatDayMonth(date: Date): string {
   return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(date);
@@ -182,6 +197,27 @@ export async function getMyCreatedEvents(limit = 50): Promise<EventCreatedCardSo
   return data;
 }
 
+export async function getOwnedEventForEdit(eventId: string): Promise<EventEditSource | null> {
+  const user = await requireUser();
+  const supabase = await createClient();
+
+  const { data: event, error } = await supabase
+    .from("events")
+    .select(EVENT_EDIT_SELECT)
+    .eq("id", eventId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error("Failed to load event.");
+  }
+
+  if (!event || !isEventOwner(event.created_by, user.id)) {
+    return null;
+  }
+
+  return event;
+}
+
 export async function getEventDetail(eventId: string): Promise<{
   event: EventRow | null;
   organizer: OrganizerProfile | null;
@@ -212,7 +248,7 @@ export async function getEventDetail(eventId: string): Promise<{
     };
   }
 
-  const isOwner = event.created_by === user.id;
+  const isOwner = isEventOwner(event.created_by, user.id);
   if (!event.is_published && !isOwner) {
     return {
       event: null,

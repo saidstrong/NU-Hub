@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   eventCreateSchema,
   nuLocalDateTimeToUtcIso,
+  utcIsoToNuLocalDateTimeInput,
 } from "@/lib/validation/events";
 
 describe("events validation", () => {
@@ -66,5 +67,20 @@ describe("events validation", () => {
       "2026-03-12T10:30:00.000Z",
     );
     expect(nuLocalDateTimeToUtcIso("invalid")).toBeNull();
+  });
+
+  it("converts UTC ISO to NU local datetime input deterministically", () => {
+    expect(utcIsoToNuLocalDateTimeInput("2026-03-12T10:30:00.000Z")).toBe(
+      "2026-03-12T15:30",
+    );
+    expect(utcIsoToNuLocalDateTimeInput("invalid")).toBeNull();
+  });
+
+  it("keeps datetime conversion roundtrip stable for edit prefills", () => {
+    const initialLocal = "2026-06-02T09:15";
+    const utcIso = nuLocalDateTimeToUtcIso(initialLocal);
+
+    expect(utcIso).toBe("2026-06-02T04:15:00.000Z");
+    expect(utcIsoToNuLocalDateTimeInput(utcIso ?? "")).toBe(initialLocal);
   });
 });

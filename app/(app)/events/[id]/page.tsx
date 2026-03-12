@@ -74,6 +74,7 @@ export default async function EventDetailPage({ params, searchParams }: EventDet
         title="Event"
         subtitle="Schedule, location, and participation details"
         backHref="/events"
+        actions={isOwner ? [{ label: "Edit Event", href: `/events/${event.id}/edit` }] : []}
       />
       {message ? (
         <div className="rounded-xl border border-accent/35 bg-accent/10 px-3 py-2 text-[13px] text-wire-100">
