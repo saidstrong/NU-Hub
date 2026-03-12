@@ -280,7 +280,9 @@ export async function getCommunityDetail(communityId: string): Promise<Community
       .maybeSingle(),
     supabase
       .from("community_members")
-      .select("profiles!inner(user_id, full_name, major, year_label, avatar_path)")
+      .select(
+        "user_id, member_profile:profiles!community_members_user_id_fkey(full_name, major, year_label, avatar_path)",
+      )
       .eq("community_id", community.id)
       .eq("status", "joined")
       .order("created_at", { ascending: true })
@@ -301,17 +303,18 @@ export async function getCommunityDetail(communityId: string): Promise<Community
 
   const joinedMemberPreview = (joinedMembersResult.data ?? [])
     .map((row) => {
-      const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
-      if (!profile) return null;
+      const profile = Array.isArray(row.member_profile)
+        ? row.member_profile[0]
+        : row.member_profile;
       return {
-        user_id: profile.user_id,
-        full_name: profile.full_name,
-        major: profile.major,
-        year_label: profile.year_label,
-        avatar_path: profile.avatar_path,
+        user_id: row.user_id,
+        full_name: profile?.full_name ?? "",
+        major: profile?.major ?? null,
+        year_label: profile?.year_label ?? null,
+        avatar_path: profile?.avatar_path ?? null,
       };
     })
-    .filter((member): member is CommunityMemberProfilePreview => member !== null);
+    .filter((member): member is CommunityMemberProfilePreview => Boolean(member.user_id));
 
   return {
     community,

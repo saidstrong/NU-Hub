@@ -153,7 +153,8 @@ export default async function CommunityProfilePage({
         {joinedMemberPreview.length > 0 ? (
           <div className="space-y-2">
             {joinedMemberPreview.map((member) => {
-              const memberAvatarUrl = toPublicStorageUrl("avatars", member.avatar_path);
+              const memberAvatarPath = member.avatar_path?.trim() || null;
+              const memberAvatarUrl = toPublicStorageUrl("avatars", memberAvatarPath);
               const memberMeta = [member.major, member.year_label]
                 .map((value) => value?.trim())
                 .filter(Boolean)
