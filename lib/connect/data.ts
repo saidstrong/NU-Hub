@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { requireUser } from "@/lib/auth/session";
+import { isCommunityOwner } from "@/lib/connect/ownership";
 import type { Database } from "@/types/database";
 
 export type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
@@ -9,6 +10,10 @@ type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
 export type CommunityCardSource = Pick<
   CommunityRow,
   "id" | "name" | "description" | "tags" | "join_type"
+>;
+export type CommunityEditSource = Pick<
+  CommunityRow,
+  "id" | "created_by" | "name" | "description" | "category" | "tags" | "join_type"
 >;
 export type PersonProfileDetail = Pick<
   ProfileRow,
@@ -320,6 +325,29 @@ export async function getMyCommunities(
   }
 
   return resolvedCommunities;
+}
+
+export async function getOwnedCommunityForEdit(
+  communityId: string,
+): Promise<CommunityEditSource | null> {
+  const user = await requireUser();
+  const supabase = await createClient();
+
+  const { data: community, error } = await supabase
+    .from("communities")
+    .select("id, created_by, name, description, category, tags, join_type")
+    .eq("id", communityId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error("Failed to load community.");
+  }
+
+  if (!community || !isCommunityOwner(community.created_by, user.id)) {
+    return null;
+  }
+
+  return community;
 }
 
 export async function getOwnerPendingCommunityRequests(): Promise<CommunityRequestItem[]> {

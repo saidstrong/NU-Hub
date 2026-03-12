@@ -98,6 +98,7 @@ export default async function CommunityProfilePage({
         title="Community Profile"
         subtitle="Purpose, membership, and participation details"
         backHref="/connect/communities"
+        actions={isOwner ? [{ label: "Edit", href: `/connect/communities/${community.id}/edit` }] : []}
       />
       {message ? (
         <div className="rounded-xl border border-accent/35 bg-accent/10 px-3 py-2 text-[13px] text-wire-100">

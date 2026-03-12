@@ -49,6 +49,12 @@ export const createCommunitySchema = z.object({
   joinType: z.enum(["open", "request"]),
 });
 
+export const updateCommunitySchema = createCommunitySchema;
+
+export const communityMutationIdSchema = z.object({
+  communityId: z.string().uuid("Invalid community id."),
+});
+
 export const communityJoinSchema = z.object({
   communityId: z.string().uuid("Invalid community id."),
   redirectTo: z.string().optional(),
