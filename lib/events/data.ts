@@ -89,7 +89,7 @@ export function toEventCardData(
 }
 
 export function formatParticipationLabel(status: EventParticipationStatus): string {
-  return status === "joined" ? "Joined" : "Interested";
+  return status === "going" ? "Going" : "Interested";
 }
 
 export async function getPublishedEvents(limit = 24): Promise<EventCardSource[]> {
@@ -317,6 +317,10 @@ export async function getEventDetail(eventId: string): Promise<{
   isSaved: boolean;
   isOwner: boolean;
   participationStatus: EventParticipationStatus | null;
+  rsvpCounts: {
+    going: number;
+    interested: number;
+  };
 }> {
   const user = await requireUser();
   const supabase = await createClient();
@@ -338,6 +342,10 @@ export async function getEventDetail(eventId: string): Promise<{
       isSaved: false,
       isOwner: false,
       participationStatus: null,
+      rsvpCounts: {
+        going: 0,
+        interested: 0,
+      },
     };
   }
 
@@ -349,10 +357,14 @@ export async function getEventDetail(eventId: string): Promise<{
       isSaved: false,
       isOwner: false,
       participationStatus: null,
+      rsvpCounts: {
+        going: 0,
+        interested: 0,
+      },
     };
   }
 
-  const [organizerResult, savedResult, participantResult] = await Promise.all([
+  const [organizerResult, savedResult, participantResult, goingCountResult, interestedCountResult] = await Promise.all([
     event.created_by
       ? supabase
           .from("profiles")
@@ -372,6 +384,16 @@ export async function getEventDetail(eventId: string): Promise<{
       .eq("user_id", user.id)
       .eq("event_id", event.id)
       .maybeSingle(),
+    supabase
+      .from("event_participants")
+      .select("*", { count: "exact", head: true })
+      .eq("event_id", event.id)
+      .eq("status", "going"),
+    supabase
+      .from("event_participants")
+      .select("*", { count: "exact", head: true })
+      .eq("event_id", event.id)
+      .eq("status", "interested"),
   ]);
 
   if (organizerResult.error) {
@@ -386,11 +408,19 @@ export async function getEventDetail(eventId: string): Promise<{
     throw new Error("Failed to load participation status.");
   }
 
+  if (goingCountResult.error || interestedCountResult.error) {
+    throw new Error("Failed to load RSVP counts.");
+  }
+
   return {
     event,
     organizer: organizerResult.data,
     isSaved: Boolean(savedResult.data),
     isOwner,
     participationStatus: participantResult.data?.status ?? null,
+    rsvpCounts: {
+      going: goingCountResult.count ?? 0,
+      interested: interestedCountResult.count ?? 0,
+    },
   };
 }

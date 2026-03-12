@@ -3,6 +3,7 @@ import { TagChip } from "@/components/ui/TagChip";
 import { TopBar } from "@/components/ui/TopBar";
 import { notFound } from "next/navigation";
 import {
+  clearEventParticipationAction,
   setEventParticipationAction,
   toggleSavedEventAction,
 } from "@/lib/events/actions";
@@ -58,12 +59,12 @@ export default async function EventDetailPage({ params, searchParams }: EventDet
     );
   }
 
-  const { event, organizer, isOwner, isSaved, participationStatus } = detail;
+  const { event, organizer, isOwner, isSaved, participationStatus, rsvpCounts } = detail;
   const isDraft = !event.is_published;
   const dateLabel = formatEventDate(event.starts_at, event.ends_at);
   const organizerLabel = organizer?.full_name || "NU Atrium editorial team";
   const interestedActive = participationStatus === "interested";
-  const joinedActive = participationStatus === "joined";
+  const goingActive = participationStatus === "going";
   const organizerMeta = [organizer?.school, organizer?.major, organizer?.year_label]
     .map((value) => value?.trim())
     .filter(Boolean)
@@ -130,6 +131,22 @@ export default async function EventDetailPage({ params, searchParams }: EventDet
 
       {!isDraft ? (
         <>
+          <section className="wire-panel">
+            <h3 className="mb-2 text-sm font-semibold text-wire-100">RSVP</h3>
+            <div className="mb-2 space-y-1">
+              <p className="wire-meta">Going: {rsvpCounts.going}</p>
+              <p className="wire-meta">Interested: {rsvpCounts.interested}</p>
+              <p className="wire-meta">
+                Your RSVP:{" "}
+                {participationStatus === "going"
+                  ? "Going"
+                  : participationStatus === "interested"
+                    ? "Interested"
+                    : "Not set"}
+              </p>
+            </div>
+          </section>
+
           <div className="wire-action-row">
             <form action={setEventParticipationAction} className="w-full">
               <input type="hidden" name="eventId" value={event.id} />
@@ -141,10 +158,20 @@ export default async function EventDetailPage({ params, searchParams }: EventDet
             </form>
             <form action={setEventParticipationAction} className="w-full">
               <input type="hidden" name="eventId" value={event.id} />
-              <input type="hidden" name="status" value="joined" />
+              <input type="hidden" name="status" value="going" />
               <input type="hidden" name="redirectTo" value={`/events/${event.id}`} />
-              <button type="submit" className={joinedActive ? "wire-action-primary w-full" : "wire-action w-full"}>
-                {joinedActive ? "Joined" : "Join event"}
+              <button type="submit" className={goingActive ? "wire-action-primary w-full" : "wire-action w-full"}>
+                {goingActive ? "Going" : "Mark going"}
+              </button>
+            </form>
+          </div>
+
+          <div className="wire-action-row-single">
+            <form action={clearEventParticipationAction}>
+              <input type="hidden" name="eventId" value={event.id} />
+              <input type="hidden" name="redirectTo" value={`/events/${event.id}`} />
+              <button type="submit" className="wire-action w-full">
+                Clear RSVP
               </button>
             </form>
           </div>

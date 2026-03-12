@@ -13,10 +13,10 @@ import { isEventOwner } from "@/lib/events/ownership";
 import { createAppError } from "@/lib/observability/errors";
 import { logAppError, logInfo, logSecurityEvent, logWarn } from "@/lib/observability/logger";
 import { getRequestContext } from "@/lib/observability/request-context";
-import { writeInAppNotification } from "@/lib/notifications/write";
 import { consumeRateLimit } from "@/lib/security/rate-limit";
 import { createClient } from "@/lib/supabase/server";
 import {
+  clearEventParticipationSchema,
   eventCreateSchema,
   eventMutationIdSchema,
   eventParticipationSchema,
@@ -607,17 +607,6 @@ export async function setEventParticipationAction(formData: FormData) {
   }
 
   const supabase = await createClient();
-  const { data: existingParticipation, error: existingParticipationError } = await supabase
-    .from("event_participants")
-    .select("status")
-    .eq("event_id", parsed.data.eventId)
-    .eq("user_id", user.id)
-    .maybeSingle();
-
-  if (existingParticipationError) {
-    redirectWithError("/events", "Failed to check event participation.");
-  }
-
   const { error } = await supabase.from("event_participants").upsert(
     {
       event_id: parsed.data.eventId,
@@ -631,34 +620,47 @@ export async function setEventParticipationAction(formData: FormData) {
     redirectWithError("/events", "Failed to update participation.");
   }
 
-  if (!existingParticipation || existingParticipation.status !== parsed.data.status) {
-    const { data: event } = await supabase
-      .from("events")
-      .select("title")
-      .eq("id", parsed.data.eventId)
-      .maybeSingle();
+  revalidatePath("/events");
+  revalidatePath("/events/my-events");
+  revalidatePath(`/events/${parsed.data.eventId}`);
 
-    const eventTitle = event?.title || "this event";
-    await writeInAppNotification(supabase, {
-      userId: user.id,
-      type: "events",
-      title: parsed.data.status === "joined" ? "Event joined" : "Event marked interested",
-      message:
-        parsed.data.status === "joined"
-          ? `You joined ${eventTitle}.`
-          : `You marked ${eventTitle} as interested.`,
-      link: `/events/${parsed.data.eventId}`,
-      payload: {
-        kind: "event_participation_updated",
-        event_id: parsed.data.eventId,
-        status: parsed.data.status,
-      },
-    });
+  const redirectTo = sanitizeInternalPath(parsed.data.redirectTo, `/events/${parsed.data.eventId}`);
+  redirect(redirectTo);
+}
+
+export async function clearEventParticipationAction(formData: FormData) {
+  const parsed = clearEventParticipationSchema.safeParse({
+    eventId: getStringValue(formData, "eventId"),
+    redirectTo: getStringValue(formData, "redirectTo"),
+  });
+
+  if (!parsed.success) {
+    redirectWithError("/events", parsed.error.issues[0]?.message ?? "Invalid RSVP clear input.");
+  }
+
+  const user = await requireUser();
+  const participationRateResult = consumeRateLimit(
+    `events:clear-participation:${user.id}`,
+    EVENT_PARTICIPATION_LIMIT,
+  );
+
+  if (!participationRateResult.allowed) {
+    redirectWithError("/events", "Too many RSVP updates. Please wait and try again.");
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("event_participants")
+    .delete()
+    .eq("event_id", parsed.data.eventId)
+    .eq("user_id", user.id);
+
+  if (error) {
+    redirectWithError("/events", "Failed to clear RSVP.");
   }
 
   revalidatePath("/events");
   revalidatePath("/events/my-events");
-  revalidatePath("/profile/notifications");
   revalidatePath(`/events/${parsed.data.eventId}`);
 
   const redirectTo = sanitizeInternalPath(parsed.data.redirectTo, `/events/${parsed.data.eventId}`);

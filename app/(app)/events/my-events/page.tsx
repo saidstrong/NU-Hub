@@ -21,8 +21,9 @@ type MyEventsPageProps = {
 
 const MY_EVENTS_PAGE_SIZE = 12;
 
-function parseStatus(value?: string): "interested" | "joined" | "created" {
-  if (value === "joined" || value === "created") return value;
+function parseStatus(value?: string): "interested" | "going" | "created" {
+  if (value === "created") return value;
+  if (value === "going" || value === "joined") return "going";
   return "interested";
 }
 
@@ -30,10 +31,10 @@ export default async function MyEventsPage({ searchParams }: MyEventsPageProps) 
   const { status, message, page: pageParam } = await searchParams;
   const selectedStatus = parseStatus(status);
   const page = parsePageParam(pageParam);
-  const activeIndex = selectedStatus === "interested" ? 0 : selectedStatus === "joined" ? 1 : 2;
+  const activeIndex = selectedStatus === "interested" ? 0 : selectedStatus === "going" ? 1 : 2;
   const participationLabel =
-    selectedStatus === "joined"
-      ? formatParticipationLabel("joined")
+    selectedStatus === "going"
+      ? formatParticipationLabel("going")
       : formatParticipationLabel("interested");
 
   let events: Array<
@@ -68,7 +69,7 @@ export default async function MyEventsPage({ searchParams }: MyEventsPageProps) 
     <main>
       <TopBar
         title="My Events"
-        subtitle="Keep track of interested, joined, and created events"
+        subtitle="Keep track of interested, going, and created events"
         backHref="/events"
       />
       {message ? (
@@ -80,7 +81,7 @@ export default async function MyEventsPage({ searchParams }: MyEventsPageProps) 
       <TabRow
         tabs={[
           { label: "Interested", href: buildPageHref("/events/my-events", 1, { status: "interested" }) },
-          { label: "Joined", href: buildPageHref("/events/my-events", 1, { status: "joined" }) },
+          { label: "Going", href: buildPageHref("/events/my-events", 1, { status: "going" }) },
           { label: "Created", href: buildPageHref("/events/my-events", 1, { status: "created" }) },
         ]}
         activeIndex={activeIndex}

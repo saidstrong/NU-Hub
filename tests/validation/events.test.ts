@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  clearEventParticipationSchema,
   eventCreateSchema,
+  eventParticipationSchema,
   nuLocalDateTimeToUtcIso,
   utcIsoToNuLocalDateTimeInput,
 } from "@/lib/validation/events";
@@ -82,5 +84,44 @@ describe("events validation", () => {
 
     expect(utcIso).toBe("2026-06-02T04:15:00.000Z");
     expect(utcIsoToNuLocalDateTimeInput(utcIso ?? "")).toBe(initialLocal);
+  });
+
+  it("accepts RSVP status values interested and going", () => {
+    expect(
+      eventParticipationSchema.safeParse({
+        eventId: "192d11e4-f8bc-4881-b022-f9e2e2f83e58",
+        status: "interested",
+      }).success,
+    ).toBe(true);
+
+    expect(
+      eventParticipationSchema.safeParse({
+        eventId: "192d11e4-f8bc-4881-b022-f9e2e2f83e58",
+        status: "going",
+      }).success,
+    ).toBe(true);
+  });
+
+  it("rejects legacy RSVP status joined", () => {
+    expect(
+      eventParticipationSchema.safeParse({
+        eventId: "192d11e4-f8bc-4881-b022-f9e2e2f83e58",
+        status: "joined",
+      }).success,
+    ).toBe(false);
+  });
+
+  it("validates RSVP clear payload", () => {
+    expect(
+      clearEventParticipationSchema.safeParse({
+        eventId: "192d11e4-f8bc-4881-b022-f9e2e2f83e58",
+      }).success,
+    ).toBe(true);
+
+    expect(
+      clearEventParticipationSchema.safeParse({
+        eventId: "invalid-event-id",
+      }).success,
+    ).toBe(false);
   });
 });

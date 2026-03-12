@@ -218,21 +218,21 @@ type DatabaseSchema = {
         Row: {
           event_id: string;
           user_id: string;
-          status: "interested" | "joined";
+          status: "interested" | "going";
           created_at: string;
           updated_at: string;
         };
         Insert: {
           event_id: string;
           user_id: string;
-          status: "interested" | "joined";
+          status: "interested" | "going";
           created_at?: string;
           updated_at?: string;
         };
         Update: {
           event_id?: string;
           user_id?: string;
-          status?: "interested" | "joined";
+          status?: "interested" | "going";
           created_at?: string;
           updated_at?: string;
         };
