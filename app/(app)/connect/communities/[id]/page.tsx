@@ -6,7 +6,11 @@ import { TagChip } from "@/components/ui/TagChip";
 import { TopBar } from "@/components/ui/TopBar";
 import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/auth/session";
-import { joinOrRequestCommunityAction } from "@/lib/connect/actions";
+import {
+  createCommunityPostAction,
+  deleteCommunityPostAction,
+  joinOrRequestCommunityAction,
+} from "@/lib/connect/actions";
 import { getCommunityDetail } from "@/lib/connect/data";
 import { toPublicStorageUrl } from "@/lib/validation/media";
 import { isUuid } from "@/lib/validation/uuid";
@@ -15,6 +19,15 @@ type CommunityProfilePageProps = {
   params: Promise<{ id: string }>;
   searchParams: Promise<{ message?: string; error?: string }>;
 };
+
+function formatPostTime(createdAt: string): string {
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(createdAt));
+}
 
 export default async function CommunityProfilePage({
   params,
@@ -64,9 +77,10 @@ export default async function CommunityProfilePage({
     );
   }
 
-  const { community, memberCount, membership, ownerProfile, joinedMemberPreview } = detail;
+  const { community, memberCount, membership, ownerProfile, joinedMemberPreview, posts } = detail;
   const user = await requireUser();
   const isOwner = community.created_by === user.id;
+  const canCreatePost = membership?.status === "joined";
   const ownerName = ownerProfile?.full_name?.trim() || "Community owner";
   const ownerMeta = [ownerProfile?.school, ownerProfile?.major, ownerProfile?.year_label]
     .map((value) => value?.trim())
@@ -147,6 +161,86 @@ export default async function CommunityProfilePage({
 
       <FormSection title="Description" description="Community purpose and scope.">
         <p className="text-[13px] text-wire-200">{community.description}</p>
+      </FormSection>
+
+      <FormSection title="Posts" description="Recent updates from community members.">
+        {canCreatePost ? (
+          <form action={createCommunityPostAction} className="space-y-2">
+            <input type="hidden" name="communityId" value={community.id} />
+            <label className="block space-y-2">
+              <span className="wire-label">Share an update</span>
+              <textarea
+                name="content"
+                required
+                rows={4}
+                maxLength={1200}
+                placeholder="Share something useful for this community."
+                className="wire-textarea-field"
+              />
+            </label>
+            <div className="wire-action-row-single">
+              <SubmitButton
+                label="Post update"
+                pendingLabel="Posting..."
+                variant="primary"
+              />
+            </div>
+          </form>
+        ) : (
+          <p className="text-[13px] text-wire-300">Join this community to post updates.</p>
+        )}
+
+        <div className="border-t border-wire-700 pt-3">
+          {posts.length > 0 ? (
+            <div className="space-y-2">
+              {posts.map((post) => {
+                const authorAvatarPath = post.authorAvatarPath?.trim() || null;
+                const authorAvatarUrl = toPublicStorageUrl("avatars", authorAvatarPath);
+                const canDeletePost = post.authorId === user.id || isOwner;
+
+                return (
+                  <article
+                    key={post.id}
+                    className="rounded-xl border border-wire-700 bg-wire-800 px-3 py-2.5"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex min-w-0 items-center gap-2.5">
+                        {authorAvatarUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={authorAvatarUrl}
+                            alt={`${post.authorName} avatar`}
+                            className="h-8 w-8 shrink-0 rounded-full border border-wire-700 bg-wire-900 object-cover"
+                          />
+                        ) : (
+                          <div className="h-8 w-8 shrink-0 rounded-full border border-dashed border-wire-600 bg-wire-900" />
+                        )}
+                        <div className="min-w-0">
+                          <p className="truncate text-[13px] font-medium text-wire-100">{post.authorName}</p>
+                          <p className="wire-meta">{formatPostTime(post.createdAt)}</p>
+                        </div>
+                      </div>
+                      {canDeletePost ? (
+                        <form action={deleteCommunityPostAction}>
+                          <input type="hidden" name="communityId" value={community.id} />
+                          <input type="hidden" name="postId" value={post.id} />
+                          <button type="submit" className="wire-action-compact">
+                            Delete
+                          </button>
+                        </form>
+                      ) : null}
+                    </div>
+                    <p className="mt-2 whitespace-pre-wrap break-words text-[13px] leading-relaxed text-wire-200">
+                      {post.content}
+                    </p>
+                  </article>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-[13px] text-wire-300">No posts yet. Be the first to share an update.</p>
+          )}
+        </div>
       </FormSection>
 
       <FormSection title="Members" description="Joined members in this community.">

@@ -318,6 +318,32 @@ type DatabaseSchema = {
           updated_at?: string;
         };
       };
+      community_posts: {
+        Row: {
+          id: string;
+          community_id: string;
+          author_id: string;
+          content: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          community_id: string;
+          author_id: string;
+          content: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          community_id?: string;
+          author_id?: string;
+          content?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
       notifications: {
         Row: {
           id: string;

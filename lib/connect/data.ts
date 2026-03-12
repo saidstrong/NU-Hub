@@ -8,6 +8,7 @@ import type { Database } from "@/types/database";
 export type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
 export type CommunityRow = Database["public"]["Tables"]["communities"]["Row"];
 export type CommunityMemberRow = Database["public"]["Tables"]["community_members"]["Row"];
+export type CommunityPostRow = Database["public"]["Tables"]["community_posts"]["Row"];
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
 export type CommunityCardSource = Pick<
   CommunityRow,
@@ -79,6 +80,17 @@ export type CommunityDetail = {
   membership: CommunityMemberRow | null;
   ownerProfile: Pick<ProfileRow, "user_id" | "full_name" | "school" | "major" | "year_label"> | null;
   joinedMemberPreview: CommunityMemberProfilePreview[];
+  posts: CommunityPostListItem[];
+};
+
+export type CommunityPostListItem = {
+  id: string;
+  communityId: string;
+  authorId: string;
+  authorName: string;
+  authorAvatarPath: string | null;
+  content: string;
+  createdAt: string;
 };
 
 export type CommunityRequestItem = {
@@ -102,6 +114,7 @@ export type PaginatedCommunityResult<TItem> = {
 };
 
 const COMMUNITY_MEMBER_PREVIEW_LIMIT = 10;
+const COMMUNITY_POST_DETAIL_LIMIT = 25;
 
 function formatJoinType(joinType: CommunityRow["join_type"]): string {
   return joinType === "open" ? "Open" : "Request";
@@ -265,7 +278,7 @@ export async function getCommunityDetail(communityId: string): Promise<Community
 
   if (!community) return null;
 
-  const [memberCountMap, membershipResult, ownerResult, joinedMembersResult] = await Promise.all([
+  const [memberCountMap, membershipResult, ownerResult, joinedMembersResult, postsResult] = await Promise.all([
     getJoinedMemberCounts(supabase, [community.id]),
     supabase
       .from("community_members")
@@ -287,6 +300,15 @@ export async function getCommunityDetail(communityId: string): Promise<Community
       .eq("status", "joined")
       .order("created_at", { ascending: true })
       .limit(COMMUNITY_MEMBER_PREVIEW_LIMIT),
+    supabase
+      .from("community_posts")
+      .select(
+        "id, community_id, author_id, content, created_at, author_profile:profiles!community_posts_author_id_fkey(user_id, full_name, avatar_path)",
+      )
+      .eq("community_id", community.id)
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: false })
+      .limit(COMMUNITY_POST_DETAIL_LIMIT),
   ]);
 
   if (membershipResult.error) {
@@ -299,6 +321,10 @@ export async function getCommunityDetail(communityId: string): Promise<Community
 
   if (joinedMembersResult.error) {
     throw new Error("Failed to load community members.");
+  }
+
+  if (postsResult.error) {
+    throw new Error("Failed to load community posts.");
   }
 
   const joinedMemberPreview = (joinedMembersResult.data ?? [])
@@ -316,12 +342,29 @@ export async function getCommunityDetail(communityId: string): Promise<Community
     })
     .filter((member): member is CommunityMemberProfilePreview => Boolean(member.user_id));
 
+  const posts = (postsResult.data ?? []).map((row) => {
+    const authorProfile = Array.isArray(row.author_profile)
+      ? row.author_profile[0]
+      : row.author_profile;
+
+    return {
+      id: row.id,
+      communityId: row.community_id,
+      authorId: row.author_id,
+      authorName: fallbackText(authorProfile?.full_name, "NU student"),
+      authorAvatarPath: authorProfile?.avatar_path ?? null,
+      content: row.content,
+      createdAt: row.created_at,
+    };
+  });
+
   return {
     community,
     memberCount: memberCountMap.get(community.id) ?? 0,
     membership: membershipResult.data,
     ownerProfile: ownerResult.data,
     joinedMemberPreview,
+    posts,
   };
 }
 

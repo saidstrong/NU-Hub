@@ -20,6 +20,8 @@ import {
   createCommunitySchema,
   communityJoinSchema,
   communityRequestReviewSchema,
+  createCommunityPostSchema,
+  deleteCommunityPostSchema,
   updateCommunitySchema,
 } from "@/lib/validation/connect";
 import {
@@ -73,6 +75,16 @@ const COMMUNITY_DELETE_LIMIT = {
   windowMs: 30 * 60 * 1000,
 };
 
+const COMMUNITY_POST_CREATE_LIMIT = {
+  maxHits: 20,
+  windowMs: 10 * 60 * 1000,
+};
+
+const COMMUNITY_POST_DELETE_LIMIT = {
+  maxHits: 30,
+  windowMs: 10 * 60 * 1000,
+};
+
 function mapUpdateCommunityErrorMessage(errorCode?: string): string {
   if (errorCode === "42501") {
     return "You do not have permission to edit this community.";
@@ -87,6 +99,26 @@ function mapDeleteCommunityErrorMessage(errorCode?: string): string {
   }
 
   return "Failed to delete community.";
+}
+
+function mapCreateCommunityPostErrorMessage(errorCode?: string): string {
+  if (errorCode === "42501") {
+    return "Only joined members can post in this community.";
+  }
+
+  if (errorCode === "23514") {
+    return "Post cannot be empty.";
+  }
+
+  return "Failed to publish post.";
+}
+
+function mapDeleteCommunityPostErrorMessage(errorCode?: string): string {
+  if (errorCode === "42501") {
+    return "You do not have permission to delete this post.";
+  }
+
+  return "Failed to delete post.";
 }
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
@@ -749,4 +781,208 @@ export async function reviewCommunityRequestAction(formData: FormData) {
   const successMessage = parsed.data.decision === "approve" ? "Request approved." : "Request rejected.";
 
   redirectWithMessage(redirectPath, successMessage);
+}
+
+export async function createCommunityPostAction(formData: FormData) {
+  const requestContext = await getRequestContext({ action: "createCommunityPostAction" });
+  const parsed = createCommunityPostSchema.safeParse({
+    communityId: getStringValue(formData, "communityId"),
+    content: getStringValue(formData, "content"),
+  });
+
+  if (!parsed.success) {
+    redirectWithError("/connect/communities", parsed.error.issues[0]?.message ?? "Invalid post input.");
+  }
+
+  const communityPath = `/connect/communities/${parsed.data.communityId}`;
+  const user = await requireUser();
+  const createRateResult = consumeRateLimit(
+    `connect:create-community-post:${user.id}:${parsed.data.communityId}`,
+    COMMUNITY_POST_CREATE_LIMIT,
+  );
+
+  if (!createRateResult.allowed) {
+    logSecurityEvent("community_post_create_rate_limited", {
+      ...requestContext,
+      userId: user.id,
+      communityId: parsed.data.communityId,
+      retryAfterMs: createRateResult.retryAfterMs,
+    });
+    redirectWithError(communityPath, "Too many post attempts. Please wait and try again.");
+  }
+
+  const supabase = await createClient();
+  const { data: community, error: communityError } = await supabase
+    .from("communities")
+    .select("id")
+    .eq("id", parsed.data.communityId)
+    .maybeSingle();
+
+  if (communityError || !community) {
+    redirectWithError(communityPath, "Community not found.");
+  }
+
+  const { data: membership, error: membershipError } = await supabase
+    .from("community_members")
+    .select("status")
+    .eq("community_id", parsed.data.communityId)
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (membershipError) {
+    redirectWithError(communityPath, "Failed to verify community membership.");
+  }
+
+  if (membership?.status !== "joined") {
+    logSecurityEvent("community_post_create_membership_violation", {
+      ...requestContext,
+      userId: user.id,
+      communityId: parsed.data.communityId,
+      membershipStatus: membership?.status ?? null,
+    });
+    redirectWithError(communityPath, "Join this community to post updates.");
+  }
+
+  const { data: createdPost, error: insertError } = await supabase
+    .from("community_posts")
+    .insert({
+      community_id: parsed.data.communityId,
+      author_id: user.id,
+      content: parsed.data.content,
+    })
+    .select("id")
+    .maybeSingle();
+
+  if (insertError || !createdPost) {
+    logAppError(
+      "connect",
+      "community_post_create_failed",
+      createAppError("DATABASE_ERROR", insertError?.message ?? "Community post insert returned empty response.", {
+        safeMessage: mapCreateCommunityPostErrorMessage(insertError?.code),
+        metadata: {
+          code: insertError?.code ?? null,
+          userId: user.id,
+          communityId: parsed.data.communityId,
+        },
+      }),
+      requestContext,
+    );
+    redirectWithError(communityPath, mapCreateCommunityPostErrorMessage(insertError?.code));
+  }
+
+  revalidatePath(communityPath);
+  logInfo("connect", "community_post_created", {
+    ...requestContext,
+    userId: user.id,
+    communityId: parsed.data.communityId,
+    postId: createdPost.id,
+  });
+  redirectWithMessage(communityPath, "Post published.");
+}
+
+export async function deleteCommunityPostAction(formData: FormData) {
+  const requestContext = await getRequestContext({ action: "deleteCommunityPostAction" });
+  const parsed = deleteCommunityPostSchema.safeParse({
+    communityId: getStringValue(formData, "communityId"),
+    postId: getStringValue(formData, "postId"),
+  });
+
+  if (!parsed.success) {
+    redirectWithError("/connect/communities", parsed.error.issues[0]?.message ?? "Invalid post id.");
+  }
+
+  const communityPath = `/connect/communities/${parsed.data.communityId}`;
+  const user = await requireUser();
+  const deleteRateResult = consumeRateLimit(
+    `connect:delete-community-post:${user.id}:${parsed.data.communityId}`,
+    COMMUNITY_POST_DELETE_LIMIT,
+  );
+
+  if (!deleteRateResult.allowed) {
+    logSecurityEvent("community_post_delete_rate_limited", {
+      ...requestContext,
+      userId: user.id,
+      communityId: parsed.data.communityId,
+      postId: parsed.data.postId,
+      retryAfterMs: deleteRateResult.retryAfterMs,
+    });
+    redirectWithError(communityPath, "Too many delete attempts. Please wait and try again.");
+  }
+
+  const supabase = await createClient();
+  const { data: post, error: postError } = await supabase
+    .from("community_posts")
+    .select("id, author_id, community_id, community:communities!community_posts_community_id_fkey(created_by)")
+    .eq("id", parsed.data.postId)
+    .eq("community_id", parsed.data.communityId)
+    .maybeSingle();
+
+  if (postError) {
+    redirectWithError(communityPath, "Failed to load post.");
+  }
+
+  if (!post) {
+    redirectWithError(communityPath, "Post not found.");
+  }
+
+  const communityRelation = Array.isArray(post.community) ? post.community[0] : post.community;
+  const isPostCommunityOwner = communityRelation?.created_by === user.id;
+  const isAuthor = post.author_id === user.id;
+
+  if (!isAuthor && !isPostCommunityOwner) {
+    logSecurityEvent("community_post_delete_ownership_violation", {
+      ...requestContext,
+      userId: user.id,
+      communityId: parsed.data.communityId,
+      postId: parsed.data.postId,
+      authorId: post.author_id,
+      ownerId: communityRelation?.created_by ?? null,
+    });
+    redirectWithError(communityPath, "You can only delete your own posts.");
+  }
+
+  const { data: deletedPost, error: deleteError } = await supabase
+    .from("community_posts")
+    .delete()
+    .eq("id", parsed.data.postId)
+    .eq("community_id", parsed.data.communityId)
+    .select("id")
+    .maybeSingle();
+
+  if (deleteError) {
+    logAppError(
+      "connect",
+      "community_post_delete_failed",
+      createAppError("DATABASE_ERROR", deleteError.message, {
+        safeMessage: mapDeleteCommunityPostErrorMessage(deleteError.code),
+        metadata: {
+          code: deleteError.code,
+          userId: user.id,
+          communityId: parsed.data.communityId,
+          postId: parsed.data.postId,
+        },
+      }),
+      requestContext,
+    );
+    redirectWithError(communityPath, mapDeleteCommunityPostErrorMessage(deleteError.code));
+  }
+
+  if (!deletedPost) {
+    logWarn("connect", "community_post_delete_missing_row", {
+      ...requestContext,
+      userId: user.id,
+      communityId: parsed.data.communityId,
+      postId: parsed.data.postId,
+    });
+    redirectWithError(communityPath, "Post not found.");
+  }
+
+  revalidatePath(communityPath);
+  logInfo("connect", "community_post_deleted", {
+    ...requestContext,
+    userId: user.id,
+    communityId: parsed.data.communityId,
+    postId: parsed.data.postId,
+  });
+  redirectWithMessage(communityPath, "Post deleted.");
 }

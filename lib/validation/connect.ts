@@ -66,3 +66,17 @@ export const communityRequestReviewSchema = z.object({
   decision: z.enum(["approve", "reject"]),
   redirectTo: z.string().optional(),
 });
+
+export const createCommunityPostSchema = z.object({
+  communityId: z.string().uuid("Invalid community id."),
+  content: z
+    .string()
+    .trim()
+    .min(1, "Post cannot be empty.")
+    .max(1200, "Post is too long."),
+});
+
+export const deleteCommunityPostSchema = z.object({
+  communityId: z.string().uuid("Invalid community id."),
+  postId: z.string().uuid("Invalid post id."),
+});
