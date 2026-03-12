@@ -17,20 +17,16 @@ import { getCurrentProfile } from "@/lib/profile/data";
 import { consumeRateLimit } from "@/lib/security/rate-limit";
 import { createClient } from "@/lib/supabase/server";
 import {
-  LISTING_IMAGE_ALLOWED_MIME_TYPES,
-  LISTING_IMAGE_MAX_SIZE_BYTES,
+  isOwnerScopedListingImagePath,
   listingImageCountSchema,
-  listingImageMetaSchema,
   listingCreateSchema,
   listingMutationIdSchema,
+  parseUploadedListingImagePaths,
   listingUpdateSchema,
   toggleSavedListingSchema,
 } from "@/lib/validation/market";
 import {
-  createMediaFilename,
-  hasValidImageSignature,
   removeStorageObjectBestEffort,
-  validateImageFileMeta,
 } from "@/lib/validation/media";
 
 const LISTING_IMAGES_BUCKET = "listing-images";
@@ -50,12 +46,6 @@ const DELETE_LISTING_LIMIT = {
   maxHits: 8,
   windowMs: 30 * 60 * 1000,
 };
-
-function getFileValue(formData: FormData, key: string): File[] {
-  return formData
-    .getAll(key)
-    .filter((value): value is File => value instanceof File && value.size > 0);
-}
 
 function mapCreateListingErrorMessage(errorCode?: string): string {
   if (errorCode === "23503") {
@@ -184,55 +174,34 @@ async function createListingWithStatus(formData: FormData, status: "draft" | "ac
     redirectWithError("/market/post", "Too many listing submissions. Please wait and try again.");
   }
 
-  const imageFiles = getFileValue(formData, "images");
-  const parsedImageCount = listingImageCountSchema.safeParse(imageFiles.length);
+  const parsedUploadedImagePaths = parseUploadedListingImagePaths(
+    getStringValue(formData, "uploadedImagePaths"),
+  );
+
+  if (parsedUploadedImagePaths.error) {
+    redirectWithError("/market/post", parsedUploadedImagePaths.error);
+  }
+
+  const uploadedImagePaths = parsedUploadedImagePaths.paths;
+  const parsedImageCount = listingImageCountSchema.safeParse(uploadedImagePaths.length);
 
   if (!parsedImageCount.success) {
     logWarn("market", "listing_create_invalid_image_count", {
       ...requestContext,
       userId: user.id,
-      imageCount: imageFiles.length,
+      imageCount: uploadedImagePaths.length,
     });
     redirectWithError("/market/post", parsedImageCount.error.issues[0]?.message ?? "Invalid image count.");
   }
 
-  for (const file of imageFiles) {
-    const imageMetaError = validateImageFileMeta(file, LISTING_IMAGE_MAX_SIZE_BYTES);
-    if (imageMetaError) {
-      redirectWithError("/market/post", imageMetaError);
-    }
-
-    const parsedImageMeta = listingImageMetaSchema.safeParse({
-      name: file.name,
-      type: file.type,
-      size: file.size,
-    });
-
-    if (!parsedImageMeta.success) {
-      logWarn("market", "listing_create_invalid_image_meta", {
+  for (const storagePath of uploadedImagePaths) {
+    if (!isOwnerScopedListingImagePath(storagePath, user.id)) {
+      logSecurityEvent("listing_upload_invalid_storage_path", {
         ...requestContext,
         userId: user.id,
+        storagePath,
       });
-      redirectWithError("/market/post", parsedImageMeta.error.issues[0]?.message ?? "Invalid image input.");
-    }
-
-    if (!LISTING_IMAGE_ALLOWED_MIME_TYPES.includes(parsedImageMeta.data.type)) {
-      logSecurityEvent("listing_upload_disallowed_mime_type", {
-        ...requestContext,
-        userId: user.id,
-        mimeType: parsedImageMeta.data.type,
-      });
-      redirectWithError("/market/post", "Only JPEG, PNG, and WEBP images are allowed.");
-    }
-
-    const hasValidSignature = await hasValidImageSignature(file);
-    if (!hasValidSignature) {
-      logSecurityEvent("listing_upload_signature_mismatch", {
-        ...requestContext,
-        userId: user.id,
-        mimeType: file.type,
-      });
-      redirectWithError("/market/post", "Invalid image content. Upload JPEG, PNG, or WEBP files only.");
+      redirectWithError("/market/post", "Invalid uploaded image reference.");
     }
   }
 
@@ -275,6 +244,10 @@ async function createListingWithStatus(formData: FormData, status: "draft" | "ac
     .single();
 
   if (error || !created) {
+    for (const storagePath of uploadedImagePaths) {
+      await removeStorageObjectBestEffort(supabase, LISTING_IMAGES_BUCKET, storagePath);
+    }
+
     logAppError(
       "market",
       "listing_create_failed",
@@ -290,44 +263,14 @@ async function createListingWithStatus(formData: FormData, status: "draft" | "ac
     redirectWithError("/market/post", mapCreateListingErrorMessage(error?.code));
   }
 
-  if (imageFiles.length > 0) {
-    const uploadedPaths: string[] = [];
+  if (uploadedImagePaths.length > 0) {
     const listingImageRows: Array<{
       listing_id: string;
       storage_path: string;
       sort_order: number;
     }> = [];
 
-    for (const [index, file] of imageFiles.entries()) {
-      const storagePath = `${sellerId}/${created.id}/${createMediaFilename("listing", file)}`;
-      const { error: uploadError } = await supabase.storage
-        .from(LISTING_IMAGES_BUCKET)
-        .upload(storagePath, file, {
-          upsert: false,
-          contentType: file.type,
-        });
-
-      if (uploadError) {
-        logAppError(
-          "market",
-          "listing_upload_failed",
-          createAppError("STORAGE_ERROR", uploadError.message, {
-            safeMessage: "Failed to upload listing images. Listing was not created. Please try again.",
-            metadata: {
-              listingId: created.id,
-              userId: sellerId,
-            },
-          }),
-          requestContext,
-        );
-        await cleanupFailedListingWithImages(supabase, created.id, uploadedPaths);
-        redirectWithError(
-          "/market/post",
-          "Failed to upload listing images. Listing was not created. Please try again.",
-        );
-      }
-
-      uploadedPaths.push(storagePath);
+    for (const [index, storagePath] of uploadedImagePaths.entries()) {
       listingImageRows.push({
         listing_id: created.id,
         storage_path: storagePath,
@@ -353,7 +296,7 @@ async function createListingWithStatus(formData: FormData, status: "draft" | "ac
         }),
         requestContext,
       );
-      await cleanupFailedListingWithImages(supabase, created.id, uploadedPaths);
+      await cleanupFailedListingWithImages(supabase, created.id, uploadedImagePaths);
       redirectWithError(
         "/market/post",
         "Failed to save listing images. Listing was not created. Please try again.",
@@ -370,7 +313,7 @@ async function createListingWithStatus(formData: FormData, status: "draft" | "ac
     userId: sellerId,
     listingId: created.id,
     status,
-    imageCount: imageFiles.length,
+    imageCount: uploadedImagePaths.length,
   });
 
   if (status === "draft") {

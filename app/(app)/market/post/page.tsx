@@ -1,5 +1,5 @@
 import { FormSection } from "@/components/ui/FormSection";
-import { ImageUploadPreview } from "@/components/ui/ImageUploadPreview";
+import { DirectListingImageUpload } from "@/components/ui/DirectListingImageUpload";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import { TopBar } from "@/components/ui/TopBar";
 import { WireField, WireTextarea } from "@/components/ui/WireField";
@@ -30,19 +30,10 @@ export default async function MarketPostPage({ searchParams }: MarketPostPagePro
         </div>
       ) : null}
 
-      <form
-        action={publishListingAction}
-        className="flex flex-col gap-5"
-        encType="multipart/form-data"
-      >
+      <form action={publishListingAction} className="flex flex-col gap-5">
         <section className="wire-panel">
           <h3 className="mb-2 text-sm font-semibold text-wire-100">Upload images</h3>
-          <ImageUploadPreview
-            name="images"
-            label="Listing images (optional)"
-            helperText="Up to 4 images. JPEG, PNG, WEBP. Upload order sets cover image."
-            maxPreviewCount={4}
-          />
+          <DirectListingImageUpload />
         </section>
 
         <FormSection title="Item title">

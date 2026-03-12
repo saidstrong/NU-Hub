@@ -3,6 +3,7 @@ export const IMAGE_ALLOWED_MIME_TYPES = [
   "image/png",
   "image/webp",
 ] as const;
+export const IMAGE_ALLOWED_EXTENSIONS = ["jpg", "jpeg", "png", "webp"] as const;
 
 export const AVATAR_MAX_SIZE_BYTES = 5 * 1024 * 1024;
 export const EVENT_COVER_MAX_SIZE_BYTES = 10 * 1024 * 1024;

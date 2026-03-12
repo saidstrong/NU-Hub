@@ -1,5 +1,6 @@
 import { z } from "zod";
 import {
+  IMAGE_ALLOWED_EXTENSIONS,
   IMAGE_ALLOWED_MIME_TYPES,
   LISTING_IMAGE_MAX_SIZE_BYTES as SHARED_LISTING_IMAGE_MAX_SIZE_BYTES,
 } from "@/lib/validation/media";
@@ -7,6 +8,7 @@ import {
 export const LISTING_IMAGE_MAX_COUNT = 4;
 export const LISTING_IMAGE_MAX_SIZE_BYTES = SHARED_LISTING_IMAGE_MAX_SIZE_BYTES;
 export const LISTING_IMAGE_ALLOWED_MIME_TYPES = IMAGE_ALLOWED_MIME_TYPES;
+export const LISTING_IMAGE_ALLOWED_EXTENSIONS = IMAGE_ALLOWED_EXTENSIONS;
 
 const listingBaseSchema = z.object({
   title: z
@@ -75,6 +77,70 @@ export const listingImageMetaSchema = z.object({
     .min(1, "Image file is empty.")
     .max(LISTING_IMAGE_MAX_SIZE_BYTES, "Each image must be 10MB or less."),
 });
+
+const listingUploadedImagePathSchema = z
+  .string()
+  .trim()
+  .min(1, "Image path is required.")
+  .max(300, "Image path is too long.")
+  .refine((value) => !value.includes(".."), "Invalid image path.")
+  .refine((value) => !value.includes("\\"), "Invalid image path.")
+  .refine((value) => !value.includes("//"), "Invalid image path.")
+  .refine((value) => {
+    const extension = value.split(".").pop()?.toLowerCase() ?? "";
+    return LISTING_IMAGE_ALLOWED_EXTENSIONS.includes(
+      extension as (typeof LISTING_IMAGE_ALLOWED_EXTENSIONS)[number],
+    );
+  }, "Invalid image extension.");
+
+export const listingUploadedImagePathsSchema = z
+  .array(listingUploadedImagePathSchema)
+  .max(LISTING_IMAGE_MAX_COUNT, `You can upload up to ${LISTING_IMAGE_MAX_COUNT} images.`);
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+const UUID_PATTERN =
+  "[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}";
+
+export function isOwnerScopedListingImagePath(path: string, userId: string): boolean {
+  const pattern = new RegExp(
+    `^${escapeRegExp(userId)}/market/${UUID_PATTERN}/listing-${UUID_PATTERN}\\.(?:jpg|jpeg|png|webp)$`,
+    "i",
+  );
+
+  return pattern.test(path);
+}
+
+export function parseUploadedListingImagePaths(raw: string): {
+  paths: string[];
+  error: string | null;
+} {
+  if (!raw.trim()) {
+    return { paths: [], error: null };
+  }
+
+  let parsedJson: unknown;
+
+  try {
+    parsedJson = JSON.parse(raw);
+  } catch {
+    return { paths: [], error: "Invalid uploaded image paths." };
+  }
+
+  const parsed = listingUploadedImagePathsSchema.safeParse(parsedJson);
+
+  if (!parsed.success) {
+    return {
+      paths: [],
+      error: parsed.error.issues[0]?.message ?? "Invalid uploaded image paths.",
+    };
+  }
+
+  const dedupedPaths = Array.from(new Set(parsed.data));
+  return { paths: dedupedPaths, error: null };
+}
 
 export type ListingCreateInput = z.infer<typeof listingCreateSchema>;
 export type ListingUpdateInput = z.infer<typeof listingUpdateSchema>;
