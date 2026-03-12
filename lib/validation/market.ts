@@ -8,7 +8,7 @@ export const LISTING_IMAGE_ALLOWED_MIME_TYPES = [
   "image/webp",
 ] as const;
 
-export const listingCreateSchema = z.object({
+const listingBaseSchema = z.object({
   title: z
     .string()
     .trim()
@@ -39,12 +39,23 @@ export const listingCreateSchema = z.object({
     .trim()
     .min(2, "Pickup location is required.")
     .max(120, "Pickup location is too long."),
+});
+
+export const listingCreateSchema = listingBaseSchema.extend({
   status: z.enum(["draft", "active"]),
+});
+
+export const listingUpdateSchema = listingBaseSchema.extend({
+  status: z.enum(["draft", "active", "reserved", "sold", "archived"]),
 });
 
 export const toggleSavedListingSchema = z.object({
   listingId: z.string().uuid("Invalid listing id."),
   redirectTo: z.string().optional(),
+});
+
+export const listingMutationIdSchema = z.object({
+  listingId: z.string().uuid("Invalid listing id."),
 });
 
 export const listingImageCountSchema = z
@@ -66,3 +77,4 @@ export const listingImageMetaSchema = z.object({
 });
 
 export type ListingCreateInput = z.infer<typeof listingCreateSchema>;
+export type ListingUpdateInput = z.infer<typeof listingUpdateSchema>;

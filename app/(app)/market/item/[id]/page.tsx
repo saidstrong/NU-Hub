@@ -1,4 +1,5 @@
 /* eslint-disable @next/next/no-img-element */
+import Link from "next/link";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ShellButton } from "@/components/ui/ShellButton";
 import { TopBar } from "@/components/ui/TopBar";
@@ -141,10 +142,16 @@ export default async function MarketItemDetailPage({
             {isSaved ? "Unsave listing" : "Save listing"}
           </button>
         </form>
-        <ShellButton
-          label={isOwner ? "Manage listing" : "Message seller"}
-          variant="primary"
-        />
+        {isOwner ? (
+          <Link href={`/market/item/${listing.id}/edit`} className="wire-action-primary w-full">
+            Edit listing
+          </Link>
+        ) : (
+          <ShellButton
+            label="Message seller"
+            variant="primary"
+          />
+        )}
       </div>
     </main>
   );

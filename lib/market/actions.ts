@@ -5,9 +5,11 @@ import { redirect } from "next/navigation";
 import {
   getStringValue,
   redirectWithError,
+  redirectWithMessage,
   sanitizeInternalPath,
 } from "@/lib/actions/helpers";
 import { requireUser } from "@/lib/auth/session";
+import { isListingOwner } from "@/lib/market/ownership";
 import { getCurrentProfile } from "@/lib/profile/data";
 import { consumeRateLimit } from "@/lib/security/rate-limit";
 import { createClient } from "@/lib/supabase/server";
@@ -16,6 +18,8 @@ import {
   listingImageCountSchema,
   listingImageMetaSchema,
   listingCreateSchema,
+  listingMutationIdSchema,
+  listingUpdateSchema,
   toggleSavedListingSchema,
 } from "@/lib/validation/market";
 
@@ -27,6 +31,14 @@ const CREATE_LISTING_BURST_LIMIT = {
 const CREATE_LISTING_WINDOW_LIMIT = {
   maxHits: 12,
   windowMs: 15 * 60 * 1000,
+};
+const UPDATE_LISTING_LIMIT = {
+  maxHits: 30,
+  windowMs: 15 * 60 * 1000,
+};
+const DELETE_LISTING_LIMIT = {
+  maxHits: 8,
+  windowMs: 30 * 60 * 1000,
 };
 
 function getFileValue(formData: FormData, key: string): File[] {
@@ -41,6 +53,58 @@ function mapCreateListingErrorMessage(errorCode?: string): string {
   }
 
   return "Failed to create listing. Please try again.";
+}
+
+function mapUpdateListingErrorMessage(errorCode?: string): string {
+  if (errorCode === "42501") {
+    return "You do not have permission to edit this listing.";
+  }
+
+  return "Failed to update listing. Please try again.";
+}
+
+function mapDeleteListingErrorMessage(errorCode?: string): string {
+  if (errorCode === "42501") {
+    return "You do not have permission to delete this listing.";
+  }
+
+  return "Failed to delete listing. Please try again.";
+}
+
+type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
+
+function revalidateListingPaths(listingId: string) {
+  revalidatePath("/home");
+  revalidatePath("/market");
+  revalidatePath("/market/my-listings");
+  revalidatePath("/market/saved");
+  revalidatePath(`/market/item/${listingId}`);
+  revalidatePath(`/market/item/${listingId}/edit`);
+}
+
+async function verifyListingOwnershipOrRedirect(
+  supabase: SupabaseServerClient,
+  listingId: string,
+  userId: string,
+  onErrorPath: string,
+) {
+  const { data: listing, error } = await supabase
+    .from("listings")
+    .select("id, seller_id")
+    .eq("id", listingId)
+    .maybeSingle();
+
+  if (error) {
+    redirectWithError(onErrorPath, "Failed to load listing.");
+  }
+
+  if (!listing) {
+    redirectWithError(onErrorPath, "Listing not found.");
+  }
+
+  if (!isListingOwner(listing.seller_id, userId)) {
+    redirectWithError(onErrorPath, "You can only manage your own listings.");
+  }
 }
 
 function getImageExtension(file: File): string {
@@ -267,6 +331,110 @@ export async function saveDraftListingAction(formData: FormData) {
 
 export async function publishListingAction(formData: FormData) {
   await createListingWithStatus(formData, "active");
+}
+
+export async function updateListingAction(formData: FormData) {
+  const parsedListingId = listingMutationIdSchema.safeParse({
+    listingId: getStringValue(formData, "listingId"),
+  });
+
+  if (!parsedListingId.success) {
+    redirectWithError("/market", parsedListingId.error.issues[0]?.message ?? "Invalid listing id.");
+  }
+
+  const listingId = parsedListingId.data.listingId;
+  const editPath = `/market/item/${listingId}/edit`;
+  const parsed = listingUpdateSchema.safeParse({
+    title: getStringValue(formData, "title"),
+    category: getStringValue(formData, "category"),
+    priceKzt: getStringValue(formData, "priceKzt"),
+    condition: getStringValue(formData, "condition"),
+    description: getStringValue(formData, "description"),
+    pickupLocation: getStringValue(formData, "pickupLocation"),
+    status: getStringValue(formData, "status"),
+  });
+
+  if (!parsed.success) {
+    redirectWithError(editPath, parsed.error.issues[0]?.message ?? "Invalid listing input.");
+  }
+
+  const user = await requireUser();
+  const updateRateResult = consumeRateLimit(`market:update-listing:${user.id}`, UPDATE_LISTING_LIMIT);
+
+  if (!updateRateResult.allowed) {
+    redirectWithError(editPath, "Too many update attempts. Please wait and try again.");
+  }
+
+  const supabase = await createClient();
+  await verifyListingOwnershipOrRedirect(supabase, listingId, user.id, editPath);
+
+  const { data: updated, error: updateError } = await supabase
+    .from("listings")
+    .update({
+      title: parsed.data.title,
+      description: parsed.data.description,
+      price_kzt: parsed.data.priceKzt,
+      category: parsed.data.category,
+      condition: parsed.data.condition,
+      pickup_location: parsed.data.pickupLocation,
+      status: parsed.data.status,
+    })
+    .eq("id", listingId)
+    .eq("seller_id", user.id)
+    .select("id")
+    .maybeSingle();
+
+  if (updateError) {
+    redirectWithError(editPath, mapUpdateListingErrorMessage(updateError.code));
+  }
+
+  if (!updated) {
+    redirectWithError(editPath, "Listing not found.");
+  }
+
+  revalidateListingPaths(listingId);
+  redirectWithMessage(`/market/item/${listingId}`, "Listing updated");
+}
+
+export async function deleteListingAction(formData: FormData) {
+  const parsed = listingMutationIdSchema.safeParse({
+    listingId: getStringValue(formData, "listingId"),
+  });
+
+  if (!parsed.success) {
+    redirectWithError("/market", parsed.error.issues[0]?.message ?? "Invalid listing id.");
+  }
+
+  const listingId = parsed.data.listingId;
+  const editPath = `/market/item/${listingId}/edit`;
+  const user = await requireUser();
+  const deleteRateResult = consumeRateLimit(`market:delete-listing:${user.id}`, DELETE_LISTING_LIMIT);
+
+  if (!deleteRateResult.allowed) {
+    redirectWithError(editPath, "Too many delete attempts. Please wait and try again.");
+  }
+
+  const supabase = await createClient();
+  await verifyListingOwnershipOrRedirect(supabase, listingId, user.id, editPath);
+
+  const { data: deleted, error: deleteError } = await supabase
+    .from("listings")
+    .delete()
+    .eq("id", listingId)
+    .eq("seller_id", user.id)
+    .select("id")
+    .maybeSingle();
+
+  if (deleteError) {
+    redirectWithError(editPath, mapDeleteListingErrorMessage(deleteError.code));
+  }
+
+  if (!deleted) {
+    redirectWithError(editPath, "Listing not found.");
+  }
+
+  revalidateListingPaths(listingId);
+  redirectWithMessage("/market/my-listings", "Listing deleted");
 }
 
 export async function toggleSavedListingAction(formData: FormData) {

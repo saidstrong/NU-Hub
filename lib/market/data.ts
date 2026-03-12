@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { requireUser } from "@/lib/auth/session";
+import { isListingOwner } from "@/lib/market/ownership";
 import type { Database } from "@/types/database";
 
 export type ListingRow = Database["public"]["Tables"]["listings"]["Row"];
@@ -10,6 +11,10 @@ export type ListingCardSource = Pick<
   "id" | "title" | "price_kzt" | "category" | "condition" | "pickup_location" | "status"
 >;
 export type ListingWithCoverRow = ListingCardSource & { cover_image_url: string | null };
+export type ListingEditSource = Pick<
+  ListingRow,
+  "id" | "seller_id" | "title" | "description" | "price_kzt" | "category" | "condition" | "pickup_location" | "status"
+>;
 
 export type ListingSeller = Pick<
   Database["public"]["Tables"]["profiles"]["Row"],
@@ -30,6 +35,8 @@ export type ListingCardData = {
 const LISTING_IMAGES_BUCKET = "listing-images";
 const LISTING_CARD_SELECT =
   "id, title, price_kzt, category, condition, pickup_location, status";
+const LISTING_EDIT_SELECT =
+  "id, seller_id, title, description, price_kzt, category, condition, pickup_location, status";
 
 export function formatPriceKzt(priceKzt: number): string {
   return `${new Intl.NumberFormat("en-US").format(priceKzt)} KZT`;
@@ -246,6 +253,27 @@ export async function getSavedListings(): Promise<ListingWithCoverRow[]> {
     .filter((listing): listing is ListingWithCoverRow => Boolean(listing));
 }
 
+export async function getOwnedListingForEdit(listingId: string): Promise<ListingEditSource | null> {
+  const user = await requireUser();
+  const supabase = await createClient();
+
+  const { data: listing, error } = await supabase
+    .from("listings")
+    .select(LISTING_EDIT_SELECT)
+    .eq("id", listingId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error("Failed to load listing.");
+  }
+
+  if (!listing || !isListingOwner(listing.seller_id, user.id)) {
+    return null;
+  }
+
+  return listing;
+}
+
 export async function getListingDetail(listingId: string): Promise<{
   listing: ListingRow | null;
   seller: ListingSeller | null;
@@ -303,7 +331,7 @@ export async function getListingDetail(listingId: string): Promise<{
     listing,
     seller,
     isSaved: Boolean(savedRow),
-    isOwner: listing.seller_id === user.id,
+    isOwner: isListingOwner(listing.seller_id, user.id),
     imageUrls,
   };
 }
