@@ -1,3 +1,5 @@
+import { logSecurityEvent } from "@/lib/observability/logger";
+
 type RateLimitEntry = {
   hits: number;
   resetAt: number;
@@ -66,6 +68,14 @@ export function consumeRateLimit(
   }
 
   if (existing.hits >= maxHits) {
+    const keyNamespace = key.split(":").slice(0, 2).join(":") || "unknown";
+    logSecurityEvent("rate_limit_triggered", {
+      keyNamespace,
+      maxHits,
+      windowMs,
+      retryAfterMs: Math.max(0, existing.resetAt - now),
+    });
+
     return {
       allowed: false,
       retryAfterMs: Math.max(0, existing.resetAt - now),

@@ -10,6 +10,9 @@ import {
 } from "@/lib/actions/helpers";
 import { requireUser } from "@/lib/auth/session";
 import { isListingOwner } from "@/lib/market/ownership";
+import { createAppError } from "@/lib/observability/errors";
+import { logAppError, logInfo, logSecurityEvent, logWarn } from "@/lib/observability/logger";
+import { getRequestContext } from "@/lib/observability/request-context";
 import { getCurrentProfile } from "@/lib/profile/data";
 import { consumeRateLimit } from "@/lib/security/rate-limit";
 import { createClient } from "@/lib/supabase/server";
@@ -87,6 +90,7 @@ async function verifyListingOwnershipOrRedirect(
   listingId: string,
   userId: string,
   onErrorPath: string,
+  requestContext: Record<string, unknown>,
 ) {
   const { data: listing, error } = await supabase
     .from("listings")
@@ -103,6 +107,12 @@ async function verifyListingOwnershipOrRedirect(
   }
 
   if (!isListingOwner(listing.seller_id, userId)) {
+    logSecurityEvent("listing_ownership_violation", {
+      ...requestContext,
+      listingId,
+      ownerId: listing.seller_id,
+      actorId: userId,
+    });
     redirectWithError(onErrorPath, "You can only manage your own listings.");
   }
 }
@@ -177,6 +187,10 @@ async function cleanupFailedListingWithImages(
 }
 
 async function createListingWithStatus(formData: FormData, status: "draft" | "active") {
+  const requestContext = await getRequestContext({
+    action: "createListingWithStatus",
+    requestedStatus: status,
+  });
   const parsed = listingCreateSchema.safeParse({
     title: getStringValue(formData, "title"),
     category: getStringValue(formData, "category"),
@@ -202,6 +216,11 @@ async function createListingWithStatus(formData: FormData, status: "draft" | "ac
   );
 
   if (!burstRateResult.allowed || !windowRateResult.allowed) {
+    logSecurityEvent("listing_create_rate_limited", {
+      ...requestContext,
+      userId: user.id,
+      retryAfterMs: Math.max(burstRateResult.retryAfterMs, windowRateResult.retryAfterMs),
+    });
     redirectWithError("/market/post", "Too many listing submissions. Please wait and try again.");
   }
 
@@ -209,6 +228,11 @@ async function createListingWithStatus(formData: FormData, status: "draft" | "ac
   const parsedImageCount = listingImageCountSchema.safeParse(imageFiles.length);
 
   if (!parsedImageCount.success) {
+    logWarn("market", "listing_create_invalid_image_count", {
+      ...requestContext,
+      userId: user.id,
+      imageCount: imageFiles.length,
+    });
     redirectWithError("/market/post", parsedImageCount.error.issues[0]?.message ?? "Invalid image count.");
   }
 
@@ -220,15 +244,29 @@ async function createListingWithStatus(formData: FormData, status: "draft" | "ac
     });
 
     if (!parsedImageMeta.success) {
+      logWarn("market", "listing_create_invalid_image_meta", {
+        ...requestContext,
+        userId: user.id,
+      });
       redirectWithError("/market/post", parsedImageMeta.error.issues[0]?.message ?? "Invalid image input.");
     }
 
     if (!LISTING_IMAGE_ALLOWED_MIME_TYPES.includes(parsedImageMeta.data.type)) {
+      logSecurityEvent("listing_upload_disallowed_mime_type", {
+        ...requestContext,
+        userId: user.id,
+        mimeType: parsedImageMeta.data.type,
+      });
       redirectWithError("/market/post", "Only JPEG, PNG, and WEBP images are allowed.");
     }
 
     const hasValidSignature = await hasMatchingImageSignature(file);
     if (!hasValidSignature) {
+      logSecurityEvent("listing_upload_signature_mismatch", {
+        ...requestContext,
+        userId: user.id,
+        mimeType: file.type,
+      });
       redirectWithError("/market/post", "Invalid image content. Upload JPEG, PNG, or WEBP files only.");
     }
   }
@@ -238,7 +276,16 @@ async function createListingWithStatus(formData: FormData, status: "draft" | "ac
   try {
     const profile = await getCurrentProfile();
     sellerId = profile.user_id;
-  } catch {
+  } catch (error) {
+    logAppError(
+      "market",
+      "listing_create_profile_unavailable",
+      createAppError("AUTH_ERROR", "Unable to load seller profile before listing creation.", {
+        safeMessage: "Unable to load your profile. Please complete profile setup and try again.",
+        cause: error,
+      }),
+      requestContext,
+    );
     redirectWithError(
       "/market/post",
       "Unable to load your profile. Please complete profile setup and try again.",
@@ -263,6 +310,18 @@ async function createListingWithStatus(formData: FormData, status: "draft" | "ac
     .single();
 
   if (error || !created) {
+    logAppError(
+      "market",
+      "listing_create_failed",
+      createAppError("DATABASE_ERROR", error?.message ?? "Listing insert returned empty response.", {
+        safeMessage: mapCreateListingErrorMessage(error?.code),
+        metadata: {
+          code: error?.code ?? null,
+          userId: sellerId,
+        },
+      }),
+      requestContext,
+    );
     redirectWithError("/market/post", mapCreateListingErrorMessage(error?.code));
   }
 
@@ -285,6 +344,18 @@ async function createListingWithStatus(formData: FormData, status: "draft" | "ac
         });
 
       if (uploadError) {
+        logAppError(
+          "market",
+          "listing_upload_failed",
+          createAppError("STORAGE_ERROR", uploadError.message, {
+            safeMessage: "Failed to upload listing images. Listing was not created. Please try again.",
+            metadata: {
+              listingId: created.id,
+              userId: sellerId,
+            },
+          }),
+          requestContext,
+        );
         await cleanupFailedListingWithImages(supabase, created.id, uploadedPaths);
         redirectWithError(
           "/market/post",
@@ -305,6 +376,19 @@ async function createListingWithStatus(formData: FormData, status: "draft" | "ac
       .insert(listingImageRows);
 
     if (imageRowsError) {
+      logAppError(
+        "market",
+        "listing_image_rows_insert_failed",
+        createAppError("DATABASE_ERROR", imageRowsError.message, {
+          safeMessage: "Failed to save listing images. Listing was not created. Please try again.",
+          metadata: {
+            listingId: created.id,
+            userId: sellerId,
+            code: imageRowsError.code,
+          },
+        }),
+        requestContext,
+      );
       await cleanupFailedListingWithImages(supabase, created.id, uploadedPaths);
       redirectWithError(
         "/market/post",
@@ -317,6 +401,13 @@ async function createListingWithStatus(formData: FormData, status: "draft" | "ac
   revalidatePath("/market/my-listings");
   revalidatePath("/market/saved");
   revalidatePath(`/market/item/${created.id}`);
+  logInfo("market", "listing_created", {
+    ...requestContext,
+    userId: sellerId,
+    listingId: created.id,
+    status,
+    imageCount: imageFiles.length,
+  });
 
   if (status === "draft") {
     redirect("/market/my-listings?status=active&message=Draft%20saved");
@@ -334,6 +425,7 @@ export async function publishListingAction(formData: FormData) {
 }
 
 export async function updateListingAction(formData: FormData) {
+  const requestContext = await getRequestContext({ action: "updateListingAction" });
   const parsedListingId = listingMutationIdSchema.safeParse({
     listingId: getStringValue(formData, "listingId"),
   });
@@ -362,11 +454,17 @@ export async function updateListingAction(formData: FormData) {
   const updateRateResult = consumeRateLimit(`market:update-listing:${user.id}`, UPDATE_LISTING_LIMIT);
 
   if (!updateRateResult.allowed) {
+    logSecurityEvent("listing_update_rate_limited", {
+      ...requestContext,
+      userId: user.id,
+      listingId,
+      retryAfterMs: updateRateResult.retryAfterMs,
+    });
     redirectWithError(editPath, "Too many update attempts. Please wait and try again.");
   }
 
   const supabase = await createClient();
-  await verifyListingOwnershipOrRedirect(supabase, listingId, user.id, editPath);
+  await verifyListingOwnershipOrRedirect(supabase, listingId, user.id, editPath, requestContext);
 
   const { data: updated, error: updateError } = await supabase
     .from("listings")
@@ -385,18 +483,43 @@ export async function updateListingAction(formData: FormData) {
     .maybeSingle();
 
   if (updateError) {
+    logAppError(
+      "market",
+      "listing_update_failed",
+      createAppError("DATABASE_ERROR", updateError.message, {
+        safeMessage: mapUpdateListingErrorMessage(updateError.code),
+        metadata: {
+          code: updateError.code,
+          userId: user.id,
+          listingId,
+        },
+      }),
+      requestContext,
+    );
     redirectWithError(editPath, mapUpdateListingErrorMessage(updateError.code));
   }
 
   if (!updated) {
+    logWarn("market", "listing_update_missing_row", {
+      ...requestContext,
+      userId: user.id,
+      listingId,
+    });
     redirectWithError(editPath, "Listing not found.");
   }
 
   revalidateListingPaths(listingId);
+  logInfo("market", "listing_updated", {
+    ...requestContext,
+    userId: user.id,
+    listingId,
+    status: parsed.data.status,
+  });
   redirectWithMessage(`/market/item/${listingId}`, "Listing updated");
 }
 
 export async function deleteListingAction(formData: FormData) {
+  const requestContext = await getRequestContext({ action: "deleteListingAction" });
   const parsed = listingMutationIdSchema.safeParse({
     listingId: getStringValue(formData, "listingId"),
   });
@@ -411,11 +534,17 @@ export async function deleteListingAction(formData: FormData) {
   const deleteRateResult = consumeRateLimit(`market:delete-listing:${user.id}`, DELETE_LISTING_LIMIT);
 
   if (!deleteRateResult.allowed) {
+    logSecurityEvent("listing_delete_rate_limited", {
+      ...requestContext,
+      userId: user.id,
+      listingId,
+      retryAfterMs: deleteRateResult.retryAfterMs,
+    });
     redirectWithError(editPath, "Too many delete attempts. Please wait and try again.");
   }
 
   const supabase = await createClient();
-  await verifyListingOwnershipOrRedirect(supabase, listingId, user.id, editPath);
+  await verifyListingOwnershipOrRedirect(supabase, listingId, user.id, editPath, requestContext);
 
   const { data: deleted, error: deleteError } = await supabase
     .from("listings")
@@ -426,14 +555,37 @@ export async function deleteListingAction(formData: FormData) {
     .maybeSingle();
 
   if (deleteError) {
+    logAppError(
+      "market",
+      "listing_delete_failed",
+      createAppError("DATABASE_ERROR", deleteError.message, {
+        safeMessage: mapDeleteListingErrorMessage(deleteError.code),
+        metadata: {
+          code: deleteError.code,
+          userId: user.id,
+          listingId,
+        },
+      }),
+      requestContext,
+    );
     redirectWithError(editPath, mapDeleteListingErrorMessage(deleteError.code));
   }
 
   if (!deleted) {
+    logWarn("market", "listing_delete_missing_row", {
+      ...requestContext,
+      userId: user.id,
+      listingId,
+    });
     redirectWithError(editPath, "Listing not found.");
   }
 
   revalidateListingPaths(listingId);
+  logInfo("market", "listing_deleted", {
+    ...requestContext,
+    userId: user.id,
+    listingId,
+  });
   redirectWithMessage("/market/my-listings", "Listing deleted");
 }
 

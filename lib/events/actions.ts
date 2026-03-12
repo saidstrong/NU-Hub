@@ -10,6 +10,9 @@ import {
 } from "@/lib/actions/helpers";
 import { requireUser } from "@/lib/auth/session";
 import { isEventOwner } from "@/lib/events/ownership";
+import { createAppError } from "@/lib/observability/errors";
+import { logAppError, logInfo, logSecurityEvent, logWarn } from "@/lib/observability/logger";
+import { getRequestContext } from "@/lib/observability/request-context";
 import { writeInAppNotification } from "@/lib/notifications/write";
 import { consumeRateLimit } from "@/lib/security/rate-limit";
 import { createClient } from "@/lib/supabase/server";
@@ -97,6 +100,7 @@ async function verifyEventOwnershipOrRedirect(
   eventId: string,
   userId: string,
   onErrorPath: string,
+  requestContext: Record<string, unknown>,
 ) {
   const { data: event, error } = await supabase
     .from("events")
@@ -113,11 +117,18 @@ async function verifyEventOwnershipOrRedirect(
   }
 
   if (!isEventOwner(event.created_by, userId)) {
+    logSecurityEvent("event_ownership_violation", {
+      ...requestContext,
+      eventId,
+      ownerId: event.created_by,
+      actorId: userId,
+    });
     redirectWithError(onErrorPath, "You can only manage your own events.");
   }
 }
 
 export async function createEventAction(formData: FormData) {
+  const requestContext = await getRequestContext({ action: "createEventAction" });
   const parsed = eventCreateSchema.safeParse({
     title: getStringValue(formData, "title"),
     description: getStringValue(formData, "description"),
@@ -143,6 +154,11 @@ export async function createEventAction(formData: FormData) {
   );
 
   if (!burstRateResult.allowed || !windowRateResult.allowed) {
+    logSecurityEvent("event_create_rate_limited", {
+      ...requestContext,
+      userId: user.id,
+      retryAfterMs: Math.max(burstRateResult.retryAfterMs, windowRateResult.retryAfterMs),
+    });
     redirectWithError("/events/create", "Too many event submissions. Please wait and try again.");
   }
 
@@ -152,6 +168,10 @@ export async function createEventAction(formData: FormData) {
     : null;
 
   if (!startsAt || (parsed.data.endsAtInput && !endsAt)) {
+    logWarn("events", "event_create_invalid_schedule", {
+      ...requestContext,
+      userId: user.id,
+    });
     redirectWithError("/events/create", "Invalid event schedule.");
   }
 
@@ -172,16 +192,35 @@ export async function createEventAction(formData: FormData) {
     .single();
 
   if (error || !created) {
+    logAppError(
+      "events",
+      "event_create_failed",
+      createAppError("DATABASE_ERROR", error?.message ?? "Event insert returned empty response.", {
+        safeMessage: mapCreateEventErrorMessage(error?.code),
+        metadata: {
+          code: error?.code ?? null,
+          userId: user.id,
+        },
+      }),
+      requestContext,
+    );
     redirectWithError("/events/create", mapCreateEventErrorMessage(error?.code));
   }
 
   revalidateEventPaths(created.id);
 
   const successMessage = created.is_published ? "Event published." : "Draft saved.";
+  logInfo("events", "event_created", {
+    ...requestContext,
+    userId: user.id,
+    eventId: created.id,
+    isPublished: created.is_published,
+  });
   redirectWithMessage(`/events/${created.id}`, successMessage);
 }
 
 export async function updateEventAction(formData: FormData) {
+  const requestContext = await getRequestContext({ action: "updateEventAction" });
   const parsedEventId = eventMutationIdSchema.safeParse({
     eventId: getStringValue(formData, "eventId"),
   });
@@ -210,6 +249,12 @@ export async function updateEventAction(formData: FormData) {
   const updateRateResult = consumeRateLimit(`events:update:${user.id}`, UPDATE_EVENT_LIMIT);
 
   if (!updateRateResult.allowed) {
+    logSecurityEvent("event_update_rate_limited", {
+      ...requestContext,
+      userId: user.id,
+      eventId,
+      retryAfterMs: updateRateResult.retryAfterMs,
+    });
     redirectWithError(editPath, "Too many update attempts. Please wait and try again.");
   }
 
@@ -219,11 +264,16 @@ export async function updateEventAction(formData: FormData) {
     : null;
 
   if (!startsAt || (parsed.data.endsAtInput && !endsAt)) {
+    logWarn("events", "event_update_invalid_schedule", {
+      ...requestContext,
+      userId: user.id,
+      eventId,
+    });
     redirectWithError(editPath, "Invalid event schedule.");
   }
 
   const supabase = await createClient();
-  await verifyEventOwnershipOrRedirect(supabase, eventId, user.id, editPath);
+  await verifyEventOwnershipOrRedirect(supabase, eventId, user.id, editPath, requestContext);
 
   const { data: updated, error: updateError } = await supabase
     .from("events")
@@ -242,18 +292,42 @@ export async function updateEventAction(formData: FormData) {
     .maybeSingle();
 
   if (updateError) {
+    logAppError(
+      "events",
+      "event_update_failed",
+      createAppError("DATABASE_ERROR", updateError.message, {
+        safeMessage: mapUpdateEventErrorMessage(updateError.code),
+        metadata: {
+          code: updateError.code,
+          userId: user.id,
+          eventId,
+        },
+      }),
+      requestContext,
+    );
     redirectWithError(editPath, mapUpdateEventErrorMessage(updateError.code));
   }
 
   if (!updated) {
+    logWarn("events", "event_update_missing_row", {
+      ...requestContext,
+      userId: user.id,
+      eventId,
+    });
     redirectWithError(editPath, "Event not found.");
   }
 
   revalidateEventPaths(eventId);
+  logInfo("events", "event_updated", {
+    ...requestContext,
+    userId: user.id,
+    eventId,
+  });
   redirectWithMessage(`/events/${eventId}`, "Event updated");
 }
 
 export async function deleteEventAction(formData: FormData) {
+  const requestContext = await getRequestContext({ action: "deleteEventAction" });
   const parsed = eventMutationIdSchema.safeParse({
     eventId: getStringValue(formData, "eventId"),
   });
@@ -268,11 +342,17 @@ export async function deleteEventAction(formData: FormData) {
   const deleteRateResult = consumeRateLimit(`events:delete:${user.id}`, DELETE_EVENT_LIMIT);
 
   if (!deleteRateResult.allowed) {
+    logSecurityEvent("event_delete_rate_limited", {
+      ...requestContext,
+      userId: user.id,
+      eventId,
+      retryAfterMs: deleteRateResult.retryAfterMs,
+    });
     redirectWithError(editPath, "Too many delete attempts. Please wait and try again.");
   }
 
   const supabase = await createClient();
-  await verifyEventOwnershipOrRedirect(supabase, eventId, user.id, editPath);
+  await verifyEventOwnershipOrRedirect(supabase, eventId, user.id, editPath, requestContext);
 
   const { data: deleted, error: deleteError } = await supabase
     .from("events")
@@ -283,14 +363,37 @@ export async function deleteEventAction(formData: FormData) {
     .maybeSingle();
 
   if (deleteError) {
+    logAppError(
+      "events",
+      "event_delete_failed",
+      createAppError("DATABASE_ERROR", deleteError.message, {
+        safeMessage: mapDeleteEventErrorMessage(deleteError.code),
+        metadata: {
+          code: deleteError.code,
+          userId: user.id,
+          eventId,
+        },
+      }),
+      requestContext,
+    );
     redirectWithError(editPath, mapDeleteEventErrorMessage(deleteError.code));
   }
 
   if (!deleted) {
+    logWarn("events", "event_delete_missing_row", {
+      ...requestContext,
+      userId: user.id,
+      eventId,
+    });
     redirectWithError(editPath, "Event not found.");
   }
 
   revalidateEventPaths(eventId);
+  logInfo("events", "event_deleted", {
+    ...requestContext,
+    userId: user.id,
+    eventId,
+  });
   redirectWithMessage("/events/my-events", "Event deleted");
 }
 

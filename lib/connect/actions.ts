@@ -9,6 +9,9 @@ import {
 } from "@/lib/actions/helpers";
 import { requireUser } from "@/lib/auth/session";
 import { isCommunityOwner } from "@/lib/connect/ownership";
+import { createAppError } from "@/lib/observability/errors";
+import { logAppError, logInfo, logSecurityEvent, logWarn } from "@/lib/observability/logger";
+import { getRequestContext } from "@/lib/observability/request-context";
 import { writeInAppNotification } from "@/lib/notifications/write";
 import { consumeRateLimit } from "@/lib/security/rate-limit";
 import { createClient } from "@/lib/supabase/server";
@@ -90,6 +93,7 @@ async function verifyCommunityOwnershipOrRedirect(
   communityId: string,
   userId: string,
   onErrorPath: string,
+  requestContext: Record<string, unknown>,
 ) {
   const { data: community, error } = await supabase
     .from("communities")
@@ -106,11 +110,18 @@ async function verifyCommunityOwnershipOrRedirect(
   }
 
   if (!isCommunityOwner(community.created_by, userId)) {
+    logSecurityEvent("community_ownership_violation", {
+      ...requestContext,
+      communityId,
+      ownerId: community.created_by,
+      actorId: userId,
+    });
     redirectWithError(onErrorPath, "You can only manage your own community.");
   }
 }
 
 export async function createCommunityAction(formData: FormData) {
+  const requestContext = await getRequestContext({ action: "createCommunityAction" });
   const parsed = createCommunitySchema.safeParse({
     name: getStringValue(formData, "name"),
     description: getStringValue(formData, "description"),
@@ -137,6 +148,11 @@ export async function createCommunityAction(formData: FormData) {
   );
 
   if (!burstRateResult.allowed || !windowRateResult.allowed) {
+    logSecurityEvent("community_create_rate_limited", {
+      ...requestContext,
+      userId: user.id,
+      retryAfterMs: Math.max(burstRateResult.retryAfterMs, windowRateResult.retryAfterMs),
+    });
     redirectWithError("/connect/communities/create", "Too many create attempts. Please wait and try again.");
   }
 
@@ -156,6 +172,18 @@ export async function createCommunityAction(formData: FormData) {
     .single();
 
   if (communityInsertError || !community) {
+    logAppError(
+      "connect",
+      "community_create_failed",
+      createAppError("DATABASE_ERROR", communityInsertError?.message ?? "Community insert returned empty response.", {
+        safeMessage: "Failed to create community.",
+        metadata: {
+          code: communityInsertError?.code ?? null,
+          userId: user.id,
+        },
+      }),
+      requestContext,
+    );
     redirectWithError("/connect/communities/create", "Failed to create community.");
   }
 
@@ -169,6 +197,19 @@ export async function createCommunityAction(formData: FormData) {
     });
 
   if (memberInsertError) {
+    logAppError(
+      "connect",
+      "community_owner_membership_init_failed",
+      createAppError("DATABASE_ERROR", memberInsertError.message, {
+        safeMessage: "Failed to initialize community owner access.",
+        metadata: {
+          code: memberInsertError.code,
+          communityId: community.id,
+          userId: user.id,
+        },
+      }),
+      requestContext,
+    );
     await deleteCommunityOnCreateFailure(supabase, community.id);
     redirectWithError("/connect/communities/create", "Failed to initialize community owner access.");
   }
@@ -183,6 +224,19 @@ export async function createCommunityAction(formData: FormData) {
     .eq("user_id", user.id);
 
   if (ownerUpdateError) {
+    logAppError(
+      "connect",
+      "community_owner_membership_finalize_failed",
+      createAppError("DATABASE_ERROR", ownerUpdateError.message, {
+        safeMessage: "Failed to finalize community owner access.",
+        metadata: {
+          code: ownerUpdateError.code,
+          communityId: community.id,
+          userId: user.id,
+        },
+      }),
+      requestContext,
+    );
     await deleteCommunityOnCreateFailure(supabase, community.id);
     redirectWithError("/connect/communities/create", "Failed to finalize community owner access.");
   }
@@ -192,10 +246,16 @@ export async function createCommunityAction(formData: FormData) {
   revalidatePath("/connect/my-communities");
   revalidatePath(`/connect/communities/${community.id}`);
 
+  logInfo("connect", "community_created", {
+    ...requestContext,
+    userId: user.id,
+    communityId: community.id,
+  });
   redirectWithMessage(`/connect/communities/${community.id}`, "Community created.");
 }
 
 export async function updateCommunityAction(formData: FormData) {
+  const requestContext = await getRequestContext({ action: "updateCommunityAction" });
   const parsedCommunityId = communityMutationIdSchema.safeParse({
     communityId: getStringValue(formData, "communityId"),
   });
@@ -225,11 +285,17 @@ export async function updateCommunityAction(formData: FormData) {
   const updateRateResult = consumeRateLimit(`connect:update-community:${user.id}`, COMMUNITY_UPDATE_LIMIT);
 
   if (!updateRateResult.allowed) {
+    logSecurityEvent("community_update_rate_limited", {
+      ...requestContext,
+      userId: user.id,
+      communityId,
+      retryAfterMs: updateRateResult.retryAfterMs,
+    });
     redirectWithError(editPath, "Too many update attempts. Please wait and try again.");
   }
 
   const supabase = await createClient();
-  await verifyCommunityOwnershipOrRedirect(supabase, communityId, user.id, editPath);
+  await verifyCommunityOwnershipOrRedirect(supabase, communityId, user.id, editPath, requestContext);
 
   const { data: updated, error: updateError } = await supabase
     .from("communities")
@@ -246,18 +312,42 @@ export async function updateCommunityAction(formData: FormData) {
     .maybeSingle();
 
   if (updateError) {
+    logAppError(
+      "connect",
+      "community_update_failed",
+      createAppError("DATABASE_ERROR", updateError.message, {
+        safeMessage: mapUpdateCommunityErrorMessage(updateError.code),
+        metadata: {
+          code: updateError.code,
+          userId: user.id,
+          communityId,
+        },
+      }),
+      requestContext,
+    );
     redirectWithError(editPath, mapUpdateCommunityErrorMessage(updateError.code));
   }
 
   if (!updated) {
+    logWarn("connect", "community_update_missing_row", {
+      ...requestContext,
+      userId: user.id,
+      communityId,
+    });
     redirectWithError(editPath, "Community not found.");
   }
 
   revalidateCommunityPaths(communityId);
+  logInfo("connect", "community_updated", {
+    ...requestContext,
+    userId: user.id,
+    communityId,
+  });
   redirectWithMessage(`/connect/communities/${communityId}`, "Community updated");
 }
 
 export async function deleteCommunityAction(formData: FormData) {
+  const requestContext = await getRequestContext({ action: "deleteCommunityAction" });
   const parsed = communityMutationIdSchema.safeParse({
     communityId: getStringValue(formData, "communityId"),
   });
@@ -272,11 +362,17 @@ export async function deleteCommunityAction(formData: FormData) {
   const deleteRateResult = consumeRateLimit(`connect:delete-community:${user.id}`, COMMUNITY_DELETE_LIMIT);
 
   if (!deleteRateResult.allowed) {
+    logSecurityEvent("community_delete_rate_limited", {
+      ...requestContext,
+      userId: user.id,
+      communityId,
+      retryAfterMs: deleteRateResult.retryAfterMs,
+    });
     redirectWithError(editPath, "Too many delete attempts. Please wait and try again.");
   }
 
   const supabase = await createClient();
-  await verifyCommunityOwnershipOrRedirect(supabase, communityId, user.id, editPath);
+  await verifyCommunityOwnershipOrRedirect(supabase, communityId, user.id, editPath, requestContext);
 
   const { data: deleted, error: deleteError } = await supabase
     .from("communities")
@@ -287,14 +383,37 @@ export async function deleteCommunityAction(formData: FormData) {
     .maybeSingle();
 
   if (deleteError) {
+    logAppError(
+      "connect",
+      "community_delete_failed",
+      createAppError("DATABASE_ERROR", deleteError.message, {
+        safeMessage: mapDeleteCommunityErrorMessage(deleteError.code),
+        metadata: {
+          code: deleteError.code,
+          userId: user.id,
+          communityId,
+        },
+      }),
+      requestContext,
+    );
     redirectWithError(editPath, mapDeleteCommunityErrorMessage(deleteError.code));
   }
 
   if (!deleted) {
+    logWarn("connect", "community_delete_missing_row", {
+      ...requestContext,
+      userId: user.id,
+      communityId,
+    });
     redirectWithError(editPath, "Community not found.");
   }
 
   revalidateCommunityPaths(communityId);
+  logInfo("connect", "community_deleted", {
+    ...requestContext,
+    userId: user.id,
+    communityId,
+  });
   redirectWithMessage("/connect/my-communities", "Community deleted");
 }
 
