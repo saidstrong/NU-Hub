@@ -1,4 +1,5 @@
 import type { NextRequest } from "next/server";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import {
   buildUploadReconciliationReport,
   cleanupReadNotifications,
@@ -7,7 +8,7 @@ import {
 } from "@/lib/maintenance/cleanup";
 import { getDurationMs, logError, logInfo } from "@/lib/observability/logger";
 import { getRequestContext } from "@/lib/observability/request-context";
-import { createClient } from "@/lib/supabase/server";
+import type { Database } from "@/types/database";
 
 function parseBooleanQueryParam(value: string | null): boolean | null {
   if (!value) return null;
@@ -31,6 +32,22 @@ function isAuthorized(request: NextRequest): boolean {
   if (!authHeader) return false;
 
   return authHeader === `Bearer ${cronSecret}`;
+}
+
+function createServiceRoleClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!url || !serviceRoleKey) {
+    throw new Error("Missing Supabase service role configuration.");
+  }
+
+  return createSupabaseClient<Database>(url, serviceRoleKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  });
 }
 
 export async function GET(request: NextRequest) {
@@ -105,7 +122,7 @@ export async function GET(request: NextRequest) {
   });
 
   try {
-    const supabase = await createClient();
+    const supabase = createServiceRoleClient();
     const notifications = await cleanupReadNotifications(options, supabase);
     const drafts = await cleanupStaleDrafts(options, supabase);
     const conversations = await cleanupStaleEmptyConversations(options, supabase);
