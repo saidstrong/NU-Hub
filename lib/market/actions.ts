@@ -20,7 +20,7 @@ import {
 } from "@/lib/observability/logger";
 import { getRequestContext } from "@/lib/observability/request-context";
 import { getCurrentProfile } from "@/lib/profile/data";
-import { consumeRateLimit } from "@/lib/security/rate-limit";
+import { consumeDistributedRateLimit, consumeRateLimit } from "@/lib/security/rate-limit";
 import { createClient } from "@/lib/supabase/server";
 import {
   isOwnerScopedListingImagePath,
@@ -72,6 +72,12 @@ const SEND_MESSAGE_BURST_LIMIT = {
 };
 // Best-effort only in serverless: this in-memory limiter is instance-local.
 const ACTION_SLOW_THRESHOLD_MS = 250;
+
+function getRequestIdFromContext(context: Record<string, unknown>): string {
+  return typeof context.requestId === "string" && context.requestId.length > 0
+    ? context.requestId
+    : "unknown";
+}
 
 function mapCreateListingErrorMessage(errorCode?: string): string {
   if (errorCode === "23503") {
@@ -592,11 +598,27 @@ export async function startListingConversationAction(formData: FormData) {
   const listingPath = `/market/item/${parsed.data.listingId}`;
   const redirectPath = sanitizeInternalPath(parsed.data.redirectTo, listingPath);
   const user = await requireUser();
-  const burstRateResult = consumeRateLimit(
+  const requestId = getRequestIdFromContext(requestContext);
+  const burstRateResult = await consumeDistributedRateLimit(
     `market:start-conversation:burst:${user.id}:${parsed.data.listingId}`,
     START_CONVERSATION_BURST_LIMIT,
+    {
+      action: "startListingConversationAction",
+      userId: user.id,
+      targetId: parsed.data.listingId,
+      requestId,
+    },
   );
-  const rateResult = consumeRateLimit(`market:start-conversation:${user.id}`, START_CONVERSATION_LIMIT);
+  const rateResult = await consumeDistributedRateLimit(
+    `market:start-conversation:${user.id}`,
+    START_CONVERSATION_LIMIT,
+    {
+      action: "startListingConversationAction",
+      userId: user.id,
+      targetId: parsed.data.listingId,
+      requestId,
+    },
+  );
 
   if (!burstRateResult.allowed || !rateResult.allowed) {
     logSecurityEvent("market_start_conversation_rate_limited", {
@@ -725,11 +747,27 @@ export async function sendMarketplaceMessageAction(formData: FormData) {
   const conversationPath = `/market/messages/${parsed.data.conversationId}`;
   const redirectPath = sanitizeInternalPath(parsed.data.redirectTo, conversationPath);
   const user = await requireUser();
-  const burstRateResult = consumeRateLimit(
+  const requestId = getRequestIdFromContext(requestContext);
+  const burstRateResult = await consumeDistributedRateLimit(
     `market:send-message:burst:${user.id}:${parsed.data.conversationId}`,
     SEND_MESSAGE_BURST_LIMIT,
+    {
+      action: "sendMarketplaceMessageAction",
+      userId: user.id,
+      targetId: parsed.data.conversationId,
+      requestId,
+    },
   );
-  const rateResult = consumeRateLimit(`market:send-message:${user.id}`, SEND_MESSAGE_LIMIT);
+  const rateResult = await consumeDistributedRateLimit(
+    `market:send-message:${user.id}`,
+    SEND_MESSAGE_LIMIT,
+    {
+      action: "sendMarketplaceMessageAction",
+      userId: user.id,
+      targetId: parsed.data.conversationId,
+      requestId,
+    },
+  );
 
   if (!burstRateResult.allowed || !rateResult.allowed) {
     logSecurityEvent("market_send_message_rate_limited", {

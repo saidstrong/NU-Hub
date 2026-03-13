@@ -20,7 +20,7 @@ import {
 } from "@/lib/observability/logger";
 import { getRequestContext } from "@/lib/observability/request-context";
 import { writeInAppNotification } from "@/lib/notifications/write";
-import { consumeRateLimit } from "@/lib/security/rate-limit";
+import { consumeDistributedRateLimit, consumeRateLimit } from "@/lib/security/rate-limit";
 import { createClient } from "@/lib/supabase/server";
 import {
   acceptFriendRequestSchema,
@@ -132,6 +132,12 @@ const FRIEND_MESSAGE_SEND_BURST_LIMIT = {
 };
 // Best-effort only in serverless: this in-memory limiter is instance-local.
 const ACTION_SLOW_THRESHOLD_MS = 250;
+
+function getRequestIdFromContext(context: Record<string, unknown>): string {
+  return typeof context.requestId === "string" && context.requestId.length > 0
+    ? context.requestId
+    : "unknown";
+}
 
 function mapUpdateCommunityErrorMessage(errorCode?: string): string {
   if (errorCode === "42501") {
@@ -1213,6 +1219,7 @@ export async function cancelFriendRequestAction(formData: FormData) {
 }
 
 export async function startFriendConversationAction(formData: FormData) {
+  const requestContext = await getRequestContext({ action: "startFriendConversationAction" });
   const parsed = startFriendConversationSchema.safeParse({
     friendId: getStringValue(formData, "friendId"),
     redirectTo: getStringValue(formData, "redirectTo"),
@@ -1230,13 +1237,26 @@ export async function startFriendConversationAction(formData: FormData) {
     redirectWithError(redirectPath, "You cannot message yourself.");
   }
 
-  const burstRateResult = consumeRateLimit(
+  const requestId = getRequestIdFromContext(requestContext);
+  const burstRateResult = await consumeDistributedRateLimit(
     `connect:friend-conversation:start:burst:${user.id}:${parsed.data.friendId}`,
     FRIEND_CONVERSATION_START_BURST_LIMIT,
+    {
+      action: "startFriendConversationAction",
+      userId: user.id,
+      targetId: parsed.data.friendId,
+      requestId,
+    },
   );
-  const rateResult = consumeRateLimit(
+  const rateResult = await consumeDistributedRateLimit(
     `connect:friend-conversation:start:${user.id}`,
     FRIEND_CONVERSATION_START_LIMIT,
+    {
+      action: "startFriendConversationAction",
+      userId: user.id,
+      targetId: parsed.data.friendId,
+      requestId,
+    },
   );
   if (!burstRateResult.allowed || !rateResult.allowed) {
     redirectWithError(redirectPath, "Too many conversation attempts. Please wait and try again.");
@@ -1340,11 +1360,27 @@ export async function sendFriendMessageAction(formData: FormData) {
   const conversationPath = `/connect/messages/${parsed.data.conversationId}`;
   const redirectPath = sanitizeInternalPath(parsed.data.redirectTo, conversationPath);
   const user = await requireUser();
-  const burstRateResult = consumeRateLimit(
+  const requestId = getRequestIdFromContext(requestContext);
+  const burstRateResult = await consumeDistributedRateLimit(
     `connect:friend-message:send:burst:${user.id}:${parsed.data.conversationId}`,
     FRIEND_MESSAGE_SEND_BURST_LIMIT,
+    {
+      action: "sendFriendMessageAction",
+      userId: user.id,
+      targetId: parsed.data.conversationId,
+      requestId,
+    },
   );
-  const rateResult = consumeRateLimit(`connect:friend-message:send:${user.id}`, FRIEND_MESSAGE_SEND_LIMIT);
+  const rateResult = await consumeDistributedRateLimit(
+    `connect:friend-message:send:${user.id}`,
+    FRIEND_MESSAGE_SEND_LIMIT,
+    {
+      action: "sendFriendMessageAction",
+      userId: user.id,
+      targetId: parsed.data.conversationId,
+      requestId,
+    },
+  );
 
   if (!burstRateResult.allowed || !rateResult.allowed) {
     logSecurityEvent("friend_message_send_rate_limited", {
@@ -1499,13 +1535,26 @@ export async function createCommunityPostAction(formData: FormData) {
 
   const communityPath = `/connect/communities/${parsed.data.communityId}`;
   const user = await requireUser();
-  const burstRateResult = consumeRateLimit(
+  const requestId = getRequestIdFromContext(requestContext);
+  const burstRateResult = await consumeDistributedRateLimit(
     `connect:create-community-post:burst:${user.id}:${parsed.data.communityId}`,
     COMMUNITY_POST_CREATE_BURST_LIMIT,
+    {
+      action: "createCommunityPostAction",
+      userId: user.id,
+      targetId: parsed.data.communityId,
+      requestId,
+    },
   );
-  const createRateResult = consumeRateLimit(
+  const createRateResult = await consumeDistributedRateLimit(
     `connect:create-community-post:${user.id}:${parsed.data.communityId}`,
     COMMUNITY_POST_CREATE_LIMIT,
+    {
+      action: "createCommunityPostAction",
+      userId: user.id,
+      targetId: parsed.data.communityId,
+      requestId,
+    },
   );
 
   if (!burstRateResult.allowed || !createRateResult.allowed) {

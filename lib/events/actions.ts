@@ -20,7 +20,7 @@ import {
   logWarn,
 } from "@/lib/observability/logger";
 import { getRequestContext } from "@/lib/observability/request-context";
-import { consumeRateLimit } from "@/lib/security/rate-limit";
+import { consumeDistributedRateLimit, consumeRateLimit } from "@/lib/security/rate-limit";
 import { createClient } from "@/lib/supabase/server";
 import {
   clearEventParticipationSchema,
@@ -74,6 +74,12 @@ const EVENT_PARTICIPATION_BURST_LIMIT = {
 // Best-effort only in serverless: this in-memory limiter is instance-local.
 const ACTION_SLOW_THRESHOLD_MS = 250;
 const EVENT_IMAGES_BUCKET = "event-images";
+
+function getRequestIdFromContext(context: Record<string, unknown>): string {
+  return typeof context.requestId === "string" && context.requestId.length > 0
+    ? context.requestId
+    : "unknown";
+}
 
 function mapCreateEventErrorMessage(errorCode?: string): string {
   if (errorCode === "23503") {
@@ -615,13 +621,26 @@ export async function setEventParticipationAction(formData: FormData) {
   }
 
   const user = await requireUser();
-  const participationBurstRateResult = consumeRateLimit(
+  const requestId = getRequestIdFromContext(requestContext);
+  const participationBurstRateResult = await consumeDistributedRateLimit(
     `events:set-participation:burst:${user.id}:${parsed.data.eventId}`,
     EVENT_PARTICIPATION_BURST_LIMIT,
+    {
+      action: "setEventParticipationAction",
+      userId: user.id,
+      targetId: parsed.data.eventId,
+      requestId,
+    },
   );
-  const participationRateResult = consumeRateLimit(
+  const participationRateResult = await consumeDistributedRateLimit(
     `events:set-participation:${user.id}`,
     EVENT_PARTICIPATION_LIMIT,
+    {
+      action: "setEventParticipationAction",
+      userId: user.id,
+      targetId: parsed.data.eventId,
+      requestId,
+    },
   );
 
   if (!participationBurstRateResult.allowed || !participationRateResult.allowed) {
@@ -750,13 +769,26 @@ export async function clearEventParticipationAction(formData: FormData) {
   }
 
   const user = await requireUser();
-  const participationBurstRateResult = consumeRateLimit(
+  const requestId = getRequestIdFromContext(requestContext);
+  const participationBurstRateResult = await consumeDistributedRateLimit(
     `events:clear-participation:burst:${user.id}:${parsed.data.eventId}`,
     EVENT_PARTICIPATION_BURST_LIMIT,
+    {
+      action: "clearEventParticipationAction",
+      userId: user.id,
+      targetId: parsed.data.eventId,
+      requestId,
+    },
   );
-  const participationRateResult = consumeRateLimit(
+  const participationRateResult = await consumeDistributedRateLimit(
     `events:clear-participation:${user.id}`,
     EVENT_PARTICIPATION_LIMIT,
+    {
+      action: "clearEventParticipationAction",
+      userId: user.id,
+      targetId: parsed.data.eventId,
+      requestId,
+    },
   );
 
   if (!participationBurstRateResult.allowed || !participationRateResult.allowed) {

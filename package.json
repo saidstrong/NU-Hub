@@ -13,6 +13,7 @@
   "dependencies": {
     "@supabase/ssr": "^0.9.0",
     "@supabase/supabase-js": "^2.99.0",
+    "@upstash/redis": "^1.37.0",
     "lucide-react": "0.510.0",
     "next": "^15.2.8",
     "react": "19.0.0",
