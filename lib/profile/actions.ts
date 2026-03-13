@@ -23,6 +23,7 @@ import {
   AVATAR_MAX_SIZE_BYTES,
   createMediaFilename,
   hasValidImageSignature,
+  isSafeStoragePath,
   removeStorageObjectBestEffort,
   validateImageFileMeta,
 } from "@/lib/validation/media";
@@ -285,6 +286,9 @@ export async function updateProfileAction(formData: FormData) {
 
     previousAvatarPath = existingProfile?.avatar_path ?? null;
     uploadedAvatarPath = `${user.id}/profile/${createMediaFilename("avatar", avatarFile)}`;
+    if (!isSafeStoragePath(uploadedAvatarPath)) {
+      redirectWithError("/profile/edit", "Invalid avatar path.");
+    }
 
     const { error: uploadError } = await supabase.storage
       .from(AVATARS_BUCKET)

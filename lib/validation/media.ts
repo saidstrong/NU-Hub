@@ -8,6 +8,29 @@ export const IMAGE_ALLOWED_EXTENSIONS = ["jpg", "jpeg", "png", "webp"] as const;
 export const AVATAR_MAX_SIZE_BYTES = 5 * 1024 * 1024;
 export const EVENT_COVER_MAX_SIZE_BYTES = 10 * 1024 * 1024;
 export const LISTING_IMAGE_MAX_SIZE_BYTES = 10 * 1024 * 1024;
+const UNSAFE_FILENAME_CHARS_PATTERN = /[<>:"|?*\u0000-\u001f]/;
+const SUSPICIOUS_DOUBLE_EXTENSION_SEGMENTS = new Set([
+  "php",
+  "phtml",
+  "phar",
+  "js",
+  "mjs",
+  "cjs",
+  "ts",
+  "tsx",
+  "jsx",
+  "exe",
+  "bat",
+  "cmd",
+  "com",
+  "scr",
+  "sh",
+  "ps1",
+  "jar",
+  "html",
+  "htm",
+  "svg",
+]);
 
 type AllowedImageMimeType = (typeof IMAGE_ALLOWED_MIME_TYPES)[number];
 
@@ -33,7 +56,59 @@ function hasAllowedImageMimeType(type: string): type is AllowedImageMimeType {
   return IMAGE_ALLOWED_MIME_TYPES.includes(type as AllowedImageMimeType);
 }
 
+export function validateImageFilename(fileName: string): string | null {
+  const normalized = fileName.trim();
+
+  if (!normalized) {
+    return "Image file name is missing.";
+  }
+
+  if (
+    normalized.includes("/") ||
+    normalized.includes("\\") ||
+    normalized.includes("..")
+  ) {
+    return "Invalid image file name.";
+  }
+
+  if (UNSAFE_FILENAME_CHARS_PATTERN.test(normalized)) {
+    return "Invalid image file name.";
+  }
+
+  const segments = normalized
+    .split(".")
+    .map((segment) => segment.trim())
+    .filter(Boolean);
+
+  if (segments.length < 2) {
+    return "Image file must include a valid extension.";
+  }
+
+  const extension = segments[segments.length - 1]?.toLowerCase() ?? "";
+  if (
+    !IMAGE_ALLOWED_EXTENSIONS.includes(
+      extension as (typeof IMAGE_ALLOWED_EXTENSIONS)[number],
+    )
+  ) {
+    return "Only JPG, JPEG, PNG, and WEBP file extensions are allowed.";
+  }
+
+  if (segments.length > 2) {
+    const previousExtension = segments[segments.length - 2]?.toLowerCase() ?? "";
+    if (SUSPICIOUS_DOUBLE_EXTENSION_SEGMENTS.has(previousExtension)) {
+      return "Suspicious file name is not allowed.";
+    }
+  }
+
+  return null;
+}
+
 export function validateImageFileMeta(file: FileLike, maxSizeBytes: number): string | null {
+  const fileNameError = validateImageFilename(file.name);
+  if (fileNameError) {
+    return fileNameError;
+  }
+
   if (!hasAllowedImageMimeType(file.type)) {
     return "Only JPEG, PNG, and WEBP images are allowed.";
   }
@@ -101,6 +176,31 @@ export async function hasValidImageSignature(file: FileWithBytes): Promise<boole
     signature[10] === 0x42 &&
     signature[11] === 0x50
   );
+}
+
+export function isSafeStoragePath(path: string): boolean {
+  const normalized = path.trim();
+
+  if (!normalized || normalized.length > 500) {
+    return false;
+  }
+
+  if (
+    normalized.startsWith("/") ||
+    normalized.endsWith("/") ||
+    normalized.includes("\\") ||
+    normalized.includes("..") ||
+    normalized.includes("//")
+  ) {
+    return false;
+  }
+
+  const segments = normalized.split("/");
+  if (segments.length === 0) {
+    return false;
+  }
+
+  return segments.every((segment) => /^[a-zA-Z0-9._-]+$/.test(segment));
 }
 
 export function toPublicStorageUrl(bucket: string, storagePath: string | null | undefined): string | null {

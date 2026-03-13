@@ -58,10 +58,19 @@ const START_CONVERSATION_LIMIT = {
   maxHits: 30,
   windowMs: 10 * 60 * 1000,
 };
+const START_CONVERSATION_BURST_LIMIT = {
+  maxHits: 6,
+  windowMs: 15 * 1000,
+};
 const SEND_MESSAGE_LIMIT = {
   maxHits: 100,
   windowMs: 10 * 60 * 1000,
 };
+const SEND_MESSAGE_BURST_LIMIT = {
+  maxHits: 12,
+  windowMs: 15 * 1000,
+};
+// Best-effort only in serverless: this in-memory limiter is instance-local.
 const ACTION_SLOW_THRESHOLD_MS = 250;
 
 function mapCreateListingErrorMessage(errorCode?: string): string {
@@ -583,14 +592,18 @@ export async function startListingConversationAction(formData: FormData) {
   const listingPath = `/market/item/${parsed.data.listingId}`;
   const redirectPath = sanitizeInternalPath(parsed.data.redirectTo, listingPath);
   const user = await requireUser();
+  const burstRateResult = consumeRateLimit(
+    `market:start-conversation:burst:${user.id}:${parsed.data.listingId}`,
+    START_CONVERSATION_BURST_LIMIT,
+  );
   const rateResult = consumeRateLimit(`market:start-conversation:${user.id}`, START_CONVERSATION_LIMIT);
 
-  if (!rateResult.allowed) {
+  if (!burstRateResult.allowed || !rateResult.allowed) {
     logSecurityEvent("market_start_conversation_rate_limited", {
       ...requestContext,
       userId: user.id,
       listingId: parsed.data.listingId,
-      retryAfterMs: rateResult.retryAfterMs,
+      retryAfterMs: Math.max(burstRateResult.retryAfterMs, rateResult.retryAfterMs),
     });
     redirectWithError(redirectPath, "Too many conversation attempts. Please wait and try again.");
   }
@@ -712,9 +725,13 @@ export async function sendMarketplaceMessageAction(formData: FormData) {
   const conversationPath = `/market/messages/${parsed.data.conversationId}`;
   const redirectPath = sanitizeInternalPath(parsed.data.redirectTo, conversationPath);
   const user = await requireUser();
+  const burstRateResult = consumeRateLimit(
+    `market:send-message:burst:${user.id}:${parsed.data.conversationId}`,
+    SEND_MESSAGE_BURST_LIMIT,
+  );
   const rateResult = consumeRateLimit(`market:send-message:${user.id}`, SEND_MESSAGE_LIMIT);
 
-  if (!rateResult.allowed) {
+  if (!burstRateResult.allowed || !rateResult.allowed) {
     logSecurityEvent("market_send_message_rate_limited", {
       ...requestContext,
       action: "sendMarketplaceMessageAction",
@@ -723,7 +740,7 @@ export async function sendMarketplaceMessageAction(formData: FormData) {
       durationMs: getDurationMs(startedAt),
       outcome: "rate_limited",
       conversationId: parsed.data.conversationId,
-      retryAfterMs: rateResult.retryAfterMs,
+      retryAfterMs: Math.max(burstRateResult.retryAfterMs, rateResult.retryAfterMs),
     });
     redirectWithError(redirectPath, "Too many messages. Please wait and try again.");
   }

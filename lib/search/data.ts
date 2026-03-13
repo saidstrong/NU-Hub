@@ -75,24 +75,18 @@ async function getJoinedCommunityMemberCounts(
   const counts = new Map<string, number>();
   if (communityIds.length === 0) return counts;
 
-  const countEntries = await Promise.all(
-    communityIds.map(async (communityId) => {
-      const { count, error } = await supabase
-        .from("community_members")
-        .select("*", { count: "exact", head: true })
-        .eq("community_id", communityId)
-        .eq("status", "joined");
+  const { data, error } = await supabase
+    .from("community_members")
+    .select("community_id")
+    .in("community_id", communityIds)
+    .eq("status", "joined");
 
-      if (error) {
-        throw new Error("Failed to load community search counts.");
-      }
+  if (error) {
+    throw new Error("Failed to load community search counts.");
+  }
 
-      return [communityId, count ?? 0] as const;
-    }),
-  );
-
-  for (const [communityId, count] of countEntries) {
-    counts.set(communityId, count);
+  for (const row of data) {
+    counts.set(row.community_id, (counts.get(row.community_id) ?? 0) + 1);
   }
 
   return counts;

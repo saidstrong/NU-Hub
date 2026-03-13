@@ -8,22 +8,13 @@ import {
   listingImageCountSchema,
 } from "@/lib/validation/market";
 import {
-  IMAGE_ALLOWED_EXTENSIONS,
   createMediaFilename,
   hasValidImageSignature,
+  isSafeStoragePath,
   validateImageFileMeta,
 } from "@/lib/validation/media";
 
 const LISTING_IMAGES_BUCKET = "listing-images";
-
-function hasAllowedFileExtension(fileName: string): boolean {
-  const extension = fileName.split(".").pop()?.toLowerCase();
-  if (!extension) return false;
-
-  return IMAGE_ALLOWED_EXTENSIONS.includes(
-    extension as (typeof IMAGE_ALLOWED_EXTENSIONS)[number],
-  );
-}
 
 export function DirectListingImageUpload() {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -98,11 +89,6 @@ export function DirectListingImageUpload() {
         setError(imageMetaError);
         return;
       }
-
-      if (!hasAllowedFileExtension(file.name)) {
-        setError("Only JPG, JPEG, PNG, and WEBP file extensions are allowed.");
-        return;
-      }
     }
 
     setError(null);
@@ -131,6 +117,12 @@ export function DirectListingImageUpload() {
       }
 
       const storagePath = `${userId}/market/${uploadBatchId}/${createMediaFilename("listing", file)}`;
+      if (!isSafeStoragePath(storagePath)) {
+        await removePathsBestEffort(nextPaths);
+        setIsUploading(false);
+        setError("Invalid upload path.");
+        return;
+      }
       const { error: uploadError } = await supabase.storage
         .from(LISTING_IMAGES_BUCKET)
         .upload(storagePath, file, {

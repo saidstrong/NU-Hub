@@ -67,6 +67,11 @@ const EVENT_PARTICIPATION_LIMIT = {
   maxHits: 40,
   windowMs: 10 * 60 * 1000,
 };
+const EVENT_PARTICIPATION_BURST_LIMIT = {
+  maxHits: 12,
+  windowMs: 30 * 1000,
+};
+// Best-effort only in serverless: this in-memory limiter is instance-local.
 const ACTION_SLOW_THRESHOLD_MS = 250;
 const EVENT_IMAGES_BUCKET = "event-images";
 
@@ -610,12 +615,16 @@ export async function setEventParticipationAction(formData: FormData) {
   }
 
   const user = await requireUser();
+  const participationBurstRateResult = consumeRateLimit(
+    `events:set-participation:burst:${user.id}:${parsed.data.eventId}`,
+    EVENT_PARTICIPATION_BURST_LIMIT,
+  );
   const participationRateResult = consumeRateLimit(
     `events:set-participation:${user.id}`,
     EVENT_PARTICIPATION_LIMIT,
   );
 
-  if (!participationRateResult.allowed) {
+  if (!participationBurstRateResult.allowed || !participationRateResult.allowed) {
     logSecurityEvent("event_rsvp_set_rate_limited", {
       ...requestContext,
       action: "setEventParticipationAction",
@@ -624,7 +633,7 @@ export async function setEventParticipationAction(formData: FormData) {
       durationMs: getDurationMs(startedAt),
       outcome: "rate_limited",
       eventId: parsed.data.eventId,
-      retryAfterMs: participationRateResult.retryAfterMs,
+      retryAfterMs: Math.max(participationBurstRateResult.retryAfterMs, participationRateResult.retryAfterMs),
     });
     redirectWithError("/events", "Too many participation updates. Please wait and try again.");
   }
@@ -741,12 +750,16 @@ export async function clearEventParticipationAction(formData: FormData) {
   }
 
   const user = await requireUser();
+  const participationBurstRateResult = consumeRateLimit(
+    `events:clear-participation:burst:${user.id}:${parsed.data.eventId}`,
+    EVENT_PARTICIPATION_BURST_LIMIT,
+  );
   const participationRateResult = consumeRateLimit(
     `events:clear-participation:${user.id}`,
     EVENT_PARTICIPATION_LIMIT,
   );
 
-  if (!participationRateResult.allowed) {
+  if (!participationBurstRateResult.allowed || !participationRateResult.allowed) {
     logSecurityEvent("event_rsvp_clear_rate_limited", {
       ...requestContext,
       action: "clearEventParticipationAction",
@@ -755,7 +768,7 @@ export async function clearEventParticipationAction(formData: FormData) {
       durationMs: getDurationMs(startedAt),
       outcome: "rate_limited",
       eventId: parsed.data.eventId,
-      retryAfterMs: participationRateResult.retryAfterMs,
+      retryAfterMs: Math.max(participationBurstRateResult.retryAfterMs, participationRateResult.retryAfterMs),
     });
     redirectWithError("/events", "Too many RSVP updates. Please wait and try again.");
   }

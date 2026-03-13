@@ -41,6 +41,7 @@ import {
   AVATAR_MAX_SIZE_BYTES,
   createMediaFilename,
   hasValidImageSignature,
+  isSafeStoragePath,
   removeStorageObjectBestEffort,
   validateImageFileMeta,
 } from "@/lib/validation/media";
@@ -92,6 +93,10 @@ const COMMUNITY_POST_CREATE_LIMIT = {
   maxHits: 20,
   windowMs: 10 * 60 * 1000,
 };
+const COMMUNITY_POST_CREATE_BURST_LIMIT = {
+  maxHits: 4,
+  windowMs: 30 * 1000,
+};
 
 const COMMUNITY_POST_DELETE_LIMIT = {
   maxHits: 30,
@@ -112,11 +117,20 @@ const FRIEND_CONVERSATION_START_LIMIT = {
   maxHits: 40,
   windowMs: 10 * 60 * 1000,
 };
+const FRIEND_CONVERSATION_START_BURST_LIMIT = {
+  maxHits: 6,
+  windowMs: 15 * 1000,
+};
 
 const FRIEND_MESSAGE_SEND_LIMIT = {
   maxHits: 120,
   windowMs: 10 * 60 * 1000,
 };
+const FRIEND_MESSAGE_SEND_BURST_LIMIT = {
+  maxHits: 12,
+  windowMs: 15 * 1000,
+};
+// Best-effort only in serverless: this in-memory limiter is instance-local.
 const ACTION_SLOW_THRESHOLD_MS = 250;
 
 function mapUpdateCommunityErrorMessage(errorCode?: string): string {
@@ -392,6 +406,10 @@ export async function createCommunityAction(formData: FormData) {
   let uploadedAvatarPath: string | null = null;
   if (avatarFile) {
     uploadedAvatarPath = `${user.id}/communities/${community.id}/${createMediaFilename("avatar", avatarFile)}`;
+    if (!isSafeStoragePath(uploadedAvatarPath)) {
+      await deleteCommunityOnCreateFailure(supabase, community.id);
+      redirectWithError("/connect/communities/create", "Invalid community avatar path.");
+    }
     const { error: avatarUploadError } = await supabase.storage
       .from(AVATARS_BUCKET)
       .upload(uploadedAvatarPath, avatarFile, {
@@ -549,6 +567,9 @@ export async function updateCommunityAction(formData: FormData) {
   let uploadedAvatarPath: string | null = null;
   if (avatarFile) {
     uploadedAvatarPath = `${user.id}/communities/${communityId}/${createMediaFilename("avatar", avatarFile)}`;
+    if (!isSafeStoragePath(uploadedAvatarPath)) {
+      redirectWithError(editPath, "Invalid community avatar path.");
+    }
     const { error: avatarUploadError } = await supabase.storage
       .from(AVATARS_BUCKET)
       .upload(uploadedAvatarPath, avatarFile, {
@@ -1209,11 +1230,15 @@ export async function startFriendConversationAction(formData: FormData) {
     redirectWithError(redirectPath, "You cannot message yourself.");
   }
 
+  const burstRateResult = consumeRateLimit(
+    `connect:friend-conversation:start:burst:${user.id}:${parsed.data.friendId}`,
+    FRIEND_CONVERSATION_START_BURST_LIMIT,
+  );
   const rateResult = consumeRateLimit(
     `connect:friend-conversation:start:${user.id}`,
     FRIEND_CONVERSATION_START_LIMIT,
   );
-  if (!rateResult.allowed) {
+  if (!burstRateResult.allowed || !rateResult.allowed) {
     redirectWithError(redirectPath, "Too many conversation attempts. Please wait and try again.");
   }
 
@@ -1315,9 +1340,13 @@ export async function sendFriendMessageAction(formData: FormData) {
   const conversationPath = `/connect/messages/${parsed.data.conversationId}`;
   const redirectPath = sanitizeInternalPath(parsed.data.redirectTo, conversationPath);
   const user = await requireUser();
+  const burstRateResult = consumeRateLimit(
+    `connect:friend-message:send:burst:${user.id}:${parsed.data.conversationId}`,
+    FRIEND_MESSAGE_SEND_BURST_LIMIT,
+  );
   const rateResult = consumeRateLimit(`connect:friend-message:send:${user.id}`, FRIEND_MESSAGE_SEND_LIMIT);
 
-  if (!rateResult.allowed) {
+  if (!burstRateResult.allowed || !rateResult.allowed) {
     logSecurityEvent("friend_message_send_rate_limited", {
       ...requestContext,
       action: "sendFriendMessageAction",
@@ -1325,7 +1354,7 @@ export async function sendFriendMessageAction(formData: FormData) {
       route: conversationPath,
       durationMs: getDurationMs(startedAt),
       outcome: "rate_limited",
-      retryAfterMs: rateResult.retryAfterMs,
+      retryAfterMs: Math.max(burstRateResult.retryAfterMs, rateResult.retryAfterMs),
     });
     redirectWithError(redirectPath, "Too many messages. Please wait and try again.");
   }
@@ -1470,12 +1499,16 @@ export async function createCommunityPostAction(formData: FormData) {
 
   const communityPath = `/connect/communities/${parsed.data.communityId}`;
   const user = await requireUser();
+  const burstRateResult = consumeRateLimit(
+    `connect:create-community-post:burst:${user.id}:${parsed.data.communityId}`,
+    COMMUNITY_POST_CREATE_BURST_LIMIT,
+  );
   const createRateResult = consumeRateLimit(
     `connect:create-community-post:${user.id}:${parsed.data.communityId}`,
     COMMUNITY_POST_CREATE_LIMIT,
   );
 
-  if (!createRateResult.allowed) {
+  if (!burstRateResult.allowed || !createRateResult.allowed) {
     logSecurityEvent("community_post_create_rate_limited", {
       ...requestContext,
       action: "createCommunityPostAction",
@@ -1484,7 +1517,7 @@ export async function createCommunityPostAction(formData: FormData) {
       durationMs: getDurationMs(startedAt),
       outcome: "rate_limited",
       communityId: parsed.data.communityId,
-      retryAfterMs: createRateResult.retryAfterMs,
+      retryAfterMs: Math.max(burstRateResult.retryAfterMs, createRateResult.retryAfterMs),
     });
     redirectWithError(communityPath, "Too many post attempts. Please wait and try again.");
   }
