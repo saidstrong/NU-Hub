@@ -81,6 +81,10 @@ export default async function MarketMessagesPage({ searchParams }: MarketMessage
           <div className="space-y-2.5">
             {conversations.map((conversation) => {
               const counterpartAvatarUrl = toPublicStorageUrl("avatars", conversation.counterpartAvatarPath);
+              const needsReply = conversation.lastMessageSenderId === conversation.counterpartId;
+              const replyStateLabel = needsReply ? "Needs reply" : "You replied";
+              const timestampLabel = conversation.lastMessageCreatedAt ? "Last message" : "Started";
+              const timestampValue = conversation.lastMessageCreatedAt ?? conversation.updatedAt;
 
               return (
                 <Link
@@ -93,9 +97,21 @@ export default async function MarketMessagesPage({ searchParams }: MarketMessage
                       <p className="truncate text-sm font-semibold text-wire-100">
                         {conversation.listingTitle}
                       </p>
-                      <p className="wire-meta">With {conversation.counterpartName}</p>
+                      <div className="mt-1 flex flex-wrap items-center gap-2">
+                        <p className="wire-meta">With {conversation.counterpartName}</p>
+                        <span className={needsReply
+                          ? "rounded-full border border-accent/40 bg-accent/10 px-2 py-0.5 text-[11px] font-medium text-accent"
+                          : "rounded-full border border-wire-600 bg-wire-900 px-2 py-0.5 text-[11px] font-medium text-wire-300"}
+                        >
+                          {replyStateLabel}
+                        </span>
+                      </div>
                     </div>
-                    <p className="wire-meta shrink-0">{formatMessageTime(conversation.lastMessageAt)}</p>
+                    <p className="wire-meta shrink-0 text-right">
+                      {timestampLabel}
+                      <br />
+                      <span className="text-wire-200">{formatMessageTime(timestampValue)}</span>
+                    </p>
                   </div>
                   <div className="mt-2 flex items-center gap-2.5">
                     {counterpartAvatarUrl ? (
@@ -116,7 +132,7 @@ export default async function MarketMessagesPage({ searchParams }: MarketMessage
         ) : !loadError ? (
           <EmptyState
             title="No conversations yet"
-            description="Open a listing and use Message seller to start a conversation."
+            description="Start by messaging a seller from a listing."
             actionLabel="Browse market"
             actionHref="/market"
           />

@@ -124,7 +124,7 @@ export default async function MarketConversationPage({
           <h2 className="wire-section-title">Messages</h2>
         </div>
         {thread.messages.length > 0 ? (
-          <div className="space-y-2.5">
+          <div className="space-y-3">
             {thread.messages.map((messageItem) => {
               const senderAvatarUrl = toPublicStorageUrl("avatars", messageItem.senderAvatarPath);
 
@@ -132,10 +132,10 @@ export default async function MarketConversationPage({
                 <article
                   key={messageItem.id}
                   className={messageItem.isOwnMessage
-                    ? "ml-8 rounded-2xl border border-accent/30 bg-accent/10 px-3 py-2.5"
-                    : "mr-8 rounded-2xl border border-wire-700 bg-wire-800 px-3 py-2.5"}
+                    ? "ml-8 rounded-2xl border border-accent/30 bg-accent/10 px-3 py-3"
+                    : "mr-8 rounded-2xl border border-wire-700 bg-wire-800 px-3 py-3"}
                 >
-                  <div className="mb-1 flex items-center justify-between gap-2">
+                  <div className="flex items-center justify-between gap-2">
                     <div className="flex min-w-0 items-center gap-2">
                       {senderAvatarUrl ? (
                         <img
@@ -148,9 +148,9 @@ export default async function MarketConversationPage({
                       )}
                       <p className="truncate text-[12px] font-medium text-wire-100">{messageItem.senderName}</p>
                     </div>
-                    <p className="wire-meta">{formatMessageTime(messageItem.createdAt)}</p>
+                    <p className="text-[11px] text-wire-300">{formatMessageTime(messageItem.createdAt)}</p>
                   </div>
-                  <p className="whitespace-pre-wrap break-words text-[13px] text-wire-200">
+                  <p className="mt-1.5 whitespace-pre-wrap break-words text-[13px] text-wire-200">
                     {messageItem.content}
                   </p>
                 </article>
@@ -158,7 +158,9 @@ export default async function MarketConversationPage({
             })}
           </div>
         ) : (
-          <p className="text-[13px] text-wire-300">No messages yet. Start the conversation below.</p>
+          <p className="text-[13px] text-wire-300">
+            No messages yet. Send the first message to start the conversation.
+          </p>
         )}
       </section>
 

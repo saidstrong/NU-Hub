@@ -55,6 +55,8 @@ export type MarketplaceConversationListItem = {
   counterpartAvatarPath: string | null;
   lastMessagePreview: string;
   lastMessageAt: string;
+  lastMessageCreatedAt: string | null;
+  lastMessageSenderId: string;
   updatedAt: string;
 };
 export type PaginatedMarketplaceConversationResult = {
@@ -534,13 +536,14 @@ export async function getMarketplaceConversationsPage(
 
   const listingMap = new Map((listingsResult.data ?? []).map((listing) => [listing.id, listing]));
   const counterpartMap = new Map((profilesResult.data ?? []).map((profile) => [profile.user_id, profile]));
-  const lastMessageMap = new Map<string, Pick<MessageRow, "content" | "created_at">>();
+  const lastMessageMap = new Map<string, Pick<MessageRow, "content" | "created_at" | "sender_id">>();
 
   for (const message of messagesResult.data ?? []) {
     if (!lastMessageMap.has(message.conversation_id)) {
       lastMessageMap.set(message.conversation_id, {
         content: message.content,
         created_at: message.created_at,
+        sender_id: message.sender_id,
       });
     }
   }
@@ -562,6 +565,8 @@ export async function getMarketplaceConversationsPage(
         counterpartAvatarPath: counterpart?.avatar_path ?? null,
         lastMessagePreview: toMessagePreview(lastMessage?.content ?? ""),
         lastMessageAt: lastMessage?.created_at ?? conversation.created_at,
+        lastMessageCreatedAt: lastMessage?.created_at ?? null,
+        lastMessageSenderId: lastMessage?.sender_id ?? conversation.buyer_id,
         updatedAt: conversation.updated_at,
       };
     }),
