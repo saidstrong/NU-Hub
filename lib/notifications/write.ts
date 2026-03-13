@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import * as Sentry from "@sentry/nextjs";
 import { logWarn } from "@/lib/observability/logger";
 import { sanitizeInternalPathValue } from "@/lib/security/paths";
 import type { Database, Json } from "@/types/database";
@@ -13,6 +14,8 @@ export type NotificationWriteInput = {
   link?: string | null;
   payload?: Json;
 };
+
+const EXPECTED_NOTIFICATION_WRITE_ERROR_CODES = new Set(["42501"]);
 
 function sanitizeNotificationLink(link?: string | null): string | null {
   if (!link) {
@@ -43,26 +46,72 @@ function sanitizeNotificationPayload(payload: Json | undefined): Json {
   return safePayload;
 }
 
+function getErrorCode(error: unknown): string | null {
+  if (!error || typeof error !== "object") {
+    return null;
+  }
+
+  const candidate = (error as { code?: unknown }).code;
+  return typeof candidate === "string" ? candidate : null;
+}
+
 export async function writeInAppNotification(
   supabase: SupabaseClient<Database>,
   input: NotificationWriteInput,
 ) {
-  const { error } = await supabase.from("notifications").insert({
-    user_id: input.userId,
-    type: input.type,
-    title: sanitizeNotificationText(input.title, 120),
-    message: sanitizeNotificationText(input.message, 500),
-    link: sanitizeNotificationLink(input.link),
-    payload: sanitizeNotificationPayload(input.payload),
-  });
+  const route = sanitizeNotificationLink(input.link);
 
-  if (error) {
+  try {
+    const { error } = await supabase.from("notifications").insert({
+      user_id: input.userId,
+      type: input.type,
+      title: sanitizeNotificationText(input.title, 120),
+      message: sanitizeNotificationText(input.message, 500),
+      link: route,
+      payload: sanitizeNotificationPayload(input.payload),
+    });
+
+    if (!error) {
+      return;
+    }
+
     logWarn("notifications", "notification_write_failed", {
       action: "writeInAppNotification",
       userId: input.userId,
-      route: sanitizeNotificationLink(input.link),
+      route,
       outcome: "error",
       errorCode: error.code ?? null,
+    });
+
+    if (!EXPECTED_NOTIFICATION_WRITE_ERROR_CODES.has(error.code ?? "")) {
+      Sentry.captureException(error, {
+        tags: {
+          domain: "notifications",
+          action: "writeInAppNotification",
+        },
+        extra: {
+          route,
+          errorCode: error.code ?? null,
+        },
+      });
+    }
+  } catch (error) {
+    logWarn("notifications", "notification_write_exception", {
+      action: "writeInAppNotification",
+      userId: input.userId,
+      route,
+      outcome: "error",
+      errorCode: getErrorCode(error),
+    });
+
+    Sentry.captureException(error, {
+      tags: {
+        domain: "notifications",
+        action: "writeInAppNotification",
+      },
+      extra: {
+        route,
+      },
     });
   }
 }
