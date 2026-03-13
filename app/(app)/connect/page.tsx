@@ -34,6 +34,7 @@ export default async function ConnectHomePage() {
         actions={[
           { label: "People", href: "/connect/people" },
           { label: "Communities", href: "/connect/communities" },
+          { label: "Messages", href: "/connect/messages" },
         ]}
       />
       {loadError ? (

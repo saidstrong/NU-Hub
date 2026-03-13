@@ -10,6 +10,8 @@ export type CommunityRow = Database["public"]["Tables"]["communities"]["Row"];
 export type CommunityMemberRow = Database["public"]["Tables"]["community_members"]["Row"];
 export type CommunityPostRow = Database["public"]["Tables"]["community_posts"]["Row"];
 export type FriendshipRow = Database["public"]["Tables"]["friendships"]["Row"];
+export type FriendConversationRow = Database["public"]["Tables"]["friend_conversations"]["Row"];
+export type FriendMessageRow = Database["public"]["Tables"]["friend_messages"]["Row"];
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
 export type CommunityCardSource = Pick<
   CommunityRow,
@@ -124,6 +126,32 @@ export type FriendItem = {
   friendAvatarPath: string | null;
   updatedAt: string;
 };
+export type FriendInboxConversation = {
+  conversationId: string;
+  counterpartId: string;
+  counterpartName: string;
+  counterpartAvatarPath: string | null;
+  lastMessagePreview: string;
+  lastMessageSenderId: string | null;
+  lastMessageAt: string;
+  updatedAt: string;
+};
+export type FriendMessageThreadItem = {
+  id: string;
+  senderId: string;
+  senderName: string;
+  senderAvatarPath: string | null;
+  content: string;
+  createdAt: string;
+  isOwnMessage: boolean;
+};
+export type FriendConversationThread = {
+  conversationId: string;
+  counterpartId: string;
+  counterpartName: string;
+  counterpartAvatarPath: string | null;
+  messages: FriendMessageThreadItem[];
+};
 export type CommunityListEntry = {
   community: CommunityCardSource;
   memberCount: number;
@@ -156,6 +184,17 @@ async function requireMatchingUserId(userId: string): Promise<string> {
   }
 
   return user.id;
+}
+
+function dedupeStrings(values: string[]): string[] {
+  return Array.from(new Set(values));
+}
+
+function toMessagePreview(value: string, maxLength = 120): string {
+  const normalized = value.trim().replace(/\s+/g, " ");
+  if (!normalized) return "No messages yet.";
+  if (normalized.length <= maxLength) return normalized;
+  return `${normalized.slice(0, maxLength)}...`;
 }
 
 export function toPersonCardData(profile: PeopleDiscoveryItem): PersonCardData {
@@ -378,6 +417,158 @@ export async function getFriends(userId: string, limit = 200): Promise<FriendIte
   });
 
   return resolvedFriends.sort((a, b) => a.friendName.localeCompare(b.friendName, "en-US"));
+}
+
+export async function getFriendInbox(userId: string, limit = 25): Promise<FriendInboxConversation[]> {
+  const viewerId = await requireMatchingUserId(userId);
+  const safeLimit = Math.max(1, Math.min(limit, 40));
+  const supabase = await createClient();
+
+  const { data: conversations, error: conversationsError } = await supabase
+    .from("friend_conversations")
+    .select("id, user_a_id, user_b_id, created_at, updated_at")
+    .or(`user_a_id.eq.${viewerId},user_b_id.eq.${viewerId}`)
+    .order("updated_at", { ascending: false })
+    .order("id", { ascending: false })
+    .limit(safeLimit);
+
+  if (conversationsError) {
+    throw new Error("Failed to load friend inbox.");
+  }
+
+  if (!conversations || conversations.length === 0) {
+    return [];
+  }
+
+  const conversationIds = dedupeStrings(conversations.map((conversation) => conversation.id));
+  const counterpartIds = dedupeStrings(
+    conversations.map((conversation) =>
+      conversation.user_a_id === viewerId ? conversation.user_b_id : conversation.user_a_id,
+    ),
+  );
+
+  const [profilesResult, messagesResult] = await Promise.all([
+    counterpartIds.length > 0
+      ? supabase
+          .from("profiles")
+          .select("user_id, full_name, avatar_path")
+          .in("user_id", counterpartIds)
+      : Promise.resolve({
+          data: [] as Pick<ProfileRow, "user_id" | "full_name" | "avatar_path">[],
+          error: null,
+        }),
+    supabase
+      .from("friend_messages")
+      .select("id, conversation_id, sender_id, content, created_at")
+      .in("conversation_id", conversationIds)
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: false }),
+  ]);
+
+  if (profilesResult.error || messagesResult.error) {
+    throw new Error("Failed to load friend inbox metadata.");
+  }
+
+  const profileMap = new Map((profilesResult.data ?? []).map((profile) => [profile.user_id, profile]));
+  const lastMessageMap = new Map<string, Pick<FriendMessageRow, "sender_id" | "content" | "created_at">>();
+
+  for (const message of messagesResult.data ?? []) {
+    if (!lastMessageMap.has(message.conversation_id)) {
+      lastMessageMap.set(message.conversation_id, {
+        sender_id: message.sender_id,
+        content: message.content,
+        created_at: message.created_at,
+      });
+    }
+  }
+
+  return conversations.map((conversation) => {
+    const counterpartId =
+      conversation.user_a_id === viewerId ? conversation.user_b_id : conversation.user_a_id;
+    const counterpartProfile = profileMap.get(counterpartId);
+    const lastMessage = lastMessageMap.get(conversation.id);
+
+    return {
+      conversationId: conversation.id,
+      counterpartId,
+      counterpartName: fallbackText(counterpartProfile?.full_name, "NU student"),
+      counterpartAvatarPath: counterpartProfile?.avatar_path ?? null,
+      lastMessagePreview: toMessagePreview(lastMessage?.content ?? ""),
+      lastMessageSenderId: lastMessage?.sender_id ?? null,
+      lastMessageAt: lastMessage?.created_at ?? conversation.created_at,
+      updatedAt: conversation.updated_at,
+    };
+  });
+}
+
+export async function getFriendConversationThread(
+  conversationId: string,
+): Promise<FriendConversationThread | null> {
+  const user = await requireUser();
+  const supabase = await createClient();
+
+  const { data: conversation, error: conversationError } = await supabase
+    .from("friend_conversations")
+    .select("id, user_a_id, user_b_id")
+    .eq("id", conversationId)
+    .maybeSingle();
+
+  if (conversationError) {
+    throw new Error("Failed to load friend conversation.");
+  }
+
+  if (!conversation) {
+    return null;
+  }
+
+  const isParticipant = conversation.user_a_id === user.id || conversation.user_b_id === user.id;
+  if (!isParticipant) {
+    return null;
+  }
+
+  const counterpartId = conversation.user_a_id === user.id ? conversation.user_b_id : conversation.user_a_id;
+
+  const [profilesResult, messagesResult] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("user_id, full_name, avatar_path")
+      .in("user_id", dedupeStrings([conversation.user_a_id, conversation.user_b_id])),
+    supabase
+      .from("friend_messages")
+      .select("id, sender_id, content, created_at")
+      .eq("conversation_id", conversation.id)
+      .order("created_at", { ascending: true })
+      .order("id", { ascending: true })
+      .limit(250),
+  ]);
+
+  if (profilesResult.error || messagesResult.error) {
+    throw new Error("Failed to load friend conversation thread.");
+  }
+
+  const profileMap = new Map((profilesResult.data ?? []).map((profile) => [profile.user_id, profile]));
+  const counterpartProfile = profileMap.get(counterpartId);
+
+  return {
+    conversationId: conversation.id,
+    counterpartId,
+    counterpartName: fallbackText(counterpartProfile?.full_name, "NU student"),
+    counterpartAvatarPath: counterpartProfile?.avatar_path ?? null,
+    messages: (messagesResult.data ?? []).map((message) => {
+      const senderProfile = profileMap.get(message.sender_id);
+      const isOwnMessage = message.sender_id === user.id;
+
+      return {
+        id: message.id,
+        senderId: message.sender_id,
+        senderName: isOwnMessage ? "You" : fallbackText(senderProfile?.full_name, "NU student"),
+        senderAvatarPath: senderProfile?.avatar_path ?? null,
+        content: message.content,
+        createdAt: message.created_at,
+        isOwnMessage,
+      };
+    }),
+  };
 }
 
 export async function getCommunities(limit = 24): Promise<Array<{

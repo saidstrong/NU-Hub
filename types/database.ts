@@ -431,6 +431,52 @@ type DatabaseSchema = {
           updated_at?: string;
         };
       };
+      friend_conversations: {
+        Row: {
+          id: string;
+          user_a_id: string;
+          user_b_id: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_a_id: string;
+          user_b_id: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_a_id?: string;
+          user_b_id?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      friend_messages: {
+        Row: {
+          id: string;
+          conversation_id: string;
+          sender_id: string;
+          content: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          conversation_id: string;
+          sender_id: string;
+          content: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          conversation_id?: string;
+          sender_id?: string;
+          content?: string;
+          created_at?: string;
+        };
+      };
       content_reports: {
         Row: {
           id: string;

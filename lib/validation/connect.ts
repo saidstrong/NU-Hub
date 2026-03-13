@@ -72,6 +72,16 @@ export const sendFriendRequestSchema = z.object({
   redirectTo: z.string().trim().optional(),
 });
 
+export const startFriendConversationSchema = z
+  .object({
+    friendId: z.string().trim().uuid("Invalid user id."),
+    redirectTo: z.string().trim().optional(),
+  })
+  .refine((value) => value.friendId.length > 0, {
+    message: "Invalid user id.",
+    path: ["friendId"],
+  });
+
 const friendshipMutationSchema = z.object({
   friendshipId: z.string().trim().uuid("Invalid friendship id."),
   redirectTo: z.string().trim().optional(),
@@ -80,6 +90,16 @@ const friendshipMutationSchema = z.object({
 export const acceptFriendRequestSchema = friendshipMutationSchema;
 export const rejectFriendRequestSchema = friendshipMutationSchema;
 export const cancelFriendRequestSchema = friendshipMutationSchema;
+
+export const sendFriendMessageSchema = z.object({
+  conversationId: z.string().trim().uuid("Invalid conversation id."),
+  content: z
+    .string()
+    .trim()
+    .min(1, "Message cannot be empty.")
+    .max(1200, "Message is too long."),
+  redirectTo: z.string().trim().optional(),
+});
 
 export const createCommunityPostSchema = z.object({
   communityId: z.string().uuid("Invalid community id."),

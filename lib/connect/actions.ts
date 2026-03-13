@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import {
   getStringValue,
   redirectWithError,
@@ -20,6 +21,8 @@ import {
   cancelFriendRequestSchema,
   communityMutationIdSchema,
   createCommunitySchema,
+  sendFriendMessageSchema,
+  startFriendConversationSchema,
   rejectFriendRequestSchema,
   sendFriendRequestSchema,
   communityJoinSchema,
@@ -99,6 +102,16 @@ const FRIEND_REQUEST_REVIEW_LIMIT = {
   windowMs: 10 * 60 * 1000,
 };
 
+const FRIEND_CONVERSATION_START_LIMIT = {
+  maxHits: 40,
+  windowMs: 10 * 60 * 1000,
+};
+
+const FRIEND_MESSAGE_SEND_LIMIT = {
+  maxHits: 120,
+  windowMs: 10 * 60 * 1000,
+};
+
 function mapUpdateCommunityErrorMessage(errorCode?: string): string {
   if (errorCode === "42501") {
     return "You do not have permission to edit this community.";
@@ -169,6 +182,38 @@ function mapFriendRequestErrorMessage(errorCode?: string): string {
   return "Failed to update friend request.";
 }
 
+function mapFriendConversationErrorMessage(errorCode?: string): string {
+  if (errorCode === "42501") {
+    return "You cannot start a conversation with this user.";
+  }
+
+  if (errorCode === "23505") {
+    return "Conversation already exists.";
+  }
+
+  return "Failed to start conversation.";
+}
+
+function mapFriendMessageErrorMessage(errorCode?: string): string {
+  if (errorCode === "42501") {
+    return "You cannot send messages in this conversation.";
+  }
+
+  if (errorCode === "23514") {
+    return "Message cannot be empty.";
+  }
+
+  return "Failed to send message.";
+}
+
+function revalidateFriendMessagingPaths(userId: string, otherUserId: string, conversationId: string) {
+  revalidatePath("/connect");
+  revalidatePath("/connect/messages");
+  revalidatePath(`/connect/messages/${conversationId}`);
+  revalidatePath(`/connect/people/${userId}`);
+  revalidatePath(`/connect/people/${otherUserId}`);
+}
+
 function getOptionalFile(formData: FormData, key: string): File | null {
   const value = formData.get(key);
   if (!(value instanceof File) || value.size <= 0) {
@@ -223,6 +268,27 @@ async function getFriendshipBetweenUsers(
     .or(
       `and(requester_id.eq.${firstUserId},addressee_id.eq.${secondUserId}),and(requester_id.eq.${secondUserId},addressee_id.eq.${firstUserId})`,
     )
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
+}
+
+async function getAcceptedFriendshipBetweenUsers(
+  supabase: SupabaseServerClient,
+  firstUserId: string,
+  secondUserId: string,
+) {
+  const { data, error } = await supabase
+    .from("friendships")
+    .select("id, requester_id, addressee_id, status")
+    .or(
+      `and(requester_id.eq.${firstUserId},addressee_id.eq.${secondUserId}),and(requester_id.eq.${secondUserId},addressee_id.eq.${firstUserId})`,
+    )
+    .eq("status", "accepted")
     .maybeSingle();
 
   if (error) {
@@ -1116,6 +1182,189 @@ export async function cancelFriendRequestAction(formData: FormData) {
 
   revalidateFriendPaths(user.id, friendship.addressee_id);
   redirectWithMessage(redirectPath, "Friend request canceled.");
+}
+
+export async function startFriendConversationAction(formData: FormData) {
+  const parsed = startFriendConversationSchema.safeParse({
+    friendId: getStringValue(formData, "friendId"),
+    redirectTo: getStringValue(formData, "redirectTo"),
+  });
+
+  if (!parsed.success) {
+    redirectWithError("/connect/people", parsed.error.issues[0]?.message ?? "Invalid conversation input.");
+  }
+
+  const fallbackPath = `/connect/people/${parsed.data.friendId}`;
+  const redirectPath = sanitizeInternalPath(parsed.data.redirectTo, fallbackPath);
+  const user = await requireUser();
+
+  if (parsed.data.friendId === user.id) {
+    redirectWithError(redirectPath, "You cannot message yourself.");
+  }
+
+  const rateResult = consumeRateLimit(
+    `connect:friend-conversation:start:${user.id}`,
+    FRIEND_CONVERSATION_START_LIMIT,
+  );
+  if (!rateResult.allowed) {
+    redirectWithError(redirectPath, "Too many conversation attempts. Please wait and try again.");
+  }
+
+  const supabase = await createClient();
+  const { data: friendProfile, error: friendProfileError } = await supabase
+    .from("profiles")
+    .select("user_id")
+    .eq("user_id", parsed.data.friendId)
+    .maybeSingle();
+
+  if (friendProfileError || !friendProfile) {
+    redirectWithError("/connect/people", "Student not found.");
+  }
+
+  let acceptedFriendship: {
+    id: string;
+    requester_id: string;
+    addressee_id: string;
+    status: "pending" | "accepted" | "rejected";
+  } | null = null;
+
+  try {
+    acceptedFriendship = await getAcceptedFriendshipBetweenUsers(supabase, user.id, parsed.data.friendId);
+  } catch {
+    redirectWithError(redirectPath, "Failed to verify friendship.");
+  }
+
+  if (!acceptedFriendship) {
+    redirectWithError(redirectPath, "Only accepted friends can start conversations.");
+  }
+
+  const userAId = user.id < parsed.data.friendId ? user.id : parsed.data.friendId;
+  const userBId = user.id < parsed.data.friendId ? parsed.data.friendId : user.id;
+
+  const { data: existingConversation, error: existingConversationError } = await supabase
+    .from("friend_conversations")
+    .select("id")
+    .eq("user_a_id", userAId)
+    .eq("user_b_id", userBId)
+    .maybeSingle();
+
+  if (existingConversationError) {
+    redirectWithError(redirectPath, "Failed to load conversation.");
+  }
+
+  if (existingConversation) {
+    redirect(`/connect/messages/${existingConversation.id}`);
+  }
+
+  const { data: createdConversation, error: createConversationError } = await supabase
+    .from("friend_conversations")
+    .insert({
+      user_a_id: userAId,
+      user_b_id: userBId,
+    })
+    .select("id")
+    .maybeSingle();
+
+  if (createConversationError?.code === "23505") {
+    const { data: racedConversation, error: raceLookupError } = await supabase
+      .from("friend_conversations")
+      .select("id")
+      .eq("user_a_id", userAId)
+      .eq("user_b_id", userBId)
+      .maybeSingle();
+
+    if (raceLookupError || !racedConversation) {
+      redirectWithError(redirectPath, "Failed to open conversation.");
+    }
+
+    revalidateFriendMessagingPaths(user.id, parsed.data.friendId, racedConversation.id);
+    redirect(`/connect/messages/${racedConversation.id}`);
+  }
+
+  if (createConversationError || !createdConversation) {
+    redirectWithError(redirectPath, mapFriendConversationErrorMessage(createConversationError?.code));
+  }
+
+  revalidateFriendMessagingPaths(user.id, parsed.data.friendId, createdConversation.id);
+  redirect(`/connect/messages/${createdConversation.id}`);
+}
+
+export async function sendFriendMessageAction(formData: FormData) {
+  const parsed = sendFriendMessageSchema.safeParse({
+    conversationId: getStringValue(formData, "conversationId"),
+    content: getStringValue(formData, "content"),
+    redirectTo: getStringValue(formData, "redirectTo"),
+  });
+
+  if (!parsed.success) {
+    redirectWithError("/connect/messages", parsed.error.issues[0]?.message ?? "Invalid message input.");
+  }
+
+  const conversationPath = `/connect/messages/${parsed.data.conversationId}`;
+  const redirectPath = sanitizeInternalPath(parsed.data.redirectTo, conversationPath);
+  const user = await requireUser();
+  const rateResult = consumeRateLimit(`connect:friend-message:send:${user.id}`, FRIEND_MESSAGE_SEND_LIMIT);
+
+  if (!rateResult.allowed) {
+    redirectWithError(redirectPath, "Too many messages. Please wait and try again.");
+  }
+
+  const supabase = await createClient();
+  const { data: conversation, error: conversationError } = await supabase
+    .from("friend_conversations")
+    .select("id, user_a_id, user_b_id")
+    .eq("id", parsed.data.conversationId)
+    .maybeSingle();
+
+  if (conversationError) {
+    redirectWithError(redirectPath, "Failed to load conversation.");
+  }
+
+  if (!conversation) {
+    redirectWithError("/connect/messages", "Conversation not found.");
+  }
+
+  const isParticipant = conversation.user_a_id === user.id || conversation.user_b_id === user.id;
+  if (!isParticipant) {
+    redirectWithError("/connect/messages", "You cannot send messages in this conversation.");
+  }
+
+  let acceptedFriendship: {
+    id: string;
+    requester_id: string;
+    addressee_id: string;
+    status: "pending" | "accepted" | "rejected";
+  } | null = null;
+
+  try {
+    acceptedFriendship = await getAcceptedFriendshipBetweenUsers(
+      supabase,
+      conversation.user_a_id,
+      conversation.user_b_id,
+    );
+  } catch {
+    redirectWithError(redirectPath, "Failed to verify friendship.");
+  }
+
+  if (!acceptedFriendship) {
+    redirectWithError(redirectPath, "Only accepted friends can message each other.");
+  }
+
+  const { error: insertMessageError } = await supabase
+    .from("friend_messages")
+    .insert({
+      conversation_id: conversation.id,
+      sender_id: user.id,
+      content: parsed.data.content,
+    });
+
+  if (insertMessageError) {
+    redirectWithError(redirectPath, mapFriendMessageErrorMessage(insertMessageError.code));
+  }
+
+  const counterpartId = conversation.user_a_id === user.id ? conversation.user_b_id : conversation.user_a_id;
+  revalidateFriendMessagingPaths(user.id, counterpartId, conversation.id);
+  redirect(redirectPath);
 }
 
 export async function createCommunityPostAction(formData: FormData) {

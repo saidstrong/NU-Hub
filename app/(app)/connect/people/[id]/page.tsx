@@ -9,6 +9,7 @@ import {
   acceptFriendRequestAction,
   cancelFriendRequestAction,
   rejectFriendRequestAction,
+  startFriendConversationAction,
   sendFriendRequestAction,
 } from "@/lib/connect/actions";
 import { getFriendshipWithPerson, getPersonProfile, toPersonCardData } from "@/lib/connect/data";
@@ -179,10 +180,17 @@ export default async function PersonProfilePage({ params, searchParams }: Person
       </FormSection>
       {!isSelfProfile ? (
         friendship?.status === "accepted" ? (
-          <div className="wire-action-row-single">
-            <button type="button" className="wire-action-primary w-full" disabled>
+          <div className="wire-action-row">
+            <button type="button" className="wire-action w-full" disabled>
               Friends
             </button>
+            <form action={startFriendConversationAction} className="w-full">
+              <input type="hidden" name="friendId" value={person.user_id} />
+              <input type="hidden" name="redirectTo" value={`/connect/people/${person.user_id}`} />
+              <button type="submit" className="wire-action-primary w-full">
+                Message
+              </button>
+            </form>
           </div>
         ) : friendship?.status === "pending" && friendship.requester_id === user.id ? (
           <div className="wire-action-row">
