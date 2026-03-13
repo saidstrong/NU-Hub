@@ -524,6 +524,29 @@ type DatabaseSchema = {
           updated_at?: string;
         };
       };
+      rate_limit_events: {
+        Row: {
+          id: string;
+          user_id: string | null;
+          action: string;
+          target_id: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id?: string | null;
+          action: string;
+          target_id?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string | null;
+          action?: string;
+          target_id?: string | null;
+          created_at?: string;
+        };
+      };
       content_reports: {
         Row: {
           id: string;

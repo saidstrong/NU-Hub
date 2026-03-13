@@ -80,6 +80,7 @@ export async function aggregateDailyMetricsForDay(
     notificationsResult,
     contentReportsResult,
     newUsersCountResult,
+    rateLimitEventsCountResult,
   ] = await Promise.all([
     supabase
       .from("friend_messages")
@@ -121,6 +122,11 @@ export async function aggregateDailyMetricsForDay(
       .select("user_id", { count: "exact", head: true })
       .gte("created_at", startIso)
       .lt("created_at", endIso),
+    supabase
+      .from("rate_limit_events")
+      .select("id", { count: "exact", head: true })
+      .gte("created_at", startIso)
+      .lt("created_at", endIso),
   ]);
 
   if (
@@ -131,7 +137,8 @@ export async function aggregateDailyMetricsForDay(
     eventParticipantsResult.error ||
     notificationsResult.error ||
     contentReportsResult.error ||
-    newUsersCountResult.error
+    newUsersCountResult.error ||
+    rateLimitEventsCountResult.error
   ) {
     throw new Error("Failed to aggregate daily metrics.");
   }
@@ -158,8 +165,7 @@ export async function aggregateDailyMetricsForDay(
     eventRsvps: (eventParticipantsResult.data ?? []).length,
     notificationsCreated: (notificationsResult.data ?? []).length,
     moderationReports: (contentReportsResult.data ?? []).length,
-    // No durable storage source yet in this pass.
-    rateLimitHits: 0,
+    rateLimitHits: rateLimitEventsCountResult.count ?? 0,
   };
 }
 

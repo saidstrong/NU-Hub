@@ -1,5 +1,7 @@
 import { Redis } from "@upstash/redis";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { logSecurityEvent, logWarn } from "@/lib/observability/logger";
+import type { Database } from "@/types/database";
 
 type RateLimitEntry = {
   hits: number;
@@ -63,11 +65,26 @@ export type CreateRateLimiterInput = {
   requestId?: string;
 };
 
+type RateLimitPersistenceInput = {
+  userId?: string;
+  action: string;
+  targetId?: string | null;
+};
+
 declare global {
   // eslint-disable-next-line no-var
   var __nuHubUpstashRedisClient: Redis | null | undefined;
   // eslint-disable-next-line no-var
   var __nuHubRateLimitMissingConfigWarned: boolean | undefined;
+  // eslint-disable-next-line no-var
+  var __nuHubRateLimitEventsClient:
+    | ReturnType<typeof createSupabaseClient<Database>>
+    | null
+    | undefined;
+  // eslint-disable-next-line no-var
+  var __nuHubRateLimitEventsMissingConfigWarned: boolean | undefined;
+  // eslint-disable-next-line no-var
+  var __nuHubRateLimitEventsPersistWarned: boolean | undefined;
 }
 
 const DISTRIBUTED_LIMIT_SCRIPT = `
@@ -78,6 +95,8 @@ end
 local ttl = redis.call("PTTL", KEYS[1])
 return { hits, ttl }
 `;
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function getKeyNamespace(key: string): string {
   return key.split(":").slice(0, 2).join(":") || "unknown";
@@ -134,6 +153,78 @@ function getRedisClient(): Redis | null {
   return globalThis.__nuHubUpstashRedisClient;
 }
 
+function normalizeAction(action: string): string {
+  const normalized = action.trim();
+  if (!normalized) return "unknown";
+  return normalized.length > 120 ? normalized.slice(0, 120) : normalized;
+}
+
+function normalizeTargetId(targetId?: string | null): string | null {
+  if (!targetId) return null;
+  const normalized = targetId.trim();
+  if (!normalized) return null;
+  return normalized.length > 160 ? normalized.slice(0, 160) : normalized;
+}
+
+function normalizeUserId(userId?: string): string | null {
+  if (!userId) return null;
+  const normalized = userId.trim();
+  return UUID_PATTERN.test(normalized) ? normalized : null;
+}
+
+function getRateLimitEventsClient() {
+  if (globalThis.__nuHubRateLimitEventsClient !== undefined) {
+    return globalThis.__nuHubRateLimitEventsClient;
+  }
+
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!url || !serviceRoleKey) {
+    globalThis.__nuHubRateLimitEventsClient = null;
+    if (!globalThis.__nuHubRateLimitEventsMissingConfigWarned) {
+      globalThis.__nuHubRateLimitEventsMissingConfigWarned = true;
+      logWarn("security", "rate_limit_event_persist_skipped_missing_service_role", {
+        reason: "missing_service_role_config",
+      });
+    }
+    return null;
+  }
+
+  globalThis.__nuHubRateLimitEventsClient = createSupabaseClient<Database>(url, serviceRoleKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  });
+  return globalThis.__nuHubRateLimitEventsClient;
+}
+
+async function persistRateLimitEvent(input: RateLimitPersistenceInput): Promise<void> {
+  const client = getRateLimitEventsClient();
+  if (!client) return;
+
+  const action = normalizeAction(input.action);
+  const targetId = normalizeTargetId(input.targetId);
+  const userId = normalizeUserId(input.userId);
+
+  const { error } = await client
+    .from("rate_limit_events")
+    .insert({
+      user_id: userId,
+      action,
+      target_id: targetId,
+    });
+
+  if (error && !globalThis.__nuHubRateLimitEventsPersistWarned) {
+    globalThis.__nuHubRateLimitEventsPersistWarned = true;
+    logWarn("security", "rate_limit_event_persist_failed", {
+      code: error.code ?? null,
+      action,
+    });
+  }
+}
+
 export async function consumeDistributedRateLimit(
   key: string,
   options: RateLimitWindow,
@@ -168,6 +259,11 @@ export async function consumeDistributedRateLimit(
         requestId,
         keyNamespace: getKeyNamespace(key),
         retryAfterMs: ttlMs,
+      });
+      void persistRateLimitEvent({
+        userId: context.userId,
+        action: context.action ?? getKeyNamespace(key),
+        targetId: context.targetId,
       });
       return {
         allowed: false,
@@ -258,12 +354,15 @@ export function consumeRateLimit(
   }
 
   if (existing.hits >= maxHits) {
-    const keyNamespace = key.split(":").slice(0, 2).join(":") || "unknown";
+    const keyNamespace = getKeyNamespace(key);
     logSecurityEvent("rate_limit_triggered", {
       keyNamespace,
       maxHits,
       windowMs,
       retryAfterMs: Math.max(0, existing.resetAt - now),
+    });
+    void persistRateLimitEvent({
+      action: keyNamespace,
     });
 
     return {
