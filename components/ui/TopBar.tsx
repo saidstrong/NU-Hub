@@ -5,6 +5,7 @@ import { cn } from "@/lib/cn";
 type Action = {
   label: string;
   href?: string;
+  variant?: "secondary" | "ghost";
 };
 
 type TopBarProps = {
@@ -30,16 +31,17 @@ export function TopBar({
       )}
     >
       <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-3">
+        <div className="flex min-w-0 items-start gap-3">
           {backHref ? (
             <Link
               href={backHref}
               className="wire-action-compact grid h-9 w-9 place-items-center p-0"
+              aria-label="Go back"
             >
               <ChevronLeft className="h-4 w-4" />
             </Link>
           ) : null}
-          <div>
+          <div className="min-w-0">
             <h1 className="wire-title">{title}</h1>
             {subtitle ? (
               <p className="wire-subtitle">{subtitle}</p>
@@ -47,13 +49,16 @@ export function TopBar({
           </div>
         </div>
         {actions.length > 0 ? (
-          <div className="flex flex-wrap justify-end gap-2 pt-0.5">
+          <div className="flex shrink-0 flex-wrap justify-end gap-2 pt-1">
             {actions.map((action) =>
               action.href ? (
                 <Link
                   key={`${action.label}-${action.href}`}
                   href={action.href}
-                  className="wire-action-compact min-w-[58px]"
+                  className={cn(
+                    action.variant === "ghost" ? "wire-action-ghost" : "wire-action-compact",
+                    "min-w-[76px]",
+                  )}
                 >
                   {action.label}
                 </Link>
@@ -61,7 +66,10 @@ export function TopBar({
                 <button
                   key={action.label}
                   type="button"
-                  className="wire-action-compact min-w-[58px]"
+                  className={cn(
+                    action.variant === "ghost" ? "wire-action-ghost" : "wire-action-compact",
+                    "min-w-[76px]",
+                  )}
                 >
                   {action.label}
                 </button>

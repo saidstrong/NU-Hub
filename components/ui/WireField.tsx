@@ -23,7 +23,9 @@ export function WireField({
 }: WireFieldProps) {
   return (
     <label className={cn("block space-y-2", className)}>
-      <span className="wire-label">{label}</span>
+      <span className="wire-label">
+        {label}
+      </span>
       <input
         name={name}
         type={type}
@@ -56,7 +58,9 @@ export function WireTextarea({
 }: WireTextareaProps) {
   return (
     <label className={cn("block space-y-2", className)}>
-      <span className="wire-label">{label}</span>
+      <span className="wire-label">
+        {label}
+      </span>
       <textarea
         name={name}
         defaultValue={defaultValue ?? ""}

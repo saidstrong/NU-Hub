@@ -4,7 +4,7 @@ type ShellButtonProps = {
   label: string;
   href?: string;
   block?: boolean;
-  variant?: "default" | "primary";
+  variant?: "default" | "primary" | "ghost";
 };
 
 export function ShellButton({
@@ -13,7 +13,12 @@ export function ShellButton({
   block = true,
   variant = "default",
 }: ShellButtonProps) {
-  const toneClass = variant === "primary" ? "wire-action-primary" : "wire-action";
+  const toneClass =
+    variant === "primary"
+      ? "wire-action-primary"
+      : variant === "ghost"
+        ? "wire-action-ghost"
+        : "wire-action";
   const className = `${block ? "w-full" : ""} ${toneClass}`.trim();
 
   if (href) {

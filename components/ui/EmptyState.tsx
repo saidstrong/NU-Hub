@@ -14,14 +14,14 @@ export function EmptyState({
   actionHref,
 }: EmptyStateProps) {
   return (
-    <div className="wire-panel border-dashed text-center">
-      <div className="mx-auto mb-3 h-9 w-9 rounded-xl border border-dashed border-wire-600 bg-wire-900/60" />
-      <p className="text-sm font-semibold tracking-tight text-wire-100">{title}</p>
-      <p className="mx-auto mt-1 max-w-[28ch] text-[13px] leading-relaxed text-wire-300">
+    <div className="wire-panel text-center">
+      <div className="mx-auto mb-3 h-10 w-10 rounded-full border border-wire-700 bg-wire-800/70" />
+      <p className="text-[18px] font-semibold tracking-tight text-wire-100">{title}</p>
+      <p className="mx-auto mt-2 max-w-[32ch] text-[14px] leading-relaxed text-wire-300">
         {description}
       </p>
       {actionLabel && actionHref ? (
-        <Link href={actionHref} className="wire-action mt-4 inline-flex w-auto px-3">
+        <Link href={actionHref} className="wire-action-primary mt-5 inline-flex w-auto px-4">
           {actionLabel}
         </Link>
       ) : null}

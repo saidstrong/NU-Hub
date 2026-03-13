@@ -4,17 +4,43 @@
 
 :root {
   color-scheme: dark;
+  --bg-app: #0b0f14;
+  --bg-surface: #111827;
+  --bg-elevated: #151d2b;
+  --text-primary: #f3f4f6;
+  --text-secondary: #9ca3af;
+  --text-muted: #6b7280;
+  --accent-primary: #4f7cff;
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --error: #ef4444;
+  --border-default: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.12);
+  --border-hover: rgba(255, 255, 255, 0.16);
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 32px;
+  --space-8: 40px;
+  --radius-page-card: 24px;
+  --radius-card: 20px;
+  --radius-input: 16px;
+  --radius-button: 16px;
+  --radius-pill: 999px;
 }
 
 body {
   @apply bg-wire-950 text-wire-100 antialiased;
   font-family: var(--font-sans), "Segoe UI", sans-serif;
-  font-size: 14px;
-  line-height: 1.45;
+  font-size: 16px;
+  line-height: 1.5;
 }
 
 * {
-  @apply border-wire-700;
+  border-color: var(--border-default);
 }
 
 a {
@@ -22,96 +48,169 @@ a {
 }
 
 main {
-  @apply flex flex-col gap-5 pb-1;
+  @apply flex flex-col gap-6 pb-1;
 }
 
 @layer components {
   .wire-topbar {
-    @apply rounded-2xl border border-wire-700 bg-wire-900 px-4 py-3.5;
+    @apply rounded-[var(--radius-page-card)] border bg-wire-900 px-5 py-4;
+    border-color: var(--border-default);
   }
 
   .wire-panel {
-    @apply rounded-2xl border border-wire-700 bg-wire-900 p-4;
+    @apply rounded-[var(--radius-page-card)] border bg-wire-900 p-5;
+    border-color: var(--border-default);
   }
 
   .wire-card {
-    @apply rounded-2xl border border-wire-700 bg-wire-800 p-3.5;
+    @apply rounded-[var(--radius-card)] border bg-wire-800 p-4;
+    border-color: var(--border-default);
   }
 
   .wire-title {
-    @apply text-[23px] font-semibold tracking-tight text-wire-100;
+    @apply text-[32px] font-semibold leading-[40px] tracking-tight text-wire-100;
   }
 
   .wire-section-title {
-    @apply text-[17px] font-semibold tracking-tight text-wire-100;
+    @apply text-[24px] font-semibold leading-[32px] tracking-tight text-wire-100;
   }
 
   .wire-subtitle {
-    @apply text-[13px] text-wire-300;
+    @apply text-[14px] leading-[20px] text-wire-300;
   }
 
   .wire-label {
-    @apply text-[12px] font-medium tracking-[0.04em] text-wire-300;
+    @apply text-[12px] font-medium uppercase tracking-[0.06em] text-wire-300;
   }
 
   .wire-meta {
-    @apply text-[12px] text-wire-300;
+    @apply text-[13px] leading-[20px] text-wire-300;
   }
 
   .wire-input {
-    @apply flex h-11 items-center gap-2 rounded-xl border border-wire-700 bg-wire-800 px-3 text-[13px] text-wire-200 transition-colors duration-150 hover:border-wire-600 focus-within:border-accent/45 focus-within:ring-1 focus-within:ring-accent/25;
+    @apply flex min-h-12 items-center gap-2 rounded-[var(--radius-input)] border bg-wire-800 px-4 text-[14px] text-wire-200 transition-colors duration-150;
+    border-color: var(--border-default);
+  }
+
+  .wire-input:hover {
+    border-color: var(--border-hover);
+  }
+
+  .wire-input:focus-within {
+    border-color: color-mix(in oklab, var(--accent-primary), white 6%);
+    box-shadow: 0 0 0 2px color-mix(in oklab, var(--accent-primary), transparent 80%);
   }
 
   .wire-input-field {
-    @apply h-11 w-full rounded-xl border border-wire-700 bg-wire-800 px-3 text-[14px] text-wire-100 placeholder:text-wire-300 transition-colors duration-150 hover:border-wire-600 focus:border-accent/45 focus:outline-none focus:ring-1 focus:ring-accent/25;
+    @apply h-12 w-full rounded-[var(--radius-input)] border bg-wire-800 px-4 text-[14px] text-wire-100 placeholder:text-wire-300 transition-colors duration-150 focus:outline-none;
+    border-color: var(--border-default);
+  }
+
+  .wire-input-field:hover {
+    border-color: var(--border-hover);
+  }
+
+  .wire-input-field:focus {
+    border-color: color-mix(in oklab, var(--accent-primary), white 6%);
+    box-shadow: 0 0 0 2px color-mix(in oklab, var(--accent-primary), transparent 80%);
   }
 
   .wire-textarea-field {
-    @apply min-h-24 w-full rounded-xl border border-wire-700 bg-wire-800 px-3 py-2.5 text-[14px] leading-relaxed text-wire-100 placeholder:text-wire-300 transition-colors duration-150 hover:border-wire-600 focus:border-accent/45 focus:outline-none focus:ring-1 focus:ring-accent/25;
+    @apply min-h-28 w-full rounded-[var(--radius-input)] border bg-wire-800 px-4 py-3 text-[14px] leading-relaxed text-wire-100 placeholder:text-wire-300 transition-colors duration-150 focus:outline-none;
+    border-color: var(--border-default);
     resize: vertical;
   }
 
+  .wire-textarea-field:hover {
+    border-color: var(--border-hover);
+  }
+
+  .wire-textarea-field:focus {
+    border-color: color-mix(in oklab, var(--accent-primary), white 6%);
+    box-shadow: 0 0 0 2px color-mix(in oklab, var(--accent-primary), transparent 80%);
+  }
+
   .wire-action {
-    @apply flex min-h-11 items-center justify-center rounded-xl border border-wire-700 bg-wire-800 px-3 py-2 text-center text-[13px] font-medium text-wire-200 transition-colors duration-150 hover:border-wire-600 hover:bg-wire-800/85 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/35;
+    @apply inline-flex min-h-11 items-center justify-center rounded-[var(--radius-button)] border bg-wire-800 px-4 py-2 text-center text-[14px] font-medium text-wire-100 transition-colors duration-150 focus-visible:outline-none;
+    border-color: var(--border-strong);
+  }
+
+  .wire-action:hover {
+    border-color: var(--border-hover);
+    background-color: color-mix(in oklab, var(--bg-elevated), white 4%);
+  }
+
+  .wire-action:focus-visible {
+    box-shadow: 0 0 0 2px color-mix(in oklab, var(--accent-primary), transparent 72%);
   }
 
   .wire-action-compact {
-    @apply inline-flex min-h-9 items-center justify-center rounded-xl border border-wire-700 bg-wire-800 px-2.5 py-1.5 text-center text-[12px] font-medium text-wire-200 transition-colors duration-150 hover:border-wire-600 hover:bg-wire-800/85 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/35;
+    @apply inline-flex min-h-9 items-center justify-center rounded-[var(--radius-button)] border bg-wire-800 px-3 py-1.5 text-center text-[12px] font-medium text-wire-200 transition-colors duration-150 focus-visible:outline-none;
+    border-color: var(--border-default);
+  }
+
+  .wire-action-compact:hover {
+    border-color: var(--border-hover);
+    background-color: color-mix(in oklab, var(--bg-elevated), white 4%);
+  }
+
+  .wire-action-compact:focus-visible {
+    box-shadow: 0 0 0 2px color-mix(in oklab, var(--accent-primary), transparent 72%);
   }
 
   .wire-action-primary {
-    @apply flex min-h-11 items-center justify-center rounded-xl border px-3 py-2 text-center text-[13px] font-medium text-accent transition-colors duration-150 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/40;
-    border-color: rgba(91, 140, 255, 0.6);
-    background-color: rgba(91, 140, 255, 0.1);
+    @apply inline-flex min-h-11 items-center justify-center rounded-[var(--radius-button)] border border-transparent px-4 py-2 text-center text-[14px] font-medium text-white transition-colors duration-150 focus-visible:outline-none;
+    background-color: var(--accent-primary);
   }
 
   .wire-action-primary:hover {
-    border-color: #5B8CFF;
-    background-color: rgba(91, 140, 255, 0.16);
+    background-color: color-mix(in oklab, var(--accent-primary), white 8%);
+  }
+
+  .wire-action-primary:focus-visible {
+    box-shadow: 0 0 0 2px color-mix(in oklab, var(--accent-primary), transparent 66%);
+  }
+
+  .wire-action-ghost {
+    @apply inline-flex min-h-11 items-center justify-center rounded-[var(--radius-button)] px-3 py-2 text-center text-[14px] font-medium text-wire-300 transition-colors duration-150 focus-visible:outline-none;
+  }
+
+  .wire-action-ghost:hover {
+    @apply text-wire-100;
+    background-color: color-mix(in oklab, var(--bg-elevated), white 6%);
+  }
+
+  .wire-action-ghost:focus-visible {
+    box-shadow: 0 0 0 2px color-mix(in oklab, var(--accent-primary), transparent 72%);
   }
 
   .wire-placeholder {
-    @apply rounded-xl border border-dashed border-wire-600 bg-wire-900/40;
+    @apply rounded-[var(--radius-card)] border border-dashed bg-wire-900/50;
+    border-color: var(--border-strong);
   }
 
   .wire-hover {
-    @apply transition-colors duration-150 hover:border-wire-600;
+    @apply transition-colors duration-150;
+  }
+
+  .wire-hover:hover {
+    border-color: var(--border-hover);
   }
 
   .wire-link {
-    @apply inline-flex min-h-9 items-center text-[12px] font-medium text-wire-300 transition-colors duration-150 hover:text-accent;
+    @apply inline-flex min-h-9 items-center text-[13px] font-medium text-wire-200 transition-colors duration-150 hover:text-wire-100;
   }
 
   .wire-list {
-    @apply space-y-2.5;
+    @apply space-y-3;
   }
 
   .wire-action-row {
-    @apply grid grid-cols-2 gap-2 pt-1;
+    @apply grid grid-cols-2 gap-3 pt-2;
   }
 
   .wire-action-row-single {
-    @apply pt-1;
+    @apply pt-2;
   }
 }
 

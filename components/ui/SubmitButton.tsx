@@ -6,7 +6,7 @@ import { cn } from "@/lib/cn";
 type SubmitButtonProps = {
   label: string;
   pendingLabel?: string;
-  variant?: "default" | "primary";
+  variant?: "default" | "primary" | "ghost";
   className?: string;
 };
 
@@ -23,7 +23,11 @@ export function SubmitButton({
       type="submit"
       disabled={pending}
       className={cn(
-        variant === "primary" ? "wire-action-primary" : "wire-action",
+        variant === "primary"
+          ? "wire-action-primary"
+          : variant === "ghost"
+            ? "wire-action-ghost"
+            : "wire-action",
         "w-full disabled:cursor-not-allowed disabled:opacity-70",
         className,
       )}
