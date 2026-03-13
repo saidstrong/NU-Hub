@@ -1,10 +1,13 @@
+import Link from "next/link";
 import { CommunityCard } from "@/components/ui/CommunityCard";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { FeedbackBanner } from "@/components/ui/FeedbackBanner";
 import { PersonCard } from "@/components/ui/PersonCard";
 import { SearchBar } from "@/components/ui/SearchBar";
+import { SectionHeader } from "@/components/ui/SectionHeader";
 import { SectionCard } from "@/components/ui/SectionCard";
+import { ShellButton } from "@/components/ui/ShellButton";
 import { TagChip } from "@/components/ui/TagChip";
-import { TopBar } from "@/components/ui/TopBar";
 import {
   lookingForChips,
 } from "@/lib/mock-data";
@@ -28,39 +31,78 @@ export default async function ConnectHomePage() {
 
   return (
     <main>
-      <TopBar
-        title="Connect"
-        subtitle="Find peers, collaborators, and student communities"
-        actions={[
-          { label: "People", href: "/connect/people" },
-          { label: "Communities", href: "/connect/communities" },
-          { label: "Messages", href: "/connect/messages" },
-        ]}
-      />
-      {loadError ? (
-        <div className="rounded-xl border border-red-400/30 bg-red-400/10 px-3 py-2 text-[13px] text-red-200">
-          {loadError}
-        </div>
-      ) : null}
+      <section className="wire-panel">
+        <SectionHeader
+          title="Connect"
+          subtitle="Find the right people and communities for study, projects, and campus momentum."
+          actionNode={
+            <Link href="/connect/friends" className="wire-link">
+              Friends
+            </Link>
+          }
+        />
+        <p className="wire-meta">
+          Discovery first: identify aligned peers, then join circles that help you move faster.
+        </p>
+      </section>
 
-      <SearchBar placeholder="Search students and communities" />
+      {loadError ? <FeedbackBanner tone="error" message={loadError} /> : null}
 
       <section className="wire-panel">
-        <p className="wire-section-title mb-2">Discovery focus</p>
+        <SectionHeader
+          title="Search"
+          subtitle="Look up students and communities with one query."
+        />
+        <SearchBar
+          placeholder="Search students and communities"
+          queryName="q"
+          defaultValue=""
+          action="/search"
+        />
+      </section>
+
+      <section className="wire-panel">
+        <SectionHeader
+          title="Discovery focus"
+          subtitle="Keep filters lightweight and focus on strong identity signals."
+        />
         <p className="mb-3 wire-meta">
           Explore people and communities aligned with your study goals, projects, and interests.
         </p>
         <div className="flex flex-wrap gap-2">
           {lookingForChips.map((chip, idx) => (
-            <TagChip key={chip} label={chip} active={idx === 0} />
+            <TagChip key={chip} label={chip} active={idx === 0} tone="status" />
           ))}
         </div>
       </section>
 
-      <SectionCard title="People for study and projects" actionLabel="See all" actionHref="/connect/people">
-        <p className="mb-3 wire-meta">
-          Student profiles with clear academic context and collaboration intent.
-        </p>
+      <section className="wire-panel">
+        <SectionHeader
+          title="Actions"
+          subtitle="Start with people, then expand into communities and messages."
+        />
+        <div className="wire-action-row">
+          <ShellButton label="Find people" href="/connect/people" variant="primary" />
+          <Link href="/connect/communities" className="wire-action">
+            Communities
+          </Link>
+        </div>
+        <div className="mt-3 flex flex-wrap gap-3">
+          <Link href="/connect/messages" className="wire-link">
+            Messages
+          </Link>
+          <Link href="/connect/my-communities" className="wire-link">
+            My communities
+          </Link>
+        </div>
+      </section>
+
+      <SectionCard
+        title="Suggested people"
+        subtitle="Students with clear academic context and collaboration intent."
+        actionLabel="See all"
+        actionHref="/connect/people"
+      >
         {people.length > 0 ? (
           <div className="wire-list">
             {people.map((person) => (
@@ -80,13 +122,11 @@ export default async function ConnectHomePage() {
       </SectionCard>
 
       <SectionCard
-        title="Communities to join"
+        title="Suggested communities"
+        subtitle="Campus circles for project work, study support, and student-led initiatives."
         actionLabel="See all"
         actionHref="/connect/communities"
       >
-        <p className="mb-3 wire-meta">
-          Campus circles for study support, project work, and student-led initiatives.
-        </p>
         {communities.length > 0 ? (
           <div className="wire-list">
             {communities.map((entry) => (
