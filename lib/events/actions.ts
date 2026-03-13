@@ -10,6 +10,7 @@ import {
 } from "@/lib/actions/helpers";
 import { requireUser } from "@/lib/auth/session";
 import { isEventOwner } from "@/lib/events/ownership";
+import { writeInAppNotification } from "@/lib/notifications/write";
 import { createAppError } from "@/lib/observability/errors";
 import { logAppError, logInfo, logSecurityEvent, logWarn } from "@/lib/observability/logger";
 import { getRequestContext } from "@/lib/observability/request-context";
@@ -607,6 +608,17 @@ export async function setEventParticipationAction(formData: FormData) {
   }
 
   const supabase = await createClient();
+  const { data: existingParticipation, error: existingParticipationError } = await supabase
+    .from("event_participants")
+    .select("event_id")
+    .eq("event_id", parsed.data.eventId)
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (existingParticipationError) {
+    redirectWithError("/events", "Failed to update participation.");
+  }
+
   const { error } = await supabase.from("event_participants").upsert(
     {
       event_id: parsed.data.eventId,
@@ -618,6 +630,33 @@ export async function setEventParticipationAction(formData: FormData) {
 
   if (error) {
     redirectWithError("/events", "Failed to update participation.");
+  }
+
+  if (!existingParticipation) {
+    const { data: eventOwner, error: eventOwnerError } = await supabase
+      .from("events")
+      .select("id, created_by, title")
+      .eq("id", parsed.data.eventId)
+      .maybeSingle();
+
+    if (!eventOwnerError && eventOwner?.created_by && eventOwner.created_by !== user.id) {
+      await writeInAppNotification(supabase, {
+        userId: eventOwner.created_by,
+        type: "events",
+        title: "New RSVP on your event",
+        message:
+          parsed.data.status === "going"
+            ? `Someone is going to ${eventOwner.title ?? "your event"}.`
+            : `Someone is interested in ${eventOwner.title ?? "your event"}.`,
+        link: `/events/${parsed.data.eventId}`,
+        payload: {
+          kind: "event_rsvp_created",
+          event_id: parsed.data.eventId,
+          rsvp_status: parsed.data.status,
+        },
+      });
+      revalidatePath("/profile/notifications");
+    }
   }
 
   revalidatePath("/events");

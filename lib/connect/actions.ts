@@ -814,7 +814,7 @@ export async function createCommunityPostAction(formData: FormData) {
   const supabase = await createClient();
   const { data: community, error: communityError } = await supabase
     .from("communities")
-    .select("id")
+    .select("id, created_by, name")
     .eq("id", parsed.data.communityId)
     .maybeSingle();
 
@@ -870,7 +870,23 @@ export async function createCommunityPostAction(formData: FormData) {
     redirectWithError(communityPath, mapCreateCommunityPostErrorMessage(insertError?.code));
   }
 
+  if (community.created_by !== user.id) {
+    await writeInAppNotification(supabase, {
+      userId: community.created_by,
+      type: "community",
+      title: "New post in your community",
+      message: `Someone posted in ${community.name}.`,
+      link: communityPath,
+      payload: {
+        kind: "community_post_created",
+        community_id: community.id,
+        post_id: createdPost.id,
+      },
+    });
+  }
+
   revalidatePath(communityPath);
+  revalidatePath("/profile/notifications");
   logInfo("connect", "community_post_created", {
     ...requestContext,
     userId: user.id,

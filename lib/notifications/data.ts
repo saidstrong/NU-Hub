@@ -12,6 +12,10 @@ export type PaginatedNotificationResult = {
   notifications: NotificationListRow[];
   hasMore: boolean;
 };
+export type NotificationReadSummary = {
+  unreadCount: number;
+  totalCount: number;
+};
 
 export async function getMyNotifications(limit = 50): Promise<NotificationListRow[]> {
   const { notifications } = await getMyNotificationsPage(1, limit);
@@ -47,6 +51,32 @@ export async function getMyNotificationsPage(
   return {
     notifications: paged.rows,
     hasMore: paged.hasMore,
+  };
+}
+
+export async function getMyNotificationReadSummary(): Promise<NotificationReadSummary> {
+  const user = await requireUser();
+  const supabase = await createClient();
+
+  const [unreadCountResult, totalCountResult] = await Promise.all([
+    supabase
+      .from("notifications")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .eq("is_read", false),
+    supabase
+      .from("notifications")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id),
+  ]);
+
+  if (unreadCountResult.error || totalCountResult.error) {
+    throw new Error("Failed to load notifications.");
+  }
+
+  return {
+    unreadCount: unreadCountResult.count ?? 0,
+    totalCount: totalCountResult.count ?? 0,
   };
 }
 

@@ -16,6 +16,10 @@ const markNotificationReadSchema = z.object({
   redirectTo: z.string().optional(),
 });
 
+const markAllNotificationsReadSchema = z.object({
+  redirectTo: z.string().optional(),
+});
+
 export async function markNotificationReadAction(formData: FormData) {
   const parsed = markNotificationReadSchema.safeParse({
     notificationId: getStringValue(formData, "notificationId"),
@@ -40,6 +44,38 @@ export async function markNotificationReadAction(formData: FormData) {
 
   if (error) {
     redirectWithError("/profile/notifications", "Failed to update notification.");
+  }
+
+  revalidatePath("/profile");
+  revalidatePath("/profile/notifications");
+
+  const redirectTo = sanitizeInternalPath(parsed.data.redirectTo, "/profile/notifications");
+  redirect(redirectTo);
+}
+
+export async function markAllNotificationsReadAction(formData: FormData) {
+  const parsed = markAllNotificationsReadSchema.safeParse({
+    redirectTo: getStringValue(formData, "redirectTo"),
+  });
+
+  if (!parsed.success) {
+    redirectWithError(
+      "/profile/notifications",
+      parsed.error.issues[0]?.message ?? "Invalid notification input.",
+    );
+  }
+
+  const user = await requireUser();
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("notifications")
+    .update({ is_read: true })
+    .eq("user_id", user.id)
+    .eq("is_read", false);
+
+  if (error) {
+    redirectWithError("/profile/notifications", "Failed to update notifications.");
   }
 
   revalidatePath("/profile");

@@ -2,9 +2,10 @@ import Link from "next/link";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PageNavigation } from "@/components/ui/PageNavigation";
 import { TopBar } from "@/components/ui/TopBar";
-import { markNotificationReadAction } from "@/lib/notifications/actions";
+import { markAllNotificationsReadAction, markNotificationReadAction } from "@/lib/notifications/actions";
 import {
   formatNotificationTime,
+  getMyNotificationReadSummary,
   getMyNotificationsPage,
 } from "@/lib/notifications/data";
 import { buildPageHref, parsePageParam } from "@/lib/pagination";
@@ -35,12 +36,19 @@ export default async function NotificationsPage({ searchParams }: NotificationsP
   const page = parsePageParam(pageParam);
   let notifications: Awaited<ReturnType<typeof getMyNotificationsPage>>["notifications"] = [];
   let hasMore = false;
+  let unreadCount = 0;
+  let totalCount = 0;
   let loadError: string | null = null;
 
   try {
-    const pagedNotifications = await getMyNotificationsPage(page, NOTIFICATIONS_PAGE_SIZE);
+    const [pagedNotifications, summary] = await Promise.all([
+      getMyNotificationsPage(page, NOTIFICATIONS_PAGE_SIZE),
+      getMyNotificationReadSummary(),
+    ]);
     notifications = pagedNotifications.notifications;
     hasMore = pagedNotifications.hasMore;
+    unreadCount = summary.unreadCount;
+    totalCount = summary.totalCount;
   } catch (notificationsError) {
     loadError =
       notificationsError instanceof Error
@@ -74,6 +82,23 @@ export default async function NotificationsPage({ searchParams }: NotificationsP
         <div className="mb-4 border-b border-wire-700 pb-3">
           <h2 className="wire-section-title">Recent activity</h2>
           <p className="mt-1 wire-meta">In-app updates for communities and events.</p>
+          <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+            <p className="wire-meta">
+              {totalCount === 0
+                ? "No notifications yet."
+                : unreadCount > 0
+                  ? `${unreadCount} unread of ${totalCount}`
+                  : `All caught up (${totalCount})`}
+            </p>
+            {unreadCount > 0 ? (
+              <form action={markAllNotificationsReadAction}>
+                <input type="hidden" name="redirectTo" value={currentPageHref} />
+                <button type="submit" className="wire-action-compact">
+                  Mark all read
+                </button>
+              </form>
+            ) : null}
+          </div>
         </div>
 
         {notifications.length > 0 ? (
