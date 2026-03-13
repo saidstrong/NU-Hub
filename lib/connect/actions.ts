@@ -11,7 +11,13 @@ import {
 import { requireUser } from "@/lib/auth/session";
 import { isCommunityOwner } from "@/lib/connect/ownership";
 import { createAppError } from "@/lib/observability/errors";
-import { logAppError, logInfo, logSecurityEvent, logWarn } from "@/lib/observability/logger";
+import {
+  getDurationMs,
+  logAppError,
+  logInfo,
+  logSecurityEvent,
+  logWarn,
+} from "@/lib/observability/logger";
 import { getRequestContext } from "@/lib/observability/request-context";
 import { writeInAppNotification } from "@/lib/notifications/write";
 import { consumeRateLimit } from "@/lib/security/rate-limit";
@@ -111,6 +117,7 @@ const FRIEND_MESSAGE_SEND_LIMIT = {
   maxHits: 120,
   windowMs: 10 * 60 * 1000,
 };
+const ACTION_SLOW_THRESHOLD_MS = 250;
 
 function mapUpdateCommunityErrorMessage(errorCode?: string): string {
   if (errorCode === "42501") {
@@ -1290,6 +1297,11 @@ export async function startFriendConversationAction(formData: FormData) {
 }
 
 export async function sendFriendMessageAction(formData: FormData) {
+  const requestContext = await getRequestContext({
+    action: "sendFriendMessageAction",
+    route: "/connect/messages/[conversationId]",
+  });
+  const startedAt = performance.now();
   const parsed = sendFriendMessageSchema.safeParse({
     conversationId: getStringValue(formData, "conversationId"),
     content: getStringValue(formData, "content"),
@@ -1306,6 +1318,15 @@ export async function sendFriendMessageAction(formData: FormData) {
   const rateResult = consumeRateLimit(`connect:friend-message:send:${user.id}`, FRIEND_MESSAGE_SEND_LIMIT);
 
   if (!rateResult.allowed) {
+    logSecurityEvent("friend_message_send_rate_limited", {
+      ...requestContext,
+      action: "sendFriendMessageAction",
+      userId: user.id,
+      route: conversationPath,
+      durationMs: getDurationMs(startedAt),
+      outcome: "rate_limited",
+      retryAfterMs: rateResult.retryAfterMs,
+    });
     redirectWithError(redirectPath, "Too many messages. Please wait and try again.");
   }
 
@@ -1317,15 +1338,41 @@ export async function sendFriendMessageAction(formData: FormData) {
     .maybeSingle();
 
   if (conversationError) {
+    logWarn("connect", "friend_message_conversation_load_failed", {
+      ...requestContext,
+      action: "sendFriendMessageAction",
+      userId: user.id,
+      route: conversationPath,
+      durationMs: getDurationMs(startedAt),
+      outcome: "error",
+      errorCode: conversationError.code ?? null,
+    });
     redirectWithError(redirectPath, "Failed to load conversation.");
   }
 
   if (!conversation) {
+    logWarn("connect", "friend_message_conversation_missing", {
+      ...requestContext,
+      action: "sendFriendMessageAction",
+      userId: user.id,
+      route: conversationPath,
+      durationMs: getDurationMs(startedAt),
+      outcome: "error",
+    });
     redirectWithError("/connect/messages", "Conversation not found.");
   }
 
   const isParticipant = conversation.user_a_id === user.id || conversation.user_b_id === user.id;
   if (!isParticipant) {
+    logSecurityEvent("friend_message_membership_violation", {
+      ...requestContext,
+      action: "sendFriendMessageAction",
+      userId: user.id,
+      route: conversationPath,
+      durationMs: getDurationMs(startedAt),
+      outcome: "error",
+      conversationId: conversation.id,
+    });
     redirectWithError("/connect/messages", "You cannot send messages in this conversation.");
   }
 
@@ -1343,10 +1390,28 @@ export async function sendFriendMessageAction(formData: FormData) {
       conversation.user_b_id,
     );
   } catch {
+    logWarn("connect", "friend_message_friendship_verify_failed", {
+      ...requestContext,
+      action: "sendFriendMessageAction",
+      userId: user.id,
+      route: conversationPath,
+      durationMs: getDurationMs(startedAt),
+      outcome: "error",
+      conversationId: conversation.id,
+    });
     redirectWithError(redirectPath, "Failed to verify friendship.");
   }
 
   if (!acceptedFriendship) {
+    logWarn("connect", "friend_message_friendship_missing", {
+      ...requestContext,
+      action: "sendFriendMessageAction",
+      userId: user.id,
+      route: conversationPath,
+      durationMs: getDurationMs(startedAt),
+      outcome: "error",
+      conversationId: conversation.id,
+    });
     redirectWithError(redirectPath, "Only accepted friends can message each other.");
   }
 
@@ -1359,16 +1424,41 @@ export async function sendFriendMessageAction(formData: FormData) {
     });
 
   if (insertMessageError) {
+    logWarn("connect", "friend_message_insert_failed", {
+      ...requestContext,
+      action: "sendFriendMessageAction",
+      userId: user.id,
+      route: conversationPath,
+      durationMs: getDurationMs(startedAt),
+      outcome: "error",
+      conversationId: conversation.id,
+      errorCode: insertMessageError.code ?? null,
+    });
     redirectWithError(redirectPath, mapFriendMessageErrorMessage(insertMessageError.code));
   }
 
   const counterpartId = conversation.user_a_id === user.id ? conversation.user_b_id : conversation.user_a_id;
+  const durationMs = getDurationMs(startedAt);
+  const timingContext = {
+    ...requestContext,
+    action: "sendFriendMessageAction",
+    userId: user.id,
+    route: conversationPath,
+    durationMs,
+    outcome: "success",
+    conversationId: conversation.id,
+  };
+  logInfo("connect", "friend_message_sent", timingContext);
+  if (durationMs > ACTION_SLOW_THRESHOLD_MS) {
+    logWarn("connect", "friend_message_send_slow", timingContext);
+  }
   revalidateFriendMessagingPaths(user.id, counterpartId, conversation.id);
   redirect(redirectPath);
 }
 
 export async function createCommunityPostAction(formData: FormData) {
   const requestContext = await getRequestContext({ action: "createCommunityPostAction" });
+  const startedAt = performance.now();
   const parsed = createCommunityPostSchema.safeParse({
     communityId: getStringValue(formData, "communityId"),
     content: getStringValue(formData, "content"),
@@ -1388,7 +1478,11 @@ export async function createCommunityPostAction(formData: FormData) {
   if (!createRateResult.allowed) {
     logSecurityEvent("community_post_create_rate_limited", {
       ...requestContext,
+      action: "createCommunityPostAction",
       userId: user.id,
+      route: communityPath,
+      durationMs: getDurationMs(startedAt),
+      outcome: "rate_limited",
       communityId: parsed.data.communityId,
       retryAfterMs: createRateResult.retryAfterMs,
     });
@@ -1420,7 +1514,11 @@ export async function createCommunityPostAction(formData: FormData) {
   if (membership?.status !== "joined") {
     logSecurityEvent("community_post_create_membership_violation", {
       ...requestContext,
+      action: "createCommunityPostAction",
       userId: user.id,
+      route: communityPath,
+      durationMs: getDurationMs(startedAt),
+      outcome: "error",
       communityId: parsed.data.communityId,
       membershipStatus: membership?.status ?? null,
     });
@@ -1445,11 +1543,23 @@ export async function createCommunityPostAction(formData: FormData) {
         safeMessage: mapCreateCommunityPostErrorMessage(insertError?.code),
         metadata: {
           code: insertError?.code ?? null,
+          action: "createCommunityPostAction",
           userId: user.id,
+          route: communityPath,
+          durationMs: getDurationMs(startedAt),
+          outcome: "error",
           communityId: parsed.data.communityId,
         },
       }),
-      requestContext,
+      {
+        ...requestContext,
+        action: "createCommunityPostAction",
+        userId: user.id,
+        route: communityPath,
+        durationMs: getDurationMs(startedAt),
+        outcome: "error",
+        communityId: parsed.data.communityId,
+      },
     );
     redirectWithError(communityPath, mapCreateCommunityPostErrorMessage(insertError?.code));
   }
@@ -1471,12 +1581,23 @@ export async function createCommunityPostAction(formData: FormData) {
 
   revalidatePath(communityPath);
   revalidatePath("/profile/notifications");
-  logInfo("connect", "community_post_created", {
+  const durationMs = getDurationMs(startedAt);
+  const timingContext = {
     ...requestContext,
+    action: "createCommunityPostAction",
     userId: user.id,
+    route: communityPath,
+    durationMs,
+    outcome: "success",
     communityId: parsed.data.communityId,
     postId: createdPost.id,
+  };
+  logInfo("connect", "community_post_created", {
+    ...timingContext,
   });
+  if (durationMs > ACTION_SLOW_THRESHOLD_MS) {
+    logWarn("connect", "community_post_create_slow", timingContext);
+  }
   redirectWithMessage(communityPath, "Post published.");
 }
 

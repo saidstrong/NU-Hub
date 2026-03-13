@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { requireUser } from "@/lib/auth/session";
 import { isCommunityOwner } from "@/lib/connect/ownership";
+import { getDurationMs, logWarn } from "@/lib/observability/logger";
 import { createPaginationWindow, splitPaginatedRows } from "@/lib/pagination";
 import { toPublicStorageUrl } from "@/lib/validation/media";
 import type { Database } from "@/types/database";
@@ -166,6 +167,7 @@ export type PaginatedCommunityResult<TItem> = {
 
 const COMMUNITY_MEMBER_PREVIEW_LIMIT = 10;
 const COMMUNITY_POST_DETAIL_LIMIT = 25;
+const LOADER_SLOW_THRESHOLD_MS = 150;
 
 function formatJoinType(joinType: CommunityRow["join_type"]): string {
   return joinType === "open" ? "Open" : "Request";
@@ -420,155 +422,218 @@ export async function getFriends(userId: string, limit = 200): Promise<FriendIte
 }
 
 export async function getFriendInbox(userId: string, limit = 25): Promise<FriendInboxConversation[]> {
-  const viewerId = await requireMatchingUserId(userId);
-  const safeLimit = Math.max(1, Math.min(limit, 40));
-  const supabase = await createClient();
+  const startedAt = performance.now();
+  let viewerId = userId;
+  let outcome: "success" | "error" = "success";
 
-  const { data: conversations, error: conversationsError } = await supabase
-    .from("friend_conversations")
-    .select("id, user_a_id, user_b_id, created_at, updated_at")
-    .or(`user_a_id.eq.${viewerId},user_b_id.eq.${viewerId}`)
-    .order("updated_at", { ascending: false })
-    .order("id", { ascending: false })
-    .limit(safeLimit);
+  try {
+    viewerId = await requireMatchingUserId(userId);
+    const safeLimit = Math.max(1, Math.min(limit, 40));
+    const supabase = await createClient();
 
-  if (conversationsError) {
-    throw new Error("Failed to load friend inbox.");
-  }
+    const { data: conversations, error: conversationsError } = await supabase
+      .from("friend_conversations")
+      .select("id, user_a_id, user_b_id, created_at, updated_at")
+      .or(`user_a_id.eq.${viewerId},user_b_id.eq.${viewerId}`)
+      .order("updated_at", { ascending: false })
+      .order("id", { ascending: false })
+      .limit(safeLimit);
 
-  if (!conversations || conversations.length === 0) {
-    return [];
-  }
+    if (conversationsError) {
+      throw new Error("Failed to load friend inbox.");
+    }
 
-  const conversationIds = dedupeStrings(conversations.map((conversation) => conversation.id));
-  const counterpartIds = dedupeStrings(
-    conversations.map((conversation) =>
-      conversation.user_a_id === viewerId ? conversation.user_b_id : conversation.user_a_id,
-    ),
-  );
+    if (!conversations || conversations.length === 0) {
+      return [];
+    }
 
-  const [profilesResult, messagesResult] = await Promise.all([
-    counterpartIds.length > 0
-      ? supabase
-          .from("profiles")
-          .select("user_id, full_name, avatar_path")
-          .in("user_id", counterpartIds)
-      : Promise.resolve({
-          data: [] as Pick<ProfileRow, "user_id" | "full_name" | "avatar_path">[],
-          error: null,
-        }),
-    supabase
-      .from("friend_messages")
-      .select("id, conversation_id, sender_id, content, created_at")
-      .in("conversation_id", conversationIds)
-      .order("created_at", { ascending: false })
-      .order("id", { ascending: false }),
-  ]);
+    const conversationIds = dedupeStrings(conversations.map((conversation) => conversation.id));
+    const counterpartIds = dedupeStrings(
+      conversations.map((conversation) =>
+        conversation.user_a_id === viewerId ? conversation.user_b_id : conversation.user_a_id,
+      ),
+    );
 
-  if (profilesResult.error || messagesResult.error) {
-    throw new Error("Failed to load friend inbox metadata.");
-  }
+    const [profilesResult, messagesResult] = await Promise.all([
+      counterpartIds.length > 0
+        ? supabase
+            .from("profiles")
+            .select("user_id, full_name, avatar_path")
+            .in("user_id", counterpartIds)
+        : Promise.resolve({
+            data: [] as Pick<ProfileRow, "user_id" | "full_name" | "avatar_path">[],
+            error: null,
+          }),
+      supabase
+        .from("friend_messages")
+        .select("id, conversation_id, sender_id, content, created_at")
+        .in("conversation_id", conversationIds)
+        .order("created_at", { ascending: false })
+        .order("id", { ascending: false }),
+    ]);
 
-  const profileMap = new Map((profilesResult.data ?? []).map((profile) => [profile.user_id, profile]));
-  const lastMessageMap = new Map<string, Pick<FriendMessageRow, "sender_id" | "content" | "created_at">>();
+    if (profilesResult.error || messagesResult.error) {
+      throw new Error("Failed to load friend inbox metadata.");
+    }
 
-  for (const message of messagesResult.data ?? []) {
-    if (!lastMessageMap.has(message.conversation_id)) {
-      lastMessageMap.set(message.conversation_id, {
-        sender_id: message.sender_id,
-        content: message.content,
-        created_at: message.created_at,
+    const profileMap = new Map((profilesResult.data ?? []).map((profile) => [profile.user_id, profile]));
+    const lastMessageMap = new Map<string, Pick<FriendMessageRow, "sender_id" | "content" | "created_at">>();
+
+    for (const message of messagesResult.data ?? []) {
+      if (!lastMessageMap.has(message.conversation_id)) {
+        lastMessageMap.set(message.conversation_id, {
+          sender_id: message.sender_id,
+          content: message.content,
+          created_at: message.created_at,
+        });
+      }
+    }
+
+    return conversations.map((conversation) => {
+      const counterpartId =
+        conversation.user_a_id === viewerId ? conversation.user_b_id : conversation.user_a_id;
+      const counterpartProfile = profileMap.get(counterpartId);
+      const lastMessage = lastMessageMap.get(conversation.id);
+
+      return {
+        conversationId: conversation.id,
+        counterpartId,
+        counterpartName: fallbackText(counterpartProfile?.full_name, "NU student"),
+        counterpartAvatarPath: counterpartProfile?.avatar_path ?? null,
+        lastMessagePreview: toMessagePreview(lastMessage?.content ?? ""),
+        lastMessageSenderId: lastMessage?.sender_id ?? null,
+        lastMessageAt: lastMessage?.created_at ?? conversation.created_at,
+        updatedAt: conversation.updated_at,
+      };
+    });
+  } catch (error) {
+    outcome = "error";
+    logWarn("connect", "friend_inbox_loader_failed", {
+      action: "getFriendInbox",
+      userId: viewerId,
+      route: "/connect/messages",
+      durationMs: getDurationMs(startedAt),
+      outcome,
+      error:
+        error instanceof Error
+          ? { name: error.name, message: error.message }
+          : { name: "UnknownError" },
+    });
+    throw error;
+  } finally {
+    const durationMs = getDurationMs(startedAt);
+    if (durationMs > LOADER_SLOW_THRESHOLD_MS) {
+      logWarn("connect", "friend_inbox_loader_slow", {
+        action: "getFriendInbox",
+        userId: viewerId,
+        route: "/connect/messages",
+        durationMs,
+        outcome,
       });
     }
   }
+}
 
-  return conversations.map((conversation) => {
-    const counterpartId =
-      conversation.user_a_id === viewerId ? conversation.user_b_id : conversation.user_a_id;
+export async function getFriendConversationThread(
+  conversationId: string,
+): Promise<FriendConversationThread | null> {
+  const startedAt = performance.now();
+  let viewerId: string | null = null;
+  let outcome: "success" | "error" = "success";
+
+  try {
+    const user = await requireUser();
+    viewerId = user.id;
+    const supabase = await createClient();
+
+    const { data: conversation, error: conversationError } = await supabase
+      .from("friend_conversations")
+      .select("id, user_a_id, user_b_id")
+      .eq("id", conversationId)
+      .maybeSingle();
+
+    if (conversationError) {
+      throw new Error("Failed to load friend conversation.");
+    }
+
+    if (!conversation) {
+      return null;
+    }
+
+    const isParticipant = conversation.user_a_id === user.id || conversation.user_b_id === user.id;
+    if (!isParticipant) {
+      return null;
+    }
+
+    const counterpartId = conversation.user_a_id === user.id ? conversation.user_b_id : conversation.user_a_id;
+
+    const [profilesResult, messagesResult] = await Promise.all([
+      supabase
+        .from("profiles")
+        .select("user_id, full_name, avatar_path")
+        .in("user_id", dedupeStrings([conversation.user_a_id, conversation.user_b_id])),
+      supabase
+        .from("friend_messages")
+        .select("id, sender_id, content, created_at")
+        .eq("conversation_id", conversation.id)
+        .order("created_at", { ascending: true })
+        .order("id", { ascending: true })
+        .limit(250),
+    ]);
+
+    if (profilesResult.error || messagesResult.error) {
+      throw new Error("Failed to load friend conversation thread.");
+    }
+
+    const profileMap = new Map((profilesResult.data ?? []).map((profile) => [profile.user_id, profile]));
     const counterpartProfile = profileMap.get(counterpartId);
-    const lastMessage = lastMessageMap.get(conversation.id);
 
     return {
       conversationId: conversation.id,
       counterpartId,
       counterpartName: fallbackText(counterpartProfile?.full_name, "NU student"),
       counterpartAvatarPath: counterpartProfile?.avatar_path ?? null,
-      lastMessagePreview: toMessagePreview(lastMessage?.content ?? ""),
-      lastMessageSenderId: lastMessage?.sender_id ?? null,
-      lastMessageAt: lastMessage?.created_at ?? conversation.created_at,
-      updatedAt: conversation.updated_at,
+      messages: (messagesResult.data ?? []).map((message) => {
+        const senderProfile = profileMap.get(message.sender_id);
+        const isOwnMessage = message.sender_id === user.id;
+
+        return {
+          id: message.id,
+          senderId: message.sender_id,
+          senderName: isOwnMessage ? "You" : fallbackText(senderProfile?.full_name, "NU student"),
+          senderAvatarPath: senderProfile?.avatar_path ?? null,
+          content: message.content,
+          createdAt: message.created_at,
+          isOwnMessage,
+        };
+      }),
     };
-  });
-}
-
-export async function getFriendConversationThread(
-  conversationId: string,
-): Promise<FriendConversationThread | null> {
-  const user = await requireUser();
-  const supabase = await createClient();
-
-  const { data: conversation, error: conversationError } = await supabase
-    .from("friend_conversations")
-    .select("id, user_a_id, user_b_id")
-    .eq("id", conversationId)
-    .maybeSingle();
-
-  if (conversationError) {
-    throw new Error("Failed to load friend conversation.");
+  } catch (error) {
+    outcome = "error";
+    logWarn("connect", "friend_thread_loader_failed", {
+      action: "getFriendConversationThread",
+      userId: viewerId,
+      route: `/connect/messages/${conversationId}`,
+      durationMs: getDurationMs(startedAt),
+      outcome,
+      error:
+        error instanceof Error
+          ? { name: error.name, message: error.message }
+          : { name: "UnknownError" },
+    });
+    throw error;
+  } finally {
+    const durationMs = getDurationMs(startedAt);
+    if (durationMs > LOADER_SLOW_THRESHOLD_MS) {
+      logWarn("connect", "friend_thread_loader_slow", {
+        action: "getFriendConversationThread",
+        userId: viewerId,
+        route: `/connect/messages/${conversationId}`,
+        durationMs,
+        outcome,
+      });
+    }
   }
-
-  if (!conversation) {
-    return null;
-  }
-
-  const isParticipant = conversation.user_a_id === user.id || conversation.user_b_id === user.id;
-  if (!isParticipant) {
-    return null;
-  }
-
-  const counterpartId = conversation.user_a_id === user.id ? conversation.user_b_id : conversation.user_a_id;
-
-  const [profilesResult, messagesResult] = await Promise.all([
-    supabase
-      .from("profiles")
-      .select("user_id, full_name, avatar_path")
-      .in("user_id", dedupeStrings([conversation.user_a_id, conversation.user_b_id])),
-    supabase
-      .from("friend_messages")
-      .select("id, sender_id, content, created_at")
-      .eq("conversation_id", conversation.id)
-      .order("created_at", { ascending: true })
-      .order("id", { ascending: true })
-      .limit(250),
-  ]);
-
-  if (profilesResult.error || messagesResult.error) {
-    throw new Error("Failed to load friend conversation thread.");
-  }
-
-  const profileMap = new Map((profilesResult.data ?? []).map((profile) => [profile.user_id, profile]));
-  const counterpartProfile = profileMap.get(counterpartId);
-
-  return {
-    conversationId: conversation.id,
-    counterpartId,
-    counterpartName: fallbackText(counterpartProfile?.full_name, "NU student"),
-    counterpartAvatarPath: counterpartProfile?.avatar_path ?? null,
-    messages: (messagesResult.data ?? []).map((message) => {
-      const senderProfile = profileMap.get(message.sender_id);
-      const isOwnMessage = message.sender_id === user.id;
-
-      return {
-        id: message.id,
-        senderId: message.sender_id,
-        senderName: isOwnMessage ? "You" : fallbackText(senderProfile?.full_name, "NU student"),
-        senderAvatarPath: senderProfile?.avatar_path ?? null,
-        content: message.content,
-        createdAt: message.created_at,
-        isOwnMessage,
-      };
-    }),
-  };
 }
 
 export async function getCommunities(limit = 24): Promise<Array<{
@@ -616,109 +681,141 @@ export async function getCommunitiesPage(
 }
 
 export async function getCommunityDetail(communityId: string): Promise<CommunityDetail | null> {
-  const user = await requireUser();
-  const supabase = await createClient();
+  const startedAt = performance.now();
+  let viewerId: string | null = null;
+  let outcome: "success" | "error" = "success";
 
-  const { data: community, error: communityError } = await supabase
-    .from("communities")
-    .select("*")
-    .eq("id", communityId)
-    .maybeSingle();
+  try {
+    const user = await requireUser();
+    viewerId = user.id;
+    const supabase = await createClient();
 
-  if (communityError) {
-    throw new Error("Failed to load community.");
-  }
-
-  if (!community) return null;
-
-  const [memberCountMap, membershipResult, ownerResult, joinedMembersResult, postsResult] = await Promise.all([
-    getJoinedMemberCounts(supabase, [community.id]),
-    supabase
-      .from("community_members")
+    const { data: community, error: communityError } = await supabase
+      .from("communities")
       .select("*")
-      .eq("community_id", community.id)
-      .eq("user_id", user.id)
-      .maybeSingle(),
-    supabase
-      .from("profiles")
-      .select("user_id, full_name, school, major, year_label")
-      .eq("user_id", community.created_by)
-      .maybeSingle(),
-    supabase
-      .from("community_members")
-      .select(
-        "user_id, member_profile:profiles!community_members_user_id_fkey(full_name, major, year_label, avatar_path)",
-      )
-      .eq("community_id", community.id)
-      .eq("status", "joined")
-      .order("created_at", { ascending: true })
-      .limit(COMMUNITY_MEMBER_PREVIEW_LIMIT),
-    supabase
-      .from("community_posts")
-      .select(
-        "id, community_id, author_id, content, created_at, author_profile:profiles!community_posts_author_id_fkey(user_id, full_name, avatar_path)",
-      )
-      .eq("community_id", community.id)
-      .order("created_at", { ascending: false })
-      .order("id", { ascending: false })
-      .limit(COMMUNITY_POST_DETAIL_LIMIT),
-  ]);
+      .eq("id", communityId)
+      .maybeSingle();
 
-  if (membershipResult.error) {
-    throw new Error("Failed to load your community membership.");
-  }
+    if (communityError) {
+      throw new Error("Failed to load community.");
+    }
 
-  if (ownerResult.error) {
-    throw new Error("Failed to load community owner profile.");
-  }
+    if (!community) return null;
 
-  if (joinedMembersResult.error) {
-    throw new Error("Failed to load community members.");
-  }
+    const [memberCountMap, membershipResult, ownerResult, joinedMembersResult, postsResult] = await Promise.all([
+      getJoinedMemberCounts(supabase, [community.id]),
+      supabase
+        .from("community_members")
+        .select("*")
+        .eq("community_id", community.id)
+        .eq("user_id", user.id)
+        .maybeSingle(),
+      supabase
+        .from("profiles")
+        .select("user_id, full_name, school, major, year_label")
+        .eq("user_id", community.created_by)
+        .maybeSingle(),
+      supabase
+        .from("community_members")
+        .select(
+          "user_id, member_profile:profiles!community_members_user_id_fkey(full_name, major, year_label, avatar_path)",
+        )
+        .eq("community_id", community.id)
+        .eq("status", "joined")
+        .order("created_at", { ascending: true })
+        .limit(COMMUNITY_MEMBER_PREVIEW_LIMIT),
+      supabase
+        .from("community_posts")
+        .select(
+          "id, community_id, author_id, content, created_at, author_profile:profiles!community_posts_author_id_fkey(user_id, full_name, avatar_path)",
+        )
+        .eq("community_id", community.id)
+        .order("created_at", { ascending: false })
+        .order("id", { ascending: false })
+        .limit(COMMUNITY_POST_DETAIL_LIMIT),
+    ]);
 
-  if (postsResult.error) {
-    throw new Error("Failed to load community posts.");
-  }
+    if (membershipResult.error) {
+      throw new Error("Failed to load your community membership.");
+    }
 
-  const joinedMemberPreview = (joinedMembersResult.data ?? [])
-    .map((row) => {
-      const profile = Array.isArray(row.member_profile)
-        ? row.member_profile[0]
-        : row.member_profile;
+    if (ownerResult.error) {
+      throw new Error("Failed to load community owner profile.");
+    }
+
+    if (joinedMembersResult.error) {
+      throw new Error("Failed to load community members.");
+    }
+
+    if (postsResult.error) {
+      throw new Error("Failed to load community posts.");
+    }
+
+    const joinedMemberPreview = (joinedMembersResult.data ?? [])
+      .map((row) => {
+        const profile = Array.isArray(row.member_profile)
+          ? row.member_profile[0]
+          : row.member_profile;
+        return {
+          user_id: row.user_id,
+          full_name: profile?.full_name ?? "",
+          major: profile?.major ?? null,
+          year_label: profile?.year_label ?? null,
+          avatar_path: profile?.avatar_path ?? null,
+        };
+      })
+      .filter((member): member is CommunityMemberProfilePreview => Boolean(member.user_id));
+
+    const posts = (postsResult.data ?? []).map((row) => {
+      const authorProfile = Array.isArray(row.author_profile)
+        ? row.author_profile[0]
+        : row.author_profile;
+
       return {
-        user_id: row.user_id,
-        full_name: profile?.full_name ?? "",
-        major: profile?.major ?? null,
-        year_label: profile?.year_label ?? null,
-        avatar_path: profile?.avatar_path ?? null,
+        id: row.id,
+        communityId: row.community_id,
+        authorId: row.author_id,
+        authorName: fallbackText(authorProfile?.full_name, "NU student"),
+        authorAvatarPath: authorProfile?.avatar_path ?? null,
+        content: row.content,
+        createdAt: row.created_at,
       };
-    })
-    .filter((member): member is CommunityMemberProfilePreview => Boolean(member.user_id));
-
-  const posts = (postsResult.data ?? []).map((row) => {
-    const authorProfile = Array.isArray(row.author_profile)
-      ? row.author_profile[0]
-      : row.author_profile;
+    });
 
     return {
-      id: row.id,
-      communityId: row.community_id,
-      authorId: row.author_id,
-      authorName: fallbackText(authorProfile?.full_name, "NU student"),
-      authorAvatarPath: authorProfile?.avatar_path ?? null,
-      content: row.content,
-      createdAt: row.created_at,
+      community,
+      memberCount: memberCountMap.get(community.id) ?? 0,
+      membership: membershipResult.data,
+      ownerProfile: ownerResult.data,
+      joinedMemberPreview,
+      posts,
     };
-  });
-
-  return {
-    community,
-    memberCount: memberCountMap.get(community.id) ?? 0,
-    membership: membershipResult.data,
-    ownerProfile: ownerResult.data,
-    joinedMemberPreview,
-    posts,
-  };
+  } catch (error) {
+    outcome = "error";
+    logWarn("connect", "community_detail_loader_failed", {
+      action: "getCommunityDetail",
+      userId: viewerId,
+      route: `/connect/communities/${communityId}`,
+      durationMs: getDurationMs(startedAt),
+      outcome,
+      error:
+        error instanceof Error
+          ? { name: error.name, message: error.message }
+          : { name: "UnknownError" },
+    });
+    throw error;
+  } finally {
+    const durationMs = getDurationMs(startedAt);
+    if (durationMs > LOADER_SLOW_THRESHOLD_MS) {
+      logWarn("connect", "community_detail_loader_slow", {
+        action: "getCommunityDetail",
+        userId: viewerId,
+        route: `/connect/communities/${communityId}`,
+        durationMs,
+        outcome,
+      });
+    }
+  }
 }
 
 export async function getMyCommunities(

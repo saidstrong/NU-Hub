@@ -92,6 +92,15 @@ function emit(level: LogLevel, entry: Omit<LogEntry, "timestamp" | "level">) {
   console.log(serialized);
 }
 
+export function getDurationMs(startedAt: number): number {
+  const duration = performance.now() - startedAt;
+  if (!Number.isFinite(duration) || duration < 0) {
+    return 0;
+  }
+
+  return Math.round(duration * 100) / 100;
+}
+
 export function logInfo(
   scope: string,
   event: string,

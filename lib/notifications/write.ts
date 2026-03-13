@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { logWarn } from "@/lib/observability/logger";
 import { sanitizeInternalPathValue } from "@/lib/security/paths";
 import type { Database, Json } from "@/types/database";
 
@@ -56,6 +57,12 @@ export async function writeInAppNotification(
   });
 
   if (error) {
-    console.error("Failed to write in-app notification:", error.message);
+    logWarn("notifications", "notification_write_failed", {
+      action: "writeInAppNotification",
+      userId: input.userId,
+      route: sanitizeNotificationLink(input.link),
+      outcome: "error",
+      errorCode: error.code ?? null,
+    });
   }
 }

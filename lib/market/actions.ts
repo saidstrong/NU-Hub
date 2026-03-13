@@ -11,7 +11,13 @@ import {
 import { requireUser } from "@/lib/auth/session";
 import { isListingOwner } from "@/lib/market/ownership";
 import { createAppError } from "@/lib/observability/errors";
-import { logAppError, logInfo, logSecurityEvent, logWarn } from "@/lib/observability/logger";
+import {
+  getDurationMs,
+  logAppError,
+  logInfo,
+  logSecurityEvent,
+  logWarn,
+} from "@/lib/observability/logger";
 import { getRequestContext } from "@/lib/observability/request-context";
 import { getCurrentProfile } from "@/lib/profile/data";
 import { consumeRateLimit } from "@/lib/security/rate-limit";
@@ -56,6 +62,7 @@ const SEND_MESSAGE_LIMIT = {
   maxHits: 100,
   windowMs: 10 * 60 * 1000,
 };
+const ACTION_SLOW_THRESHOLD_MS = 250;
 
 function mapCreateListingErrorMessage(errorCode?: string): string {
   if (errorCode === "23503") {
@@ -171,6 +178,7 @@ async function createListingWithStatus(formData: FormData, status: "draft" | "ac
     action: "createListingWithStatus",
     requestedStatus: status,
   });
+  const startedAt = performance.now();
   const parsed = listingCreateSchema.safeParse({
     title: getStringValue(formData, "title"),
     category: getStringValue(formData, "category"),
@@ -218,7 +226,11 @@ async function createListingWithStatus(formData: FormData, status: "draft" | "ac
   if (!parsedImageCount.success) {
     logWarn("market", "listing_create_invalid_image_count", {
       ...requestContext,
+      action: "createListingWithStatus",
       userId: user.id,
+      route: "/market/post",
+      durationMs: getDurationMs(startedAt),
+      outcome: "error",
       imageCount: uploadedImagePaths.length,
     });
     redirectWithError("/market/post", parsedImageCount.error.issues[0]?.message ?? "Invalid image count.");
@@ -338,13 +350,22 @@ async function createListingWithStatus(formData: FormData, status: "draft" | "ac
   revalidatePath("/market/my-listings");
   revalidatePath("/market/saved");
   revalidatePath(`/market/item/${created.id}`);
-  logInfo("market", "listing_created", {
+  const durationMs = getDurationMs(startedAt);
+  const timingContext = {
     ...requestContext,
+    action: "createListingWithStatus",
     userId: sellerId,
+    route: "/market/post",
+    durationMs,
+    outcome: "success",
     listingId: created.id,
     status,
     imageCount: uploadedImagePaths.length,
-  });
+  };
+  logInfo("market", "listing_created", timingContext);
+  if (durationMs > ACTION_SLOW_THRESHOLD_MS) {
+    logWarn("market", "listing_create_slow", timingContext);
+  }
 
   if (status === "draft") {
     redirect("/market/my-listings?status=active&message=Draft%20saved");
@@ -363,6 +384,7 @@ export async function publishListingAction(formData: FormData) {
 
 export async function updateListingAction(formData: FormData) {
   const requestContext = await getRequestContext({ action: "updateListingAction" });
+  const startedAt = performance.now();
   const parsedListingId = listingMutationIdSchema.safeParse({
     listingId: getStringValue(formData, "listingId"),
   });
@@ -431,7 +453,15 @@ export async function updateListingAction(formData: FormData) {
           listingId,
         },
       }),
-      requestContext,
+      {
+        ...requestContext,
+        action: "updateListingAction",
+        userId: user.id,
+        route: editPath,
+        durationMs: getDurationMs(startedAt),
+        outcome: "error",
+        listingId,
+      },
     );
     redirectWithError(editPath, mapUpdateListingErrorMessage(updateError.code));
   }
@@ -439,19 +469,32 @@ export async function updateListingAction(formData: FormData) {
   if (!updated) {
     logWarn("market", "listing_update_missing_row", {
       ...requestContext,
+      action: "updateListingAction",
       userId: user.id,
+      route: editPath,
+      durationMs: getDurationMs(startedAt),
+      outcome: "error",
       listingId,
     });
     redirectWithError(editPath, "Listing not found.");
   }
 
   revalidateListingPaths(listingId);
-  logInfo("market", "listing_updated", {
+  const durationMs = getDurationMs(startedAt);
+  const timingContext = {
     ...requestContext,
+    action: "updateListingAction",
     userId: user.id,
+    route: editPath,
+    durationMs,
+    outcome: "success",
     listingId,
     status: parsed.data.status,
-  });
+  };
+  logInfo("market", "listing_updated", timingContext);
+  if (durationMs > ACTION_SLOW_THRESHOLD_MS) {
+    logWarn("market", "listing_update_slow", timingContext);
+  }
   redirectWithMessage(`/market/item/${listingId}`, "Listing updated");
 }
 
@@ -655,6 +698,7 @@ export async function startListingConversationAction(formData: FormData) {
 
 export async function sendMarketplaceMessageAction(formData: FormData) {
   const requestContext = await getRequestContext({ action: "sendMarketplaceMessageAction" });
+  const startedAt = performance.now();
   const parsed = sendMarketplaceMessageSchema.safeParse({
     conversationId: getStringValue(formData, "conversationId"),
     content: getStringValue(formData, "content"),
@@ -673,7 +717,11 @@ export async function sendMarketplaceMessageAction(formData: FormData) {
   if (!rateResult.allowed) {
     logSecurityEvent("market_send_message_rate_limited", {
       ...requestContext,
+      action: "sendMarketplaceMessageAction",
       userId: user.id,
+      route: conversationPath,
+      durationMs: getDurationMs(startedAt),
+      outcome: "rate_limited",
       conversationId: parsed.data.conversationId,
       retryAfterMs: rateResult.retryAfterMs,
     });
@@ -688,10 +736,29 @@ export async function sendMarketplaceMessageAction(formData: FormData) {
     .maybeSingle();
 
   if (conversationError) {
+    logWarn("market", "market_message_conversation_load_failed", {
+      ...requestContext,
+      action: "sendMarketplaceMessageAction",
+      userId: user.id,
+      route: conversationPath,
+      durationMs: getDurationMs(startedAt),
+      outcome: "error",
+      errorCode: conversationError.code ?? null,
+      conversationId: parsed.data.conversationId,
+    });
     redirectWithError(redirectPath, "Failed to load conversation.");
   }
 
   if (!conversation) {
+    logWarn("market", "market_message_conversation_missing", {
+      ...requestContext,
+      action: "sendMarketplaceMessageAction",
+      userId: user.id,
+      route: conversationPath,
+      durationMs: getDurationMs(startedAt),
+      outcome: "error",
+      conversationId: parsed.data.conversationId,
+    });
     redirectWithError("/market/messages", "Conversation not found.");
   }
 
@@ -699,7 +766,11 @@ export async function sendMarketplaceMessageAction(formData: FormData) {
   if (!isParticipant) {
     logSecurityEvent("market_send_message_membership_violation", {
       ...requestContext,
+      action: "sendMarketplaceMessageAction",
       userId: user.id,
+      route: conversationPath,
+      durationMs: getDurationMs(startedAt),
+      outcome: "error",
       conversationId: parsed.data.conversationId,
       buyerId: conversation.buyer_id,
       sellerId: conversation.seller_id,
@@ -723,22 +794,43 @@ export async function sendMarketplaceMessageAction(formData: FormData) {
         safeMessage: mapSendMessageErrorMessage(insertMessageError.code),
         metadata: {
           code: insertMessageError.code,
+          action: "sendMarketplaceMessageAction",
           userId: user.id,
+          route: conversationPath,
+          durationMs: getDurationMs(startedAt),
+          outcome: "error",
           conversationId: conversation.id,
         },
       }),
-      requestContext,
+      {
+        ...requestContext,
+        action: "sendMarketplaceMessageAction",
+        userId: user.id,
+        route: conversationPath,
+        durationMs: getDurationMs(startedAt),
+        outcome: "error",
+        conversationId: conversation.id,
+      },
     );
     redirectWithError(redirectPath, mapSendMessageErrorMessage(insertMessageError.code));
   }
 
   revalidatePath("/market/messages");
   revalidatePath(conversationPath);
-  logInfo("market", "message_sent", {
+  const durationMs = getDurationMs(startedAt);
+  const timingContext = {
     ...requestContext,
+    action: "sendMarketplaceMessageAction",
     userId: user.id,
+    route: conversationPath,
+    durationMs,
+    outcome: "success",
     conversationId: conversation.id,
-  });
+  };
+  logInfo("market", "message_sent", timingContext);
+  if (durationMs > ACTION_SLOW_THRESHOLD_MS) {
+    logWarn("market", "market_message_send_slow", timingContext);
+  }
   redirect(redirectPath);
 }
 

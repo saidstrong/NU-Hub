@@ -12,7 +12,13 @@ import { requireUser } from "@/lib/auth/session";
 import { isEventOwner } from "@/lib/events/ownership";
 import { writeInAppNotification } from "@/lib/notifications/write";
 import { createAppError } from "@/lib/observability/errors";
-import { logAppError, logInfo, logSecurityEvent, logWarn } from "@/lib/observability/logger";
+import {
+  getDurationMs,
+  logAppError,
+  logInfo,
+  logSecurityEvent,
+  logWarn,
+} from "@/lib/observability/logger";
 import { getRequestContext } from "@/lib/observability/request-context";
 import { consumeRateLimit } from "@/lib/security/rate-limit";
 import { createClient } from "@/lib/supabase/server";
@@ -61,6 +67,7 @@ const EVENT_PARTICIPATION_LIMIT = {
   maxHits: 40,
   windowMs: 10 * 60 * 1000,
 };
+const ACTION_SLOW_THRESHOLD_MS = 250;
 const EVENT_IMAGES_BUCKET = "event-images";
 
 function mapCreateEventErrorMessage(errorCode?: string): string {
@@ -587,6 +594,11 @@ export async function toggleSavedEventAction(formData: FormData) {
 }
 
 export async function setEventParticipationAction(formData: FormData) {
+  const requestContext = await getRequestContext({
+    action: "setEventParticipationAction",
+    route: "/events/[id]",
+  });
+  const startedAt = performance.now();
   const parsed = eventParticipationSchema.safeParse({
     eventId: getStringValue(formData, "eventId"),
     status: getStringValue(formData, "status"),
@@ -604,6 +616,16 @@ export async function setEventParticipationAction(formData: FormData) {
   );
 
   if (!participationRateResult.allowed) {
+    logSecurityEvent("event_rsvp_set_rate_limited", {
+      ...requestContext,
+      action: "setEventParticipationAction",
+      userId: user.id,
+      route: `/events/${parsed.data.eventId}`,
+      durationMs: getDurationMs(startedAt),
+      outcome: "rate_limited",
+      eventId: parsed.data.eventId,
+      retryAfterMs: participationRateResult.retryAfterMs,
+    });
     redirectWithError("/events", "Too many participation updates. Please wait and try again.");
   }
 
@@ -616,6 +638,16 @@ export async function setEventParticipationAction(formData: FormData) {
     .maybeSingle();
 
   if (existingParticipationError) {
+    logWarn("events", "event_rsvp_existing_lookup_failed", {
+      ...requestContext,
+      action: "setEventParticipationAction",
+      userId: user.id,
+      route: `/events/${parsed.data.eventId}`,
+      durationMs: getDurationMs(startedAt),
+      outcome: "error",
+      eventId: parsed.data.eventId,
+      errorCode: existingParticipationError.code ?? null,
+    });
     redirectWithError("/events", "Failed to update participation.");
   }
 
@@ -629,6 +661,16 @@ export async function setEventParticipationAction(formData: FormData) {
   );
 
   if (error) {
+    logWarn("events", "event_rsvp_upsert_failed", {
+      ...requestContext,
+      action: "setEventParticipationAction",
+      userId: user.id,
+      route: `/events/${parsed.data.eventId}`,
+      durationMs: getDurationMs(startedAt),
+      outcome: "error",
+      eventId: parsed.data.eventId,
+      errorCode: error.code ?? null,
+    });
     redirectWithError("/events", "Failed to update participation.");
   }
 
@@ -663,11 +705,32 @@ export async function setEventParticipationAction(formData: FormData) {
   revalidatePath("/events/my-events");
   revalidatePath(`/events/${parsed.data.eventId}`);
 
+  const durationMs = getDurationMs(startedAt);
+  const timingContext = {
+    ...requestContext,
+    action: "setEventParticipationAction",
+    userId: user.id,
+    route: `/events/${parsed.data.eventId}`,
+    durationMs,
+    outcome: "success",
+    eventId: parsed.data.eventId,
+    status: parsed.data.status,
+  };
+  logInfo("events", "event_rsvp_set", timingContext);
+  if (durationMs > ACTION_SLOW_THRESHOLD_MS) {
+    logWarn("events", "event_rsvp_set_slow", timingContext);
+  }
+
   const redirectTo = sanitizeInternalPath(parsed.data.redirectTo, `/events/${parsed.data.eventId}`);
   redirect(redirectTo);
 }
 
 export async function clearEventParticipationAction(formData: FormData) {
+  const requestContext = await getRequestContext({
+    action: "clearEventParticipationAction",
+    route: "/events/[id]",
+  });
+  const startedAt = performance.now();
   const parsed = clearEventParticipationSchema.safeParse({
     eventId: getStringValue(formData, "eventId"),
     redirectTo: getStringValue(formData, "redirectTo"),
@@ -684,6 +747,16 @@ export async function clearEventParticipationAction(formData: FormData) {
   );
 
   if (!participationRateResult.allowed) {
+    logSecurityEvent("event_rsvp_clear_rate_limited", {
+      ...requestContext,
+      action: "clearEventParticipationAction",
+      userId: user.id,
+      route: `/events/${parsed.data.eventId}`,
+      durationMs: getDurationMs(startedAt),
+      outcome: "rate_limited",
+      eventId: parsed.data.eventId,
+      retryAfterMs: participationRateResult.retryAfterMs,
+    });
     redirectWithError("/events", "Too many RSVP updates. Please wait and try again.");
   }
 
@@ -695,12 +768,37 @@ export async function clearEventParticipationAction(formData: FormData) {
     .eq("user_id", user.id);
 
   if (error) {
+    logWarn("events", "event_rsvp_clear_failed", {
+      ...requestContext,
+      action: "clearEventParticipationAction",
+      userId: user.id,
+      route: `/events/${parsed.data.eventId}`,
+      durationMs: getDurationMs(startedAt),
+      outcome: "error",
+      eventId: parsed.data.eventId,
+      errorCode: error.code ?? null,
+    });
     redirectWithError("/events", "Failed to clear RSVP.");
   }
 
   revalidatePath("/events");
   revalidatePath("/events/my-events");
   revalidatePath(`/events/${parsed.data.eventId}`);
+
+  const durationMs = getDurationMs(startedAt);
+  const timingContext = {
+    ...requestContext,
+    action: "clearEventParticipationAction",
+    userId: user.id,
+    route: `/events/${parsed.data.eventId}`,
+    durationMs,
+    outcome: "success",
+    eventId: parsed.data.eventId,
+  };
+  logInfo("events", "event_rsvp_cleared", timingContext);
+  if (durationMs > ACTION_SLOW_THRESHOLD_MS) {
+    logWarn("events", "event_rsvp_clear_slow", timingContext);
+  }
 
   const redirectTo = sanitizeInternalPath(parsed.data.redirectTo, `/events/${parsed.data.eventId}`);
   redirect(redirectTo);
