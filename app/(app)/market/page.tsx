@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { FeedbackBanner } from "@/components/ui/FeedbackBanner";
 import { FilterRow } from "@/components/ui/FilterRow";
 import { ListingCard } from "@/components/ui/ListingCard";
 import { PageNavigation } from "@/components/ui/PageNavigation";
 import { SearchBar } from "@/components/ui/SearchBar";
+import { SectionHeader } from "@/components/ui/SectionHeader";
 import { SectionCard } from "@/components/ui/SectionCard";
+import { ShellButton } from "@/components/ui/ShellButton";
 import { TagChip } from "@/components/ui/TagChip";
-import { TopBar } from "@/components/ui/TopBar";
 import { buildPageHref, parsePageParam } from "@/lib/pagination";
 import { marketCategories } from "@/lib/mock-data";
 import { getActiveListingsPage, toListingCardData } from "@/lib/market/data";
@@ -39,38 +41,78 @@ export default async function MarketHomePage({ searchParams }: MarketHomePagePro
   const nextHref = hasMore ? buildPageHref("/market", page + 1) : undefined;
 
   return (
-    <main className="relative">
-      <TopBar
-        title="Market"
-        subtitle="Student marketplace for practical campus essentials"
-        actions={[
-          { label: "My", href: "/market/my-listings" },
-          { label: "Saved", href: "/market/saved" },
-          { label: "Messages", href: "/market/messages" },
-        ]}
-      />
-
-      <SearchBar placeholder="Search listings" />
+    <main>
+      <section className="wire-panel">
+        <SectionHeader
+          title="Market"
+          subtitle="A practical student marketplace for textbooks, electronics, dorm essentials, and project tools."
+          actionNode={
+            <Link href="/market/my-listings" className="wire-link">
+              My listings
+            </Link>
+          }
+        />
+        <p className="wire-meta">
+          Browse quickly, compare clearly, and post only when you are ready.
+        </p>
+      </section>
 
       <section className="wire-panel">
-        <p className="wire-section-title mb-1">Browse categories</p>
-        <p className="mb-3 wire-meta">Find textbooks, electronics, dorm items, and more from NU students.</p>
-        <div className="mb-3 flex flex-wrap gap-2">
+        <SectionHeader
+          title="Search"
+          subtitle="Use a keyword to find items, categories, or sellers."
+        />
+        <SearchBar
+          placeholder="Search marketplace"
+          queryName="q"
+          defaultValue=""
+          action="/search"
+        />
+      </section>
+
+      <section className="wire-panel">
+        <SectionHeader
+          title="Categories and filters"
+          subtitle="Refine what you see without overwhelming the feed."
+        />
+        <div className="mb-4 flex flex-wrap gap-2">
           {marketCategories.map((category) => (
             <Link key={category} href={`/market/category/${category.toLowerCase()}`}>
-              <TagChip label={category} />
+              <TagChip label={category} tone="status" />
             </Link>
           ))}
         </div>
-        <FilterRow filters={["Newest", "Price", "Condition", "Pickup"]} />
+        <FilterRow filters={["Newest", "Price", "Condition", "Pickup"]} activeIndex={0} />
       </section>
 
-      <SectionCard title="Recent Listings" actionLabel="Saved items" actionHref="/market/saved">
-        {loadError ? (
-          <div className="rounded-xl border border-red-400/30 bg-red-400/10 px-3 py-2 text-[13px] text-red-200">
-            {loadError}
-          </div>
-        ) : null}
+      <section className="wire-panel">
+        <SectionHeader
+          title="Actions"
+          subtitle="Post fast, then track replies and saved items."
+        />
+        <div className="wire-action-row">
+          <ShellButton label="Post listing" href="/market/post" variant="primary" />
+          <Link href="/market/messages" className="wire-action">
+            Messages
+          </Link>
+        </div>
+        <div className="mt-3 flex flex-wrap gap-3">
+          <Link href="/market/saved" className="wire-link">
+            Saved listings
+          </Link>
+          <Link href="/market/my-listings" className="wire-link">
+            Listing status
+          </Link>
+        </div>
+      </section>
+
+      <SectionCard
+        title="Recent listings"
+        subtitle="Latest published items from NU students."
+        actionLabel="Saved listings"
+        actionHref="/market/saved"
+      >
+        {loadError ? <FeedbackBanner tone="error" message={loadError} className="mb-3" /> : null}
         {listings.length > 0 ? (
           <div className="wire-list">
             {listings.map((listing) => (
@@ -96,15 +138,6 @@ export default async function MarketHomePage({ searchParams }: MarketHomePagePro
           nextLabel="Next page"
         />
       </SectionCard>
-
-      <div className="pointer-events-none fixed bottom-[calc(6.75rem+env(safe-area-inset-bottom))] left-1/2 z-20 w-full max-w-md -translate-x-1/2 px-4">
-        <Link
-          href="/market/post"
-          className="wire-action-primary pointer-events-auto ml-auto w-fit px-4 py-2 text-[13px]"
-        >
-          + Post listing
-        </Link>
-      </div>
     </main>
   );
 }
