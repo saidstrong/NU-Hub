@@ -3,6 +3,10 @@
     {
       "path": "/api/maintenance/cleanup",
       "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/maintenance/metrics",
+      "schedule": "0 2 * * *"
     }
   ]
 }

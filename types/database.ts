@@ -477,6 +477,53 @@ type DatabaseSchema = {
           created_at?: string;
         };
       };
+      daily_metrics: {
+        Row: {
+          day: string;
+          active_users: number;
+          new_users: number;
+          friend_messages: number;
+          marketplace_messages: number;
+          listings_created: number;
+          community_posts: number;
+          event_rsvps: number;
+          notifications_created: number;
+          moderation_reports: number;
+          rate_limit_hits: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          day: string;
+          active_users?: number;
+          new_users?: number;
+          friend_messages?: number;
+          marketplace_messages?: number;
+          listings_created?: number;
+          community_posts?: number;
+          event_rsvps?: number;
+          notifications_created?: number;
+          moderation_reports?: number;
+          rate_limit_hits?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          day?: string;
+          active_users?: number;
+          new_users?: number;
+          friend_messages?: number;
+          marketplace_messages?: number;
+          listings_created?: number;
+          community_posts?: number;
+          event_rsvps?: number;
+          notifications_created?: number;
+          moderation_reports?: number;
+          rate_limit_hits?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
       content_reports: {
         Row: {
           id: string;
