@@ -43,7 +43,11 @@ export default async function MarketHomePage({ searchParams }: MarketHomePagePro
       <TopBar
         title="Market"
         subtitle="Student marketplace for practical campus essentials"
-        actions={[{ label: "My", href: "/market/my-listings" }, { label: "Saved", href: "/market/saved" }]}
+        actions={[
+          { label: "My", href: "/market/my-listings" },
+          { label: "Saved", href: "/market/saved" },
+          { label: "Messages", href: "/market/messages" },
+        ]}
       />
 
       <SearchBar placeholder="Search listings" />

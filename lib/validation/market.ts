@@ -56,6 +56,21 @@ export const toggleSavedListingSchema = z.object({
   redirectTo: z.string().optional(),
 });
 
+export const startListingConversationSchema = z.object({
+  listingId: z.string().uuid("Invalid listing id."),
+  redirectTo: z.string().optional(),
+});
+
+export const sendMarketplaceMessageSchema = z.object({
+  conversationId: z.string().uuid("Invalid conversation id."),
+  content: z
+    .string()
+    .trim()
+    .min(1, "Message cannot be empty.")
+    .max(1200, "Message is too long."),
+  redirectTo: z.string().optional(),
+});
+
 export const listingMutationIdSchema = z.object({
   listingId: z.string().uuid("Invalid listing id."),
 });

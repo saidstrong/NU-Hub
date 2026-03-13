@@ -6,6 +6,8 @@ import type { Database } from "@/types/database";
 
 export type ListingRow = Database["public"]["Tables"]["listings"]["Row"];
 export type ListingImageRow = Database["public"]["Tables"]["listing_images"]["Row"];
+export type ConversationRow = Database["public"]["Tables"]["conversations"]["Row"];
+export type MessageRow = Database["public"]["Tables"]["messages"]["Row"];
 export type ListingStatus = ListingRow["status"];
 export type ListingCardSource = Pick<
   ListingRow,
@@ -20,6 +22,14 @@ export type ListingEditSource = Pick<
 export type ListingSeller = Pick<
   Database["public"]["Tables"]["profiles"]["Row"],
   "user_id" | "full_name" | "school" | "major" | "year_label" | "avatar_path"
+>;
+type ProfileIdentity = Pick<
+  Database["public"]["Tables"]["profiles"]["Row"],
+  "user_id" | "full_name" | "avatar_path"
+>;
+type ListingTitleRow = Pick<
+  ListingRow,
+  "id" | "title"
 >;
 
 export type ListingCardData = {
@@ -36,6 +46,41 @@ export type PaginatedListingResult = {
   listings: ListingWithCoverRow[];
   hasMore: boolean;
 };
+export type MarketplaceConversationListItem = {
+  id: string;
+  listingId: string;
+  listingTitle: string;
+  counterpartId: string;
+  counterpartName: string;
+  counterpartAvatarPath: string | null;
+  lastMessagePreview: string;
+  lastMessageAt: string;
+  updatedAt: string;
+};
+export type PaginatedMarketplaceConversationResult = {
+  conversations: MarketplaceConversationListItem[];
+  hasMore: boolean;
+};
+export type MarketplaceThreadMessageItem = {
+  id: string;
+  senderId: string;
+  senderName: string;
+  senderAvatarPath: string | null;
+  content: string;
+  createdAt: string;
+  isOwnMessage: boolean;
+};
+export type MarketplaceConversationThread = {
+  conversationId: string;
+  listingId: string;
+  listingTitle: string;
+  listingHref: string | null;
+  currentUserId: string;
+  counterpartId: string;
+  counterpartName: string;
+  counterpartAvatarPath: string | null;
+  messages: MarketplaceThreadMessageItem[];
+};
 
 const LISTING_IMAGES_BUCKET = "listing-images";
 const LISTING_CARD_SELECT =
@@ -49,6 +94,22 @@ export function formatPriceKzt(priceKzt: number): string {
 
 export function formatStatusLabel(status: ListingStatus): string {
   return status.charAt(0).toUpperCase() + status.slice(1);
+}
+
+function dedupeStrings(values: string[]): string[] {
+  return Array.from(new Set(values));
+}
+
+function normalizeName(value: string | null | undefined): string {
+  const trimmed = value?.trim();
+  return trimmed && trimmed.length > 0 ? trimmed : "NU student";
+}
+
+function toMessagePreview(value: string, maxLength = 120): string {
+  const normalized = value.trim().replace(/\s+/g, " ");
+  if (!normalized) return "No messages yet.";
+  if (normalized.length <= maxLength) return normalized;
+  return `${normalized.slice(0, maxLength)}...`;
 }
 
 function getPublicListingImageUrlFromClient(
@@ -402,5 +463,191 @@ export async function getListingDetail(listingId: string): Promise<{
     isSaved: Boolean(savedRow),
     isOwner: isListingOwner(listing.seller_id, user.id),
     imageUrls,
+  };
+}
+
+export async function getMarketplaceConversationsPage(
+  page = 1,
+  pageSize = 15,
+): Promise<PaginatedMarketplaceConversationResult> {
+  const user = await requireUser();
+  const { from, to, pageSize: safePageSize } = createPaginationWindow({
+    page,
+    pageSize,
+    defaultPageSize: 15,
+    maxPageSize: 30,
+  });
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("conversations")
+    .select("id, listing_id, buyer_id, seller_id, created_at, updated_at")
+    .or(`buyer_id.eq.${user.id},seller_id.eq.${user.id}`)
+    .order("updated_at", { ascending: false })
+    .order("id", { ascending: false })
+    .range(from, to);
+
+  if (error) {
+    throw new Error("Failed to load conversations.");
+  }
+
+  const paged = splitPaginatedRows(data, safePageSize);
+  if (paged.rows.length === 0) {
+    return {
+      conversations: [],
+      hasMore: false,
+    };
+  }
+
+  const conversationIds = paged.rows.map((conversation) => conversation.id);
+  const listingIds = dedupeStrings(paged.rows.map((conversation) => conversation.listing_id));
+  const counterpartIds = dedupeStrings(
+    paged.rows.map((conversation) =>
+      conversation.buyer_id === user.id ? conversation.seller_id : conversation.buyer_id,
+    ),
+  );
+
+  const [listingsResult, profilesResult, messagesResult] = await Promise.all([
+    listingIds.length > 0
+      ? supabase
+          .from("listings")
+          .select("id, title")
+          .in("id", listingIds)
+      : Promise.resolve({ data: [] as ListingTitleRow[], error: null }),
+    counterpartIds.length > 0
+      ? supabase
+          .from("profiles")
+          .select("user_id, full_name, avatar_path")
+          .in("user_id", counterpartIds)
+      : Promise.resolve({ data: [] as ProfileIdentity[], error: null }),
+    supabase
+      .from("messages")
+      .select("id, conversation_id, sender_id, content, created_at")
+      .in("conversation_id", conversationIds)
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: false }),
+  ]);
+
+  if (listingsResult.error || profilesResult.error || messagesResult.error) {
+    throw new Error("Failed to load conversation metadata.");
+  }
+
+  const listingMap = new Map((listingsResult.data ?? []).map((listing) => [listing.id, listing]));
+  const counterpartMap = new Map((profilesResult.data ?? []).map((profile) => [profile.user_id, profile]));
+  const lastMessageMap = new Map<string, Pick<MessageRow, "content" | "created_at">>();
+
+  for (const message of messagesResult.data ?? []) {
+    if (!lastMessageMap.has(message.conversation_id)) {
+      lastMessageMap.set(message.conversation_id, {
+        content: message.content,
+        created_at: message.created_at,
+      });
+    }
+  }
+
+  return {
+    conversations: paged.rows.map((conversation) => {
+      const counterpartId =
+        conversation.buyer_id === user.id ? conversation.seller_id : conversation.buyer_id;
+      const listing = listingMap.get(conversation.listing_id);
+      const counterpart = counterpartMap.get(counterpartId);
+      const lastMessage = lastMessageMap.get(conversation.id);
+
+      return {
+        id: conversation.id,
+        listingId: conversation.listing_id,
+        listingTitle: listing?.title?.trim() || "Listing unavailable",
+        counterpartId,
+        counterpartName: normalizeName(counterpart?.full_name),
+        counterpartAvatarPath: counterpart?.avatar_path ?? null,
+        lastMessagePreview: toMessagePreview(lastMessage?.content ?? ""),
+        lastMessageAt: lastMessage?.created_at ?? conversation.created_at,
+        updatedAt: conversation.updated_at,
+      };
+    }),
+    hasMore: paged.hasMore,
+  };
+}
+
+export async function getMarketplaceConversationThread(
+  conversationId: string,
+): Promise<MarketplaceConversationThread | null> {
+  const user = await requireUser();
+  const supabase = await createClient();
+
+  const { data: conversation, error: conversationError } = await supabase
+    .from("conversations")
+    .select("id, listing_id, buyer_id, seller_id, created_at, updated_at")
+    .eq("id", conversationId)
+    .maybeSingle();
+
+  if (conversationError) {
+    throw new Error("Failed to load conversation.");
+  }
+
+  if (!conversation) {
+    return null;
+  }
+
+  const isBuyer = conversation.buyer_id === user.id;
+  const isSeller = conversation.seller_id === user.id;
+
+  if (!isBuyer && !isSeller) {
+    return null;
+  }
+
+  const counterpartId = isBuyer ? conversation.seller_id : conversation.buyer_id;
+
+  const [listingResult, profilesResult, messagesResult] = await Promise.all([
+    supabase
+      .from("listings")
+      .select("id, title")
+      .eq("id", conversation.listing_id)
+      .maybeSingle(),
+    supabase
+      .from("profiles")
+      .select("user_id, full_name, avatar_path")
+      .in("user_id", dedupeStrings([conversation.buyer_id, conversation.seller_id])),
+    supabase
+      .from("messages")
+      .select("id, conversation_id, sender_id, content, created_at")
+      .eq("conversation_id", conversation.id)
+      .order("created_at", { ascending: true })
+      .order("id", { ascending: true })
+      .limit(200),
+  ]);
+
+  if (listingResult.error || profilesResult.error || messagesResult.error) {
+    throw new Error("Failed to load conversation thread.");
+  }
+
+  const profileMap = new Map((profilesResult.data ?? []).map((profile) => [profile.user_id, profile]));
+  const counterpartProfile = profileMap.get(counterpartId);
+  const listingTitle = listingResult.data?.title?.trim() || "Listing unavailable";
+  const listingHref = listingResult.data ? `/market/item/${listingResult.data.id}` : null;
+
+  return {
+    conversationId: conversation.id,
+    listingId: conversation.listing_id,
+    listingTitle,
+    listingHref,
+    currentUserId: user.id,
+    counterpartId,
+    counterpartName: normalizeName(counterpartProfile?.full_name),
+    counterpartAvatarPath: counterpartProfile?.avatar_path ?? null,
+    messages: (messagesResult.data ?? []).map((message) => {
+      const senderProfile = profileMap.get(message.sender_id);
+      const isOwnMessage = message.sender_id === user.id;
+
+      return {
+        id: message.id,
+        senderId: message.sender_id,
+        senderName: isOwnMessage ? "You" : normalizeName(senderProfile?.full_name),
+        senderAvatarPath: senderProfile?.avatar_path ?? null,
+        content: message.content,
+        createdAt: message.created_at,
+        isOwnMessage,
+      };
+    }),
   };
 }

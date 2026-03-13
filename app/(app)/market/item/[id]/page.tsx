@@ -1,10 +1,9 @@
 /* eslint-disable @next/next/no-img-element */
 import Link from "next/link";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { ShellButton } from "@/components/ui/ShellButton";
 import { TopBar } from "@/components/ui/TopBar";
 import { notFound } from "next/navigation";
-import { toggleSavedListingAction } from "@/lib/market/actions";
+import { startListingConversationAction, toggleSavedListingAction } from "@/lib/market/actions";
 import { reportContentAction } from "@/lib/moderation/actions";
 import {
   formatPriceKzt,
@@ -168,10 +167,13 @@ export default async function MarketItemDetailPage({
             Edit listing
           </Link>
         ) : (
-          <ShellButton
-            label="Message seller"
-            variant="primary"
-          />
+          <form action={startListingConversationAction} className="w-full">
+            <input type="hidden" name="listingId" value={listing.id} />
+            <input type="hidden" name="redirectTo" value={`/market/item/${listing.id}`} />
+            <button type="submit" className="wire-action-primary w-full">
+              Message seller
+            </button>
+          </form>
         )}
       </div>
       {!isOwner ? (

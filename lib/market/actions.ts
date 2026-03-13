@@ -22,6 +22,8 @@ import {
   listingCreateSchema,
   listingMutationIdSchema,
   parseUploadedListingImagePaths,
+  sendMarketplaceMessageSchema,
+  startListingConversationSchema,
   listingUpdateSchema,
   toggleSavedListingSchema,
 } from "@/lib/validation/market";
@@ -46,6 +48,14 @@ const DELETE_LISTING_LIMIT = {
   maxHits: 8,
   windowMs: 30 * 60 * 1000,
 };
+const START_CONVERSATION_LIMIT = {
+  maxHits: 30,
+  windowMs: 10 * 60 * 1000,
+};
+const SEND_MESSAGE_LIMIT = {
+  maxHits: 100,
+  windowMs: 10 * 60 * 1000,
+};
 
 function mapCreateListingErrorMessage(errorCode?: string): string {
   if (errorCode === "23503") {
@@ -69,6 +79,26 @@ function mapDeleteListingErrorMessage(errorCode?: string): string {
   }
 
   return "Failed to delete listing. Please try again.";
+}
+
+function mapStartConversationErrorMessage(errorCode?: string): string {
+  if (errorCode === "42501") {
+    return "You cannot start a conversation for this listing.";
+  }
+
+  return "Failed to start conversation.";
+}
+
+function mapSendMessageErrorMessage(errorCode?: string): string {
+  if (errorCode === "42501") {
+    return "You cannot send messages in this conversation.";
+  }
+
+  if (errorCode === "23514") {
+    return "Message cannot be empty.";
+  }
+
+  return "Failed to send message.";
 }
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
@@ -494,6 +524,222 @@ export async function deleteListingAction(formData: FormData) {
     listingId,
   });
   redirectWithMessage("/market/my-listings", "Listing deleted");
+}
+
+export async function startListingConversationAction(formData: FormData) {
+  const requestContext = await getRequestContext({ action: "startListingConversationAction" });
+  const parsed = startListingConversationSchema.safeParse({
+    listingId: getStringValue(formData, "listingId"),
+    redirectTo: getStringValue(formData, "redirectTo"),
+  });
+
+  if (!parsed.success) {
+    redirectWithError("/market", parsed.error.issues[0]?.message ?? "Invalid conversation request.");
+  }
+
+  const listingPath = `/market/item/${parsed.data.listingId}`;
+  const redirectPath = sanitizeInternalPath(parsed.data.redirectTo, listingPath);
+  const user = await requireUser();
+  const rateResult = consumeRateLimit(`market:start-conversation:${user.id}`, START_CONVERSATION_LIMIT);
+
+  if (!rateResult.allowed) {
+    logSecurityEvent("market_start_conversation_rate_limited", {
+      ...requestContext,
+      userId: user.id,
+      listingId: parsed.data.listingId,
+      retryAfterMs: rateResult.retryAfterMs,
+    });
+    redirectWithError(redirectPath, "Too many conversation attempts. Please wait and try again.");
+  }
+
+  const supabase = await createClient();
+  const { data: listing, error: listingError } = await supabase
+    .from("listings")
+    .select("id, seller_id")
+    .eq("id", parsed.data.listingId)
+    .maybeSingle();
+
+  if (listingError || !listing) {
+    redirectWithError(redirectPath, "Listing not available.");
+  }
+
+  if (listing.seller_id === user.id) {
+    logSecurityEvent("market_start_conversation_self_listing_blocked", {
+      ...requestContext,
+      userId: user.id,
+      listingId: parsed.data.listingId,
+    });
+    redirectWithError(redirectPath, "You cannot message your own listing.");
+  }
+
+  const { data: existingConversation, error: existingConversationError } = await supabase
+    .from("conversations")
+    .select("id")
+    .eq("listing_id", listing.id)
+    .eq("buyer_id", user.id)
+    .maybeSingle();
+
+  if (existingConversationError) {
+    logAppError(
+      "market",
+      "conversation_lookup_failed",
+      createAppError("DATABASE_ERROR", existingConversationError.message, {
+        safeMessage: "Failed to start conversation.",
+        metadata: {
+          code: existingConversationError.code,
+          userId: user.id,
+          listingId: listing.id,
+        },
+      }),
+      requestContext,
+    );
+    redirectWithError(redirectPath, "Failed to start conversation.");
+  }
+
+  if (existingConversation) {
+    redirect(`/market/messages/${existingConversation.id}`);
+  }
+
+  const { data: createdConversation, error: createConversationError } = await supabase
+    .from("conversations")
+    .insert({
+      listing_id: listing.id,
+      buyer_id: user.id,
+      seller_id: listing.seller_id,
+    })
+    .select("id")
+    .maybeSingle();
+
+  if (createConversationError?.code === "23505") {
+    const { data: racedConversation, error: raceLookupError } = await supabase
+      .from("conversations")
+      .select("id")
+      .eq("listing_id", listing.id)
+      .eq("buyer_id", user.id)
+      .maybeSingle();
+
+    if (raceLookupError || !racedConversation) {
+      redirectWithError(redirectPath, "Failed to open conversation.");
+    }
+
+    redirect(`/market/messages/${racedConversation.id}`);
+  }
+
+  if (createConversationError || !createdConversation) {
+    logAppError(
+      "market",
+      "conversation_create_failed",
+      createAppError("DATABASE_ERROR", createConversationError?.message ?? "Conversation insert returned empty response.", {
+        safeMessage: mapStartConversationErrorMessage(createConversationError?.code),
+        metadata: {
+          code: createConversationError?.code ?? null,
+          userId: user.id,
+          listingId: listing.id,
+        },
+      }),
+      requestContext,
+    );
+    redirectWithError(redirectPath, mapStartConversationErrorMessage(createConversationError?.code));
+  }
+
+  revalidatePath("/market/messages");
+  revalidatePath(`/market/messages/${createdConversation.id}`);
+  logInfo("market", "conversation_started", {
+    ...requestContext,
+    userId: user.id,
+    listingId: listing.id,
+    conversationId: createdConversation.id,
+  });
+  redirect(`/market/messages/${createdConversation.id}`);
+}
+
+export async function sendMarketplaceMessageAction(formData: FormData) {
+  const requestContext = await getRequestContext({ action: "sendMarketplaceMessageAction" });
+  const parsed = sendMarketplaceMessageSchema.safeParse({
+    conversationId: getStringValue(formData, "conversationId"),
+    content: getStringValue(formData, "content"),
+    redirectTo: getStringValue(formData, "redirectTo"),
+  });
+
+  if (!parsed.success) {
+    redirectWithError("/market/messages", parsed.error.issues[0]?.message ?? "Invalid message input.");
+  }
+
+  const conversationPath = `/market/messages/${parsed.data.conversationId}`;
+  const redirectPath = sanitizeInternalPath(parsed.data.redirectTo, conversationPath);
+  const user = await requireUser();
+  const rateResult = consumeRateLimit(`market:send-message:${user.id}`, SEND_MESSAGE_LIMIT);
+
+  if (!rateResult.allowed) {
+    logSecurityEvent("market_send_message_rate_limited", {
+      ...requestContext,
+      userId: user.id,
+      conversationId: parsed.data.conversationId,
+      retryAfterMs: rateResult.retryAfterMs,
+    });
+    redirectWithError(redirectPath, "Too many messages. Please wait and try again.");
+  }
+
+  const supabase = await createClient();
+  const { data: conversation, error: conversationError } = await supabase
+    .from("conversations")
+    .select("id, buyer_id, seller_id")
+    .eq("id", parsed.data.conversationId)
+    .maybeSingle();
+
+  if (conversationError) {
+    redirectWithError(redirectPath, "Failed to load conversation.");
+  }
+
+  if (!conversation) {
+    redirectWithError("/market/messages", "Conversation not found.");
+  }
+
+  const isParticipant = conversation.buyer_id === user.id || conversation.seller_id === user.id;
+  if (!isParticipant) {
+    logSecurityEvent("market_send_message_membership_violation", {
+      ...requestContext,
+      userId: user.id,
+      conversationId: parsed.data.conversationId,
+      buyerId: conversation.buyer_id,
+      sellerId: conversation.seller_id,
+    });
+    redirectWithError("/market/messages", "You cannot send messages in this conversation.");
+  }
+
+  const { error: insertMessageError } = await supabase
+    .from("messages")
+    .insert({
+      conversation_id: conversation.id,
+      sender_id: user.id,
+      content: parsed.data.content,
+    });
+
+  if (insertMessageError) {
+    logAppError(
+      "market",
+      "message_send_failed",
+      createAppError("DATABASE_ERROR", insertMessageError.message, {
+        safeMessage: mapSendMessageErrorMessage(insertMessageError.code),
+        metadata: {
+          code: insertMessageError.code,
+          userId: user.id,
+          conversationId: conversation.id,
+        },
+      }),
+      requestContext,
+    );
+    redirectWithError(redirectPath, mapSendMessageErrorMessage(insertMessageError.code));
+  }
+
+  revalidatePath("/market/messages");
+  revalidatePath(conversationPath);
+  logInfo("market", "message_sent", {
+    ...requestContext,
+    userId: user.id,
+    conversationId: conversation.id,
+  });
+  redirect(redirectPath);
 }
 
 export async function toggleSavedListingAction(formData: FormData) {

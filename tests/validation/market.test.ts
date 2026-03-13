@@ -4,6 +4,8 @@ import {
   listingCreateSchema,
   parseUploadedListingImagePaths,
   listingMutationIdSchema,
+  sendMarketplaceMessageSchema,
+  startListingConversationSchema,
   listingUpdateSchema,
 } from "@/lib/validation/market";
 
@@ -97,5 +99,43 @@ describe("market validation", () => {
     expect(isOwnerScopedListingImagePath(validPath, userId)).toBe(true);
     expect(isOwnerScopedListingImagePath(foreignPath, userId)).toBe(false);
     expect(isOwnerScopedListingImagePath(invalidExtPath, userId)).toBe(false);
+  });
+
+  it("validates start conversation payload", () => {
+    expect(
+      startListingConversationSchema.safeParse({
+        listingId: "2aafeec7-6a08-4a79-9782-1f87f1f5a0f9",
+      }).success,
+    ).toBe(true);
+
+    expect(
+      startListingConversationSchema.safeParse({
+        listingId: "invalid-id",
+      }).success,
+    ).toBe(false);
+  });
+
+  it("validates send message payload with trimming and bounds", () => {
+    const valid = sendMarketplaceMessageSchema.safeParse({
+      conversationId: "2aafeec7-6a08-4a79-9782-1f87f1f5a0f9",
+      content: "   Is this still available?   ",
+    });
+
+    expect(valid.success).toBe(true);
+    if (valid.success) {
+      expect(valid.data.content).toBe("Is this still available?");
+    }
+
+    const empty = sendMarketplaceMessageSchema.safeParse({
+      conversationId: "2aafeec7-6a08-4a79-9782-1f87f1f5a0f9",
+      content: "   ",
+    });
+    expect(empty.success).toBe(false);
+
+    const tooLong = sendMarketplaceMessageSchema.safeParse({
+      conversationId: "2aafeec7-6a08-4a79-9782-1f87f1f5a0f9",
+      content: "a".repeat(1201),
+    });
+    expect(tooLong.success).toBe(false);
   });
 });
