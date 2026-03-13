@@ -1,12 +1,21 @@
+import Link from "next/link";
+import {
+  ArrowRight,
+  CalendarDays,
+  Compass,
+  ShoppingBag,
+  Users,
+} from "lucide-react";
 import { CommunityCard } from "@/components/ui/CommunityCard";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { EventCard } from "@/components/ui/EventCard";
+import { FeedbackBanner } from "@/components/ui/FeedbackBanner";
 import { ListingCard } from "@/components/ui/ListingCard";
 import { PersonCard } from "@/components/ui/PersonCard";
-import { QuickAccessGrid } from "@/components/ui/QuickAccessGrid";
 import { SearchBar } from "@/components/ui/SearchBar";
+import { SectionHeader } from "@/components/ui/SectionHeader";
 import { SectionCard } from "@/components/ui/SectionCard";
-import { TopBar } from "@/components/ui/TopBar";
+import { ShellButton } from "@/components/ui/ShellButton";
 import {
   getCommunities,
   getPeopleDiscovery,
@@ -36,16 +45,29 @@ export default async function HomePage() {
 
   return (
     <main>
-      <TopBar
-        title="NU Atrium"
-        subtitle="Marketplace, events, and campus collaboration in one place"
-        actions={[{ label: "Search", href: "/search" }]}
-      />
-      {loadError ? (
-        <div className="rounded-xl border border-red-400/30 bg-red-400/10 px-3 py-2 text-[13px] text-red-200">
-          {loadError}
+      <section className="wire-panel">
+        <SectionHeader
+          title="NU Atrium"
+          subtitle="A focused campus dashboard for opportunities, coordination, and student utility."
+          actionNode={
+            <Link href="/profile" className="wire-link">
+              Profile
+            </Link>
+          }
+        />
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div className="space-y-2">
+            <p className="wire-label">Campus utility</p>
+            <p className="max-w-[46ch] text-[14px] leading-[22px] text-wire-200">
+              Check what matters today: active listings, upcoming events, and people or communities
+              aligned with your goals.
+            </p>
+          </div>
+          <ShellButton label="Browse market" href="/market" variant="primary" block={false} />
         </div>
-      ) : null}
+      </section>
+
+      {loadError ? <FeedbackBanner tone="error" message={loadError} /> : null}
 
       <SearchBar
         placeholder="Search market, events, people, communities"
@@ -55,22 +77,62 @@ export default async function HomePage() {
       />
 
       <section className="wire-panel">
-        <p className="wire-label mb-3">Quick Access</p>
-        <QuickAccessGrid
-          columns={2}
-          items={[
-            { label: "Market", href: "/market" },
-            { label: "Events", href: "/events" },
-            { label: "Connect", href: "/connect" },
-            { label: "Campus", href: "/campus" },
-          ]}
+        <SectionHeader
+          title="Quick access"
+          subtitle="Jump into core campus workflows."
         />
+        <div className="grid grid-cols-2 gap-3">
+          <Link
+            href="/market"
+            className="wire-card wire-hover flex min-h-[104px] flex-col justify-between rounded-[var(--radius-card)] p-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+          >
+            <ShoppingBag className="h-5 w-5 text-wire-100" aria-hidden="true" />
+            <div>
+              <p className="text-[15px] font-semibold text-wire-100">Market</p>
+              <p className="wire-meta">Buy and sell essentials</p>
+            </div>
+          </Link>
+          <Link
+            href="/events"
+            className="wire-card wire-hover flex min-h-[104px] flex-col justify-between rounded-[var(--radius-card)] p-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+          >
+            <CalendarDays className="h-5 w-5 text-wire-100" aria-hidden="true" />
+            <div>
+              <p className="text-[15px] font-semibold text-wire-100">Events</p>
+              <p className="wire-meta">Plan your week</p>
+            </div>
+          </Link>
+          <Link
+            href="/connect"
+            className="wire-card wire-hover flex min-h-[104px] flex-col justify-between rounded-[var(--radius-card)] p-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+          >
+            <Users className="h-5 w-5 text-wire-100" aria-hidden="true" />
+            <div>
+              <p className="text-[15px] font-semibold text-wire-100">Connect</p>
+              <p className="wire-meta">Find peers and groups</p>
+            </div>
+          </Link>
+          <Link
+            href="/campus"
+            className="wire-card wire-hover flex min-h-[104px] flex-col justify-between rounded-[var(--radius-card)] p-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+          >
+            <Compass className="h-5 w-5 text-wire-100" aria-hidden="true" />
+            <div>
+              <p className="text-[15px] font-semibold text-wire-100">Campus</p>
+              <p className="wire-meta">Services and contacts</p>
+            </div>
+          </Link>
+        </div>
       </section>
 
-      <SectionCard title="Featured in Market" actionLabel="See all" actionHref="/market">
-        <p className="mb-3 wire-meta">Practical listings posted by NU students this week.</p>
+      <SectionCard
+        title="Featured listings"
+        subtitle="Practical student listings worth checking today."
+        actionLabel="Open market"
+        actionHref="/market"
+      >
         {listings.length > 0 ? (
-          <div className="grid grid-cols-2 gap-2">
+          <div className="wire-list">
             {listings.map((listing) => (
               <ListingCard
                 key={listing.id}
@@ -89,8 +151,12 @@ export default async function HomePage() {
         ) : null}
       </SectionCard>
 
-      <SectionCard title="Upcoming on Campus" actionLabel="See all" actionHref="/events">
-        <p className="mb-3 wire-meta">Curated events relevant to student life and projects.</p>
+      <SectionCard
+        title="Upcoming events"
+        subtitle="High-signal events for study, projects, and campus life."
+        actionLabel="Open events"
+        actionHref="/events"
+      >
         {events.length > 0 ? (
           <div className="wire-list">
             {events.map((event) => (
@@ -108,13 +174,11 @@ export default async function HomePage() {
       </SectionCard>
 
       <SectionCard
-        title="People and Communities"
-        actionLabel="See all"
+        title="Suggested people & communities"
+        subtitle="Find aligned peers and active circles."
+        actionLabel="Open connect"
         actionHref="/connect"
       >
-        <p className="mb-3 wire-meta">
-          Find peers and campus circles aligned with your goals and interests.
-        </p>
         {people.length > 0 || communities.length > 0 ? (
           <div className="wire-list">
             {people[0] ? (
@@ -129,6 +193,10 @@ export default async function HomePage() {
                 href={`/connect/communities/${communities[0].community.id}`}
               />
             ) : null}
+            <Link href="/connect" className="wire-action-ghost inline-flex w-fit gap-2">
+              See more suggestions
+              <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            </Link>
           </div>
         ) : !loadError ? (
           <EmptyState
