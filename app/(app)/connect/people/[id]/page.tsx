@@ -4,26 +4,39 @@ import { ProfileHeader } from "@/components/ui/ProfileHeader";
 import { TagChip } from "@/components/ui/TagChip";
 import { TopBar } from "@/components/ui/TopBar";
 import { notFound } from "next/navigation";
-import { getPersonProfile, toPersonCardData } from "@/lib/connect/data";
+import { requireUser } from "@/lib/auth/session";
+import {
+  acceptFriendRequestAction,
+  cancelFriendRequestAction,
+  rejectFriendRequestAction,
+  sendFriendRequestAction,
+} from "@/lib/connect/actions";
+import { getFriendshipWithPerson, getPersonProfile, toPersonCardData } from "@/lib/connect/data";
 import { toPublicStorageUrl } from "@/lib/validation/media";
 import { isUuid } from "@/lib/validation/uuid";
 
 type PersonProfilePageProps = {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ message?: string; error?: string }>;
 };
 
-export default async function PersonProfilePage({ params }: PersonProfilePageProps) {
-  const { id } = await params;
+export default async function PersonProfilePage({ params, searchParams }: PersonProfilePageProps) {
+  const [{ id }, { message, error }] = await Promise.all([params, searchParams]);
 
   if (!isUuid(id)) {
     notFound();
   }
 
+  const user = await requireUser();
   let person = null as Awaited<ReturnType<typeof getPersonProfile>>;
+  let friendship = null as Awaited<ReturnType<typeof getFriendshipWithPerson>>;
   let loadError: string | null = null;
 
   try {
     person = await getPersonProfile(id);
+    if (person && person.user_id !== user.id) {
+      friendship = await getFriendshipWithPerson(person.user_id);
+    }
   } catch (error) {
     loadError = error instanceof Error ? error.message : "Failed to load student profile.";
   }
@@ -35,7 +48,18 @@ export default async function PersonProfilePage({ params }: PersonProfilePagePro
           title="Student Profile"
           subtitle="Campus identity and collaboration context"
           backHref="/connect/people"
+          actions={[{ label: "Friends", href: "/connect/friends" }]}
         />
+        {message ? (
+          <div className="rounded-xl border border-accent/35 bg-accent/10 px-3 py-2 text-[13px] text-wire-100">
+            {message}
+          </div>
+        ) : null}
+        {error ? (
+          <div className="rounded-xl border border-red-400/30 bg-red-400/10 px-3 py-2 text-[13px] text-red-200">
+            {error}
+          </div>
+        ) : null}
         {loadError ? (
           <div className="rounded-xl border border-red-400/30 bg-red-400/10 px-3 py-2 text-[13px] text-red-200">
             {loadError}
@@ -52,6 +76,7 @@ export default async function PersonProfilePage({ params }: PersonProfilePagePro
   }
 
   const personCard = toPersonCardData(person);
+  const isSelfProfile = person.user_id === user.id;
   const subtitle = `${personCard.major} - ${personCard.year}`;
   const avatarUrl = toPublicStorageUrl("avatars", person.avatar_path);
   const links =
@@ -65,7 +90,23 @@ export default async function PersonProfilePage({ params }: PersonProfilePagePro
         title="Student Profile"
         subtitle="Campus identity and collaboration context"
         backHref="/connect/people"
+        actions={[{ label: "Friends", href: "/connect/friends" }]}
       />
+      {message ? (
+        <div className="rounded-xl border border-accent/35 bg-accent/10 px-3 py-2 text-[13px] text-wire-100">
+          {message}
+        </div>
+      ) : null}
+      {error ? (
+        <div className="rounded-xl border border-red-400/30 bg-red-400/10 px-3 py-2 text-[13px] text-red-200">
+          {error}
+        </div>
+      ) : null}
+      {loadError ? (
+        <div className="rounded-xl border border-red-400/30 bg-red-400/10 px-3 py-2 text-[13px] text-red-200">
+          {loadError}
+        </div>
+      ) : null}
       <ProfileHeader
         name={personCard.name}
         subtitle={subtitle}
@@ -136,6 +177,61 @@ export default async function PersonProfilePage({ params }: PersonProfilePagePro
           </div>
         </div>
       </FormSection>
+      {!isSelfProfile ? (
+        friendship?.status === "accepted" ? (
+          <div className="wire-action-row-single">
+            <button type="button" className="wire-action-primary w-full" disabled>
+              Friends
+            </button>
+          </div>
+        ) : friendship?.status === "pending" && friendship.requester_id === user.id ? (
+          <div className="wire-action-row">
+            <button type="button" className="wire-action w-full" disabled>
+              Request Sent
+            </button>
+            <form action={cancelFriendRequestAction} className="w-full">
+              <input type="hidden" name="friendshipId" value={friendship.id} />
+              <input type="hidden" name="redirectTo" value={`/connect/people/${person.user_id}`} />
+              <button type="submit" className="wire-action w-full">
+                Cancel
+              </button>
+            </form>
+          </div>
+        ) : friendship?.status === "pending" ? (
+          <div className="wire-action-row">
+            <form action={acceptFriendRequestAction} className="w-full">
+              <input type="hidden" name="friendshipId" value={friendship.id} />
+              <input type="hidden" name="redirectTo" value={`/connect/people/${person.user_id}`} />
+              <button type="submit" className="wire-action-primary w-full">
+                Accept
+              </button>
+            </form>
+            <form action={rejectFriendRequestAction} className="w-full">
+              <input type="hidden" name="friendshipId" value={friendship.id} />
+              <input type="hidden" name="redirectTo" value={`/connect/people/${person.user_id}`} />
+              <button type="submit" className="wire-action w-full">
+                Reject
+              </button>
+            </form>
+          </div>
+        ) : (
+          <div className="wire-action-row-single">
+            <form action={sendFriendRequestAction} className="w-full">
+              <input type="hidden" name="addresseeId" value={person.user_id} />
+              <input type="hidden" name="redirectTo" value={`/connect/people/${person.user_id}`} />
+              <button type="submit" className="wire-action-primary w-full">
+                Add Friend
+              </button>
+            </form>
+          </div>
+        )
+      ) : (
+        <div className="wire-action-row-single">
+          <a href="/connect/friends" className="wire-action w-full text-center">
+            View Friends
+          </a>
+        </div>
+      )}
     </main>
   );
 }

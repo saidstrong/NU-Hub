@@ -67,6 +67,20 @@ export const communityRequestReviewSchema = z.object({
   redirectTo: z.string().optional(),
 });
 
+export const sendFriendRequestSchema = z.object({
+  addresseeId: z.string().trim().uuid("Invalid user id."),
+  redirectTo: z.string().trim().optional(),
+});
+
+const friendshipMutationSchema = z.object({
+  friendshipId: z.string().trim().uuid("Invalid friendship id."),
+  redirectTo: z.string().trim().optional(),
+});
+
+export const acceptFriendRequestSchema = friendshipMutationSchema;
+export const rejectFriendRequestSchema = friendshipMutationSchema;
+export const cancelFriendRequestSchema = friendshipMutationSchema;
+
 export const createCommunityPostSchema = z.object({
   communityId: z.string().uuid("Invalid community id."),
   content: z

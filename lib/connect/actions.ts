@@ -16,8 +16,12 @@ import { writeInAppNotification } from "@/lib/notifications/write";
 import { consumeRateLimit } from "@/lib/security/rate-limit";
 import { createClient } from "@/lib/supabase/server";
 import {
+  acceptFriendRequestSchema,
+  cancelFriendRequestSchema,
   communityMutationIdSchema,
   createCommunitySchema,
+  rejectFriendRequestSchema,
+  sendFriendRequestSchema,
   communityJoinSchema,
   communityRequestReviewSchema,
   createCommunityPostSchema,
@@ -85,6 +89,16 @@ const COMMUNITY_POST_DELETE_LIMIT = {
   windowMs: 10 * 60 * 1000,
 };
 
+const FRIEND_REQUEST_SEND_LIMIT = {
+  maxHits: 40,
+  windowMs: 10 * 60 * 1000,
+};
+
+const FRIEND_REQUEST_REVIEW_LIMIT = {
+  maxHits: 80,
+  windowMs: 10 * 60 * 1000,
+};
+
 function mapUpdateCommunityErrorMessage(errorCode?: string): string {
   if (errorCode === "42501") {
     return "You do not have permission to edit this community.";
@@ -133,6 +147,28 @@ function revalidateCommunityPaths(communityId: string) {
   revalidatePath("/profile/notifications");
 }
 
+function revalidateFriendPaths(userId: string, otherUserId?: string) {
+  revalidatePath("/connect");
+  revalidatePath("/connect/people");
+  revalidatePath("/connect/friends");
+  revalidatePath(`/connect/people/${userId}`);
+  if (otherUserId && otherUserId !== userId) {
+    revalidatePath(`/connect/people/${otherUserId}`);
+  }
+}
+
+function mapFriendRequestErrorMessage(errorCode?: string): string {
+  if (errorCode === "23505") {
+    return "A friend relationship already exists for this pair.";
+  }
+
+  if (errorCode === "42501") {
+    return "You do not have permission for this friend action.";
+  }
+
+  return "Failed to update friend request.";
+}
+
 function getOptionalFile(formData: FormData, key: string): File | null {
   const value = formData.get(key);
   if (!(value instanceof File) || value.size <= 0) {
@@ -174,6 +210,26 @@ async function verifyCommunityOwnershipOrRedirect(
   }
 
   return community;
+}
+
+async function getFriendshipBetweenUsers(
+  supabase: SupabaseServerClient,
+  firstUserId: string,
+  secondUserId: string,
+) {
+  const { data, error } = await supabase
+    .from("friendships")
+    .select("id, requester_id, addressee_id, status")
+    .or(
+      `and(requester_id.eq.${firstUserId},addressee_id.eq.${secondUserId}),and(requester_id.eq.${secondUserId},addressee_id.eq.${firstUserId})`,
+    )
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
 }
 
 export async function createCommunityAction(formData: FormData) {
@@ -781,6 +837,285 @@ export async function reviewCommunityRequestAction(formData: FormData) {
   const successMessage = parsed.data.decision === "approve" ? "Request approved." : "Request rejected.";
 
   redirectWithMessage(redirectPath, successMessage);
+}
+
+export async function sendFriendRequestAction(formData: FormData) {
+  const parsed = sendFriendRequestSchema.safeParse({
+    addresseeId: getStringValue(formData, "addresseeId"),
+    redirectTo: getStringValue(formData, "redirectTo"),
+  });
+
+  if (!parsed.success) {
+    redirectWithError("/connect/people", parsed.error.issues[0]?.message ?? "Invalid friend request input.");
+  }
+
+  const fallbackPath = `/connect/people/${parsed.data.addresseeId}`;
+  const redirectPath = sanitizeInternalPath(parsed.data.redirectTo, fallbackPath);
+  const user = await requireUser();
+
+  if (parsed.data.addresseeId === user.id) {
+    logSecurityEvent("friend_request_self_blocked", {
+      userId: user.id,
+      targetUserId: parsed.data.addresseeId,
+    });
+    redirectWithError(redirectPath, "You cannot send a friend request to yourself.");
+  }
+
+  const sendRateResult = consumeRateLimit(`connect:friend-request:send:${user.id}`, FRIEND_REQUEST_SEND_LIMIT);
+  if (!sendRateResult.allowed) {
+    redirectWithError(redirectPath, "Too many friend requests. Please wait and try again.");
+  }
+
+  const supabase = await createClient();
+  const { data: targetProfile, error: targetProfileError } = await supabase
+    .from("profiles")
+    .select("user_id")
+    .eq("user_id", parsed.data.addresseeId)
+    .maybeSingle();
+
+  if (targetProfileError || !targetProfile) {
+    redirectWithError("/connect/people", "Student not found.");
+  }
+
+  let existingFriendship: { id: string; requester_id: string; addressee_id: string; status: "pending" | "accepted" | "rejected"; } | null = null;
+  try {
+    existingFriendship = await getFriendshipBetweenUsers(supabase, user.id, parsed.data.addresseeId);
+  } catch {
+    redirectWithError(redirectPath, "Failed to check existing friend request.");
+  }
+
+  if (existingFriendship?.status === "accepted") {
+    redirectWithMessage(redirectPath, "You are already friends.");
+  }
+
+  if (existingFriendship?.status === "pending") {
+    if (existingFriendship.requester_id === user.id) {
+      redirectWithMessage(redirectPath, "Friend request already sent.");
+    }
+
+    redirectWithMessage(redirectPath, "This student already sent you a friend request.");
+  }
+
+  if (existingFriendship?.status === "rejected") {
+    const { error: reviveError } = await supabase
+      .from("friendships")
+      .update({
+        requester_id: user.id,
+        addressee_id: parsed.data.addresseeId,
+        status: "pending",
+      })
+      .eq("id", existingFriendship.id);
+
+    if (reviveError) {
+      redirectWithError(redirectPath, mapFriendRequestErrorMessage(reviveError.code));
+    }
+
+    revalidateFriendPaths(user.id, parsed.data.addresseeId);
+    redirectWithMessage(redirectPath, "Friend request sent.");
+  }
+
+  const { error: insertError } = await supabase.from("friendships").insert({
+    requester_id: user.id,
+    addressee_id: parsed.data.addresseeId,
+    status: "pending",
+  });
+
+  if (insertError) {
+    if (insertError.code === "23505") {
+      redirectWithMessage(redirectPath, "Friend request already exists for this student.");
+    }
+
+    redirectWithError(redirectPath, mapFriendRequestErrorMessage(insertError.code));
+  }
+
+  revalidateFriendPaths(user.id, parsed.data.addresseeId);
+  redirectWithMessage(redirectPath, "Friend request sent.");
+}
+
+export async function acceptFriendRequestAction(formData: FormData) {
+  const parsed = acceptFriendRequestSchema.safeParse({
+    friendshipId: getStringValue(formData, "friendshipId"),
+    redirectTo: getStringValue(formData, "redirectTo"),
+  });
+
+  if (!parsed.success) {
+    redirectWithError("/connect/friends", parsed.error.issues[0]?.message ?? "Invalid friend request.");
+  }
+
+  const redirectPath = sanitizeInternalPath(parsed.data.redirectTo, "/connect/friends");
+  const user = await requireUser();
+  const reviewRateResult = consumeRateLimit(`connect:friend-request:review:${user.id}`, FRIEND_REQUEST_REVIEW_LIMIT);
+
+  if (!reviewRateResult.allowed) {
+    redirectWithError(redirectPath, "Too many request actions. Please wait and try again.");
+  }
+
+  const supabase = await createClient();
+  const { data: friendship, error: friendshipError } = await supabase
+    .from("friendships")
+    .select("id, requester_id, addressee_id, status")
+    .eq("id", parsed.data.friendshipId)
+    .maybeSingle();
+
+  if (friendshipError) {
+    redirectWithError(redirectPath, "Failed to load friend request.");
+  }
+
+  if (!friendship) {
+    redirectWithError(redirectPath, "Friend request not found.");
+  }
+
+  if (friendship.addressee_id !== user.id) {
+    redirectWithError(redirectPath, "You can only review incoming friend requests.");
+  }
+
+  if (friendship.status !== "pending") {
+    redirectWithMessage(redirectPath, "This request is no longer pending.");
+  }
+
+  const { data: updated, error: updateError } = await supabase
+    .from("friendships")
+    .update({ status: "accepted" })
+    .eq("id", friendship.id)
+    .eq("addressee_id", user.id)
+    .eq("status", "pending")
+    .select("id")
+    .maybeSingle();
+
+  if (updateError) {
+    redirectWithError(redirectPath, mapFriendRequestErrorMessage(updateError.code));
+  }
+
+  if (!updated) {
+    redirectWithMessage(redirectPath, "This request is no longer pending.");
+  }
+
+  revalidateFriendPaths(user.id, friendship.requester_id);
+  redirectWithMessage(redirectPath, "Friend request accepted.");
+}
+
+export async function rejectFriendRequestAction(formData: FormData) {
+  const parsed = rejectFriendRequestSchema.safeParse({
+    friendshipId: getStringValue(formData, "friendshipId"),
+    redirectTo: getStringValue(formData, "redirectTo"),
+  });
+
+  if (!parsed.success) {
+    redirectWithError("/connect/friends", parsed.error.issues[0]?.message ?? "Invalid friend request.");
+  }
+
+  const redirectPath = sanitizeInternalPath(parsed.data.redirectTo, "/connect/friends");
+  const user = await requireUser();
+  const reviewRateResult = consumeRateLimit(`connect:friend-request:review:${user.id}`, FRIEND_REQUEST_REVIEW_LIMIT);
+
+  if (!reviewRateResult.allowed) {
+    redirectWithError(redirectPath, "Too many request actions. Please wait and try again.");
+  }
+
+  const supabase = await createClient();
+  const { data: friendship, error: friendshipError } = await supabase
+    .from("friendships")
+    .select("id, requester_id, addressee_id, status")
+    .eq("id", parsed.data.friendshipId)
+    .maybeSingle();
+
+  if (friendshipError) {
+    redirectWithError(redirectPath, "Failed to load friend request.");
+  }
+
+  if (!friendship) {
+    redirectWithError(redirectPath, "Friend request not found.");
+  }
+
+  if (friendship.addressee_id !== user.id) {
+    redirectWithError(redirectPath, "You can only review incoming friend requests.");
+  }
+
+  if (friendship.status !== "pending") {
+    redirectWithMessage(redirectPath, "This request is no longer pending.");
+  }
+
+  const { data: updated, error: updateError } = await supabase
+    .from("friendships")
+    .update({ status: "rejected" })
+    .eq("id", friendship.id)
+    .eq("addressee_id", user.id)
+    .eq("status", "pending")
+    .select("id")
+    .maybeSingle();
+
+  if (updateError) {
+    redirectWithError(redirectPath, mapFriendRequestErrorMessage(updateError.code));
+  }
+
+  if (!updated) {
+    redirectWithMessage(redirectPath, "This request is no longer pending.");
+  }
+
+  revalidateFriendPaths(user.id, friendship.requester_id);
+  redirectWithMessage(redirectPath, "Friend request rejected.");
+}
+
+export async function cancelFriendRequestAction(formData: FormData) {
+  const parsed = cancelFriendRequestSchema.safeParse({
+    friendshipId: getStringValue(formData, "friendshipId"),
+    redirectTo: getStringValue(formData, "redirectTo"),
+  });
+
+  if (!parsed.success) {
+    redirectWithError("/connect/friends", parsed.error.issues[0]?.message ?? "Invalid friend request.");
+  }
+
+  const redirectPath = sanitizeInternalPath(parsed.data.redirectTo, "/connect/friends");
+  const user = await requireUser();
+  const reviewRateResult = consumeRateLimit(`connect:friend-request:review:${user.id}`, FRIEND_REQUEST_REVIEW_LIMIT);
+
+  if (!reviewRateResult.allowed) {
+    redirectWithError(redirectPath, "Too many request actions. Please wait and try again.");
+  }
+
+  const supabase = await createClient();
+  const { data: friendship, error: friendshipError } = await supabase
+    .from("friendships")
+    .select("id, requester_id, addressee_id, status")
+    .eq("id", parsed.data.friendshipId)
+    .maybeSingle();
+
+  if (friendshipError) {
+    redirectWithError(redirectPath, "Failed to load friend request.");
+  }
+
+  if (!friendship) {
+    redirectWithError(redirectPath, "Friend request not found.");
+  }
+
+  if (friendship.requester_id !== user.id) {
+    redirectWithError(redirectPath, "You can only cancel requests you sent.");
+  }
+
+  if (friendship.status !== "pending") {
+    redirectWithMessage(redirectPath, "This request is no longer pending.");
+  }
+
+  const { data: deleted, error: deleteError } = await supabase
+    .from("friendships")
+    .delete()
+    .eq("id", friendship.id)
+    .eq("requester_id", user.id)
+    .eq("status", "pending")
+    .select("id")
+    .maybeSingle();
+
+  if (deleteError) {
+    redirectWithError(redirectPath, mapFriendRequestErrorMessage(deleteError.code));
+  }
+
+  if (!deleted) {
+    redirectWithMessage(redirectPath, "This request is no longer pending.");
+  }
+
+  revalidateFriendPaths(user.id, friendship.addressee_id);
+  redirectWithMessage(redirectPath, "Friend request canceled.");
 }
 
 export async function createCommunityPostAction(formData: FormData) {

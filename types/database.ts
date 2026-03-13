@@ -405,6 +405,32 @@ type DatabaseSchema = {
           updated_at?: string;
         };
       };
+      friendships: {
+        Row: {
+          id: string;
+          requester_id: string;
+          addressee_id: string;
+          status: "pending" | "accepted" | "rejected";
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          requester_id: string;
+          addressee_id: string;
+          status: "pending" | "accepted" | "rejected";
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          requester_id?: string;
+          addressee_id?: string;
+          status?: "pending" | "accepted" | "rejected";
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
       content_reports: {
         Row: {
           id: string;

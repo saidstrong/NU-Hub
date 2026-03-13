@@ -9,6 +9,7 @@ export type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
 export type CommunityRow = Database["public"]["Tables"]["communities"]["Row"];
 export type CommunityMemberRow = Database["public"]["Tables"]["community_members"]["Row"];
 export type CommunityPostRow = Database["public"]["Tables"]["community_posts"]["Row"];
+export type FriendshipRow = Database["public"]["Tables"]["friendships"]["Row"];
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
 export type CommunityCardSource = Pick<
   CommunityRow,
@@ -101,6 +102,28 @@ export type CommunityRequestItem = {
   requester_meta: string;
   note: string;
 };
+export type FriendRelationship = Pick<
+  FriendshipRow,
+  "id" | "requester_id" | "addressee_id" | "status"
+>;
+export type FriendRequestItem = {
+  friendshipId: string;
+  requesterId: string;
+  requesterName: string;
+  requesterMajor: string | null;
+  requesterYearLabel: string | null;
+  requesterAvatarPath: string | null;
+  createdAt: string;
+};
+export type FriendItem = {
+  friendshipId: string;
+  friendId: string;
+  friendName: string;
+  friendMajor: string | null;
+  friendYearLabel: string | null;
+  friendAvatarPath: string | null;
+  updatedAt: string;
+};
 export type CommunityListEntry = {
   community: CommunityCardSource;
   memberCount: number;
@@ -123,6 +146,16 @@ function formatJoinType(joinType: CommunityRow["join_type"]): string {
 function fallbackText(value: string | null | undefined, fallback: string): string {
   const safe = value?.trim();
   return safe && safe.length > 0 ? safe : fallback;
+}
+
+async function requireMatchingUserId(userId: string): Promise<string> {
+  const user = await requireUser();
+
+  if (user.id !== userId) {
+    throw new Error("You can only view your own friend data.");
+  }
+
+  return user.id;
 }
 
 export function toPersonCardData(profile: PeopleDiscoveryItem): PersonCardData {
@@ -216,6 +249,135 @@ export async function getPersonProfile(personId: string): Promise<PersonProfileD
   }
 
   return data;
+}
+
+export async function getFriendshipWithPerson(personId: string): Promise<FriendRelationship | null> {
+  const user = await requireUser();
+
+  if (personId === user.id) {
+    return null;
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("friendships")
+    .select("id, requester_id, addressee_id, status")
+    .or(
+      `and(requester_id.eq.${user.id},addressee_id.eq.${personId}),and(requester_id.eq.${personId},addressee_id.eq.${user.id})`,
+    )
+    .maybeSingle();
+
+  if (error) {
+    throw new Error("Failed to load friend relationship.");
+  }
+
+  return data;
+}
+
+export async function getFriendRequests(userId: string, limit = 20): Promise<FriendRequestItem[]> {
+  const viewerId = await requireMatchingUserId(userId);
+  const safeLimit = Math.max(1, Math.min(limit, 40));
+  const supabase = await createClient();
+
+  const { data: requests, error: requestsError } = await supabase
+    .from("friendships")
+    .select("id, requester_id, created_at")
+    .eq("addressee_id", viewerId)
+    .eq("status", "pending")
+    .order("created_at", { ascending: false })
+    .limit(safeLimit);
+
+  if (requestsError) {
+    throw new Error("Failed to load friend requests.");
+  }
+
+  if (!requests || requests.length === 0) {
+    return [];
+  }
+
+  const requesterIds = Array.from(new Set(requests.map((request) => request.requester_id)));
+  const { data: requesterProfiles, error: requesterProfilesError } = await supabase
+    .from("profiles")
+    .select("user_id, full_name, major, year_label, avatar_path")
+    .in("user_id", requesterIds);
+
+  if (requesterProfilesError) {
+    throw new Error("Failed to load requester profiles.");
+  }
+
+  const requesterMap = new Map(requesterProfiles.map((profile) => [profile.user_id, profile]));
+
+  return requests.map((request) => {
+    const profile = requesterMap.get(request.requester_id);
+
+    return {
+      friendshipId: request.id,
+      requesterId: request.requester_id,
+      requesterName: fallbackText(profile?.full_name, "NU student"),
+      requesterMajor: profile?.major ?? null,
+      requesterYearLabel: profile?.year_label ?? null,
+      requesterAvatarPath: profile?.avatar_path ?? null,
+      createdAt: request.created_at,
+    };
+  });
+}
+
+export async function getFriends(userId: string, limit = 200): Promise<FriendItem[]> {
+  const viewerId = await requireMatchingUserId(userId);
+  const safeLimit = Math.max(1, Math.min(limit, 400));
+  const supabase = await createClient();
+
+  const { data: friendships, error: friendshipsError } = await supabase
+    .from("friendships")
+    .select("id, requester_id, addressee_id, updated_at")
+    .eq("status", "accepted")
+    .or(`requester_id.eq.${viewerId},addressee_id.eq.${viewerId}`)
+    .order("updated_at", { ascending: false })
+    .limit(safeLimit);
+
+  if (friendshipsError) {
+    throw new Error("Failed to load friends.");
+  }
+
+  if (!friendships || friendships.length === 0) {
+    return [];
+  }
+
+  const friendIds = Array.from(
+    new Set(
+      friendships.map((friendship) =>
+        friendship.requester_id === viewerId ? friendship.addressee_id : friendship.requester_id,
+      ),
+    ),
+  );
+
+  const { data: friendProfiles, error: friendProfilesError } = await supabase
+    .from("profiles")
+    .select("user_id, full_name, major, year_label, avatar_path")
+    .in("user_id", friendIds);
+
+  if (friendProfilesError) {
+    throw new Error("Failed to load friend profiles.");
+  }
+
+  const friendProfileMap = new Map(friendProfiles.map((profile) => [profile.user_id, profile]));
+  const resolvedFriends = friendships.map((friendship) => {
+    const friendId =
+      friendship.requester_id === viewerId ? friendship.addressee_id : friendship.requester_id;
+    const profile = friendProfileMap.get(friendId);
+
+    return {
+      friendshipId: friendship.id,
+      friendId,
+      friendName: fallbackText(profile?.full_name, "NU student"),
+      friendMajor: profile?.major ?? null,
+      friendYearLabel: profile?.year_label ?? null,
+      friendAvatarPath: profile?.avatar_path ?? null,
+      updatedAt: friendship.updated_at,
+    };
+  });
+
+  return resolvedFriends.sort((a, b) => a.friendName.localeCompare(b.friendName, "en-US"));
 }
 
 export async function getCommunities(limit = 24): Promise<Array<{
