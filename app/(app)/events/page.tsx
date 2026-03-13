@@ -1,11 +1,14 @@
+import Link from "next/link";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { FeedbackBanner } from "@/components/ui/FeedbackBanner";
 import { FilterRow } from "@/components/ui/FilterRow";
 import { EventCard } from "@/components/ui/EventCard";
 import { PageNavigation } from "@/components/ui/PageNavigation";
 import { SearchBar } from "@/components/ui/SearchBar";
+import { SectionHeader } from "@/components/ui/SectionHeader";
 import { SectionCard } from "@/components/ui/SectionCard";
+import { ShellButton } from "@/components/ui/ShellButton";
 import { TagChip } from "@/components/ui/TagChip";
-import { TopBar } from "@/components/ui/TopBar";
 import { eventCategories } from "@/lib/mock-data";
 import { getPublishedEventsPage, toEventCardData } from "@/lib/events/data";
 import { buildPageHref, parsePageParam } from "@/lib/pagination";
@@ -41,57 +44,96 @@ export default async function EventsHomePage({ searchParams }: EventsHomePagePro
 
   return (
     <main>
-      <TopBar
-        title="Events"
-        subtitle="Curated academic and student-led campus events"
-        actions={[
-          { label: "Create", href: "/events/create" },
-          { label: "List", href: "/events/list" },
-          { label: "Calendar", href: "/events/calendar" },
-        ]}
-      />
-
-      <SearchBar placeholder="Search events" />
-
       <section className="wire-panel">
-        <p className="wire-section-title mb-1">Browse events</p>
-        <p className="mb-3 wire-meta">Plan your week with campus-relevant events across clubs, career, and workshops.</p>
-        <div className="mb-3 flex flex-wrap gap-2">
-          {eventCategories.map((category, idx) => (
-            <TagChip key={category} label={category} active={idx === 0} />
-          ))}
-        </div>
-        <FilterRow filters={["This week", "Campus", "Saved"]} />
+        <SectionHeader
+          title="Events"
+          subtitle="Discover high-signal campus events for study, projects, and student life."
+          actionNode={
+            <Link href="/events/my-events" className="wire-link">
+              My events
+            </Link>
+          }
+        />
+        <p className="wire-meta">
+          Follow upcoming opportunities, then quickly publish events for your communities and teams.
+        </p>
       </section>
 
-      <SectionCard title="Featured this week">
-        {loadError ? (
-          <div className="rounded-xl border border-red-400/30 bg-red-400/10 px-3 py-2 text-[13px] text-red-200">
-            {loadError}
-          </div>
-        ) : null}
+      <section className="wire-panel">
+        <SectionHeader
+          title="Search"
+          subtitle="Find events by topic, place, or organizer."
+        />
+        <SearchBar
+          placeholder="Search events"
+          queryName="q"
+          defaultValue=""
+          action="/search"
+        />
+      </section>
+
+      <section className="wire-panel">
+        <SectionHeader
+          title="Categories and filters"
+          subtitle="Keep filters light and focus on what is happening next."
+        />
+        <div className="mb-4 flex flex-wrap gap-2">
+          {eventCategories.map((category, idx) => (
+            <TagChip key={category} label={category} active={idx === 0} tone="status" />
+          ))}
+        </div>
+        <FilterRow filters={["This week", "Campus", "Saved"]} activeIndex={0} />
+      </section>
+
+      <section className="wire-panel">
+        <SectionHeader
+          title="Actions"
+          subtitle="Create and navigate event views quickly."
+        />
+        <div className="wire-action-row">
+          <ShellButton label="Create event" href="/events/create" variant="primary" />
+          <Link href="/events/list" className="wire-action">
+            Event list
+          </Link>
+        </div>
+        <div className="mt-3 flex flex-wrap gap-3">
+          <Link href="/events/calendar" className="wire-link">
+            Calendar view
+          </Link>
+          <Link href="/events/saved" className="wire-link">
+            Saved events
+          </Link>
+        </div>
+      </section>
+
+      <SectionCard
+        title="This week on campus"
+        subtitle="Featured events first, then the next upcoming opportunities."
+        actionLabel="View all events"
+        actionHref="/events/list"
+      >
+        {loadError ? <FeedbackBanner tone="error" message={loadError} className="mb-3" /> : null}
         {featuredEvent ? (
           <EventCard event={toEventCardData(featuredEvent)} href={`/events/${featuredEvent.id}`} />
         ) : !loadError ? (
           <EmptyState
             title="No published events yet"
-            description="Curated campus events will appear here as they become available."
+            description="Published campus events will appear here."
+            actionLabel="Create event"
+            actionHref="/events/create"
           />
         ) : null}
-      </SectionCard>
-
-      <SectionCard title="Upcoming on campus" actionLabel="View list" actionHref="/events/list">
         {upcomingEvents.length > 0 ? (
-          <div className="wire-list">
-            {upcomingEvents.map((event) => (
-              <EventCard key={event.id} event={toEventCardData(event)} href={`/events/${event.id}`} />
-            ))}
+          <div className="mt-4 border-t border-wire-700 pt-4">
+            <p className="mb-3 wire-label">Upcoming</p>
+            <div className="wire-list">
+              {upcomingEvents.map((event) => (
+                <EventCard key={event.id} event={toEventCardData(event)} href={`/events/${event.id}`} />
+              ))}
+            </div>
           </div>
-        ) : !loadError ? (
-          <EmptyState
-            title="No additional upcoming events"
-            description="Check back soon for more campus activities this week."
-          />
+        ) : featuredEvent && !loadError ? (
+          <p className="mt-4 wire-meta">No additional upcoming events yet.</p>
         ) : null}
       </SectionCard>
 
