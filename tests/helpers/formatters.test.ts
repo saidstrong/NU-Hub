@@ -19,7 +19,7 @@ describe("pure format and mapping helpers", () => {
   });
 
   it("formats participation labels", () => {
-    expect(formatParticipationLabel("joined")).toBe("Joined");
+    expect(formatParticipationLabel("going")).toBe("Going");
     expect(formatParticipationLabel("interested")).toBe("Interested");
   });
 

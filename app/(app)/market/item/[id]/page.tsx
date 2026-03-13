@@ -5,6 +5,7 @@ import { ShellButton } from "@/components/ui/ShellButton";
 import { TopBar } from "@/components/ui/TopBar";
 import { notFound } from "next/navigation";
 import { toggleSavedListingAction } from "@/lib/market/actions";
+import { reportContentAction } from "@/lib/moderation/actions";
 import {
   formatPriceKzt,
   formatStatusLabel,
@@ -15,14 +16,14 @@ import { isUuid } from "@/lib/validation/uuid";
 
 type MarketItemDetailPageProps = {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ message?: string }>;
+  searchParams: Promise<{ message?: string; error?: string }>;
 };
 
 export default async function MarketItemDetailPage({
   params,
   searchParams,
 }: MarketItemDetailPageProps) {
-  const { message } = await searchParams;
+  const { message, error } = await searchParams;
   const { id } = await params;
 
   if (!isUuid(id)) {
@@ -80,6 +81,11 @@ export default async function MarketItemDetailPage({
       {message ? (
         <div className="rounded-xl border border-accent/35 bg-accent/10 px-3 py-2 text-[13px] text-wire-100">
           {message}
+        </div>
+      ) : null}
+      {error ? (
+        <div className="rounded-xl border border-red-400/30 bg-red-400/10 px-3 py-2 text-[13px] text-red-200">
+          {error}
         </div>
       ) : null}
 
@@ -168,6 +174,19 @@ export default async function MarketItemDetailPage({
           />
         )}
       </div>
+      {!isOwner ? (
+        <div className="wire-action-row-single">
+          <form action={reportContentAction}>
+            <input type="hidden" name="targetType" value="listing" />
+            <input type="hidden" name="targetId" value={listing.id} />
+            <input type="hidden" name="reason" value="inappropriate" />
+            <input type="hidden" name="redirectTo" value={`/market/item/${listing.id}`} />
+            <button type="submit" className="wire-action-compact">
+              Report listing
+            </button>
+          </form>
+        </div>
+      ) : null}
     </main>
   );
 }

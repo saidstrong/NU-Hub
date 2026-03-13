@@ -100,6 +100,7 @@ type DatabaseSchema = {
           condition: string;
           pickup_location: string;
           status: "draft" | "active" | "reserved" | "sold" | "archived";
+          is_hidden: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -113,6 +114,7 @@ type DatabaseSchema = {
           condition: string;
           pickup_location: string;
           status?: "draft" | "active" | "reserved" | "sold" | "archived";
+          is_hidden?: boolean;
           created_at?: string;
           updated_at?: string;
         };
@@ -126,6 +128,7 @@ type DatabaseSchema = {
           condition?: string;
           pickup_location?: string;
           status?: "draft" | "active" | "reserved" | "sold" | "archived";
+          is_hidden?: boolean;
           created_at?: string;
           updated_at?: string;
         };
@@ -182,6 +185,7 @@ type DatabaseSchema = {
           location: string;
           cover_path: string | null;
           is_published: boolean;
+          is_hidden: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -196,6 +200,7 @@ type DatabaseSchema = {
           location: string;
           cover_path?: string | null;
           is_published?: boolean;
+          is_hidden?: boolean;
           created_at?: string;
           updated_at?: string;
         };
@@ -210,6 +215,7 @@ type DatabaseSchema = {
           location?: string;
           cover_path?: string | null;
           is_published?: boolean;
+          is_hidden?: boolean;
           created_at?: string;
           updated_at?: string;
         };
@@ -264,6 +270,7 @@ type DatabaseSchema = {
           category: string | null;
           avatar_path: string | null;
           join_type: "open" | "request";
+          is_hidden: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -276,6 +283,7 @@ type DatabaseSchema = {
           category?: string | null;
           avatar_path?: string | null;
           join_type?: "open" | "request";
+          is_hidden?: boolean;
           created_at?: string;
           updated_at?: string;
         };
@@ -288,6 +296,7 @@ type DatabaseSchema = {
           category?: string | null;
           avatar_path?: string | null;
           join_type?: "open" | "request";
+          is_hidden?: boolean;
           created_at?: string;
           updated_at?: string;
         };
@@ -324,6 +333,7 @@ type DatabaseSchema = {
           community_id: string;
           author_id: string;
           content: string;
+          is_hidden: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -332,6 +342,7 @@ type DatabaseSchema = {
           community_id: string;
           author_id: string;
           content: string;
+          is_hidden?: boolean;
           created_at?: string;
           updated_at?: string;
         };
@@ -340,8 +351,38 @@ type DatabaseSchema = {
           community_id?: string;
           author_id?: string;
           content?: string;
+          is_hidden?: boolean;
           created_at?: string;
           updated_at?: string;
+        };
+      };
+      content_reports: {
+        Row: {
+          id: string;
+          reporter_id: string;
+          target_type: "listing" | "event" | "community" | "community_post";
+          target_id: string;
+          reason: "spam" | "scam" | "harassment" | "inappropriate" | "misleading" | "other";
+          note: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          reporter_id: string;
+          target_type: "listing" | "event" | "community" | "community_post";
+          target_id: string;
+          reason: "spam" | "scam" | "harassment" | "inappropriate" | "misleading" | "other";
+          note?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          reporter_id?: string;
+          target_type?: "listing" | "event" | "community" | "community_post";
+          target_id?: string;
+          reason?: "spam" | "scam" | "harassment" | "inappropriate" | "misleading" | "other";
+          note?: string | null;
+          created_at?: string;
         };
       };
       notifications: {

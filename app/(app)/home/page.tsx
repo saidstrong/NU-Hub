@@ -57,10 +57,12 @@ export default async function HomePage() {
       <section className="wire-panel">
         <p className="wire-label mb-3">Quick Access</p>
         <QuickAccessGrid
+          columns={2}
           items={[
             { label: "Market", href: "/market" },
             { label: "Events", href: "/events" },
             { label: "Connect", href: "/connect" },
+            { label: "Campus", href: "/campus" },
           ]}
         />
       </section>

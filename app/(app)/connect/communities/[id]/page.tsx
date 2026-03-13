@@ -12,6 +12,7 @@ import {
   joinOrRequestCommunityAction,
 } from "@/lib/connect/actions";
 import { getCommunityDetail } from "@/lib/connect/data";
+import { reportContentAction } from "@/lib/moderation/actions";
 import { toPublicStorageUrl } from "@/lib/validation/media";
 import { isUuid } from "@/lib/validation/uuid";
 
@@ -197,6 +198,7 @@ export default async function CommunityProfilePage({
                 const authorAvatarPath = post.authorAvatarPath?.trim() || null;
                 const authorAvatarUrl = toPublicStorageUrl("avatars", authorAvatarPath);
                 const canDeletePost = post.authorId === user.id || isOwner;
+                const canReportPost = post.authorId !== user.id;
 
                 return (
                   <article
@@ -220,15 +222,28 @@ export default async function CommunityProfilePage({
                           <p className="wire-meta">{formatPostTime(post.createdAt)}</p>
                         </div>
                       </div>
-                      {canDeletePost ? (
-                        <form action={deleteCommunityPostAction}>
-                          <input type="hidden" name="communityId" value={community.id} />
-                          <input type="hidden" name="postId" value={post.id} />
-                          <button type="submit" className="wire-action-compact">
-                            Delete
-                          </button>
-                        </form>
-                      ) : null}
+                      <div className="flex items-center gap-2">
+                        {canDeletePost ? (
+                          <form action={deleteCommunityPostAction}>
+                            <input type="hidden" name="communityId" value={community.id} />
+                            <input type="hidden" name="postId" value={post.id} />
+                            <button type="submit" className="wire-action-compact">
+                              Delete
+                            </button>
+                          </form>
+                        ) : null}
+                        {canReportPost ? (
+                          <form action={reportContentAction}>
+                            <input type="hidden" name="targetType" value="community_post" />
+                            <input type="hidden" name="targetId" value={post.id} />
+                            <input type="hidden" name="reason" value="inappropriate" />
+                            <input type="hidden" name="redirectTo" value={`/connect/communities/${community.id}`} />
+                            <button type="submit" className="wire-action-compact">
+                              Report
+                            </button>
+                          </form>
+                        ) : null}
+                      </div>
                     </div>
                     <p className="mt-2 whitespace-pre-wrap break-words text-[13px] leading-relaxed text-wire-200">
                       {post.content}
@@ -299,6 +314,19 @@ export default async function CommunityProfilePage({
         </Link>
         {ownerMeta ? <p className="mt-1 wire-meta">{ownerMeta}</p> : null}
       </FormSection>
+      {!isOwner ? (
+        <div className="wire-action-row-single">
+          <form action={reportContentAction}>
+            <input type="hidden" name="targetType" value="community" />
+            <input type="hidden" name="targetId" value={community.id} />
+            <input type="hidden" name="reason" value="inappropriate" />
+            <input type="hidden" name="redirectTo" value={`/connect/communities/${community.id}`} />
+            <button type="submit" className="wire-action-compact">
+              Report community
+            </button>
+          </form>
+        </div>
+      ) : null}
 
       {isOwner ? (
         <div className="wire-action-row">

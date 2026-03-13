@@ -7,6 +7,7 @@ import {
   setEventParticipationAction,
   toggleSavedEventAction,
 } from "@/lib/events/actions";
+import { reportContentAction } from "@/lib/moderation/actions";
 import {
   formatEventDate,
   getEventDetail,
@@ -16,11 +17,11 @@ import { isUuid } from "@/lib/validation/uuid";
 
 type EventDetailPageProps = {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ message?: string }>;
+  searchParams: Promise<{ message?: string; error?: string }>;
 };
 
 export default async function EventDetailPage({ params, searchParams }: EventDetailPageProps) {
-  const { message } = await searchParams;
+  const { message, error } = await searchParams;
   const { id } = await params;
 
   if (!isUuid(id)) {
@@ -82,6 +83,11 @@ export default async function EventDetailPage({ params, searchParams }: EventDet
       {message ? (
         <div className="rounded-xl border border-accent/35 bg-accent/10 px-3 py-2 text-[13px] text-wire-100">
           {message}
+        </div>
+      ) : null}
+      {error ? (
+        <div className="rounded-xl border border-red-400/30 bg-red-400/10 px-3 py-2 text-[13px] text-red-200">
+          {error}
         </div>
       ) : null}
       {isDraft && isOwner ? (
@@ -185,6 +191,19 @@ export default async function EventDetailPage({ params, searchParams }: EventDet
               </button>
             </form>
           </div>
+          {!isOwner ? (
+            <div className="wire-action-row-single">
+              <form action={reportContentAction}>
+                <input type="hidden" name="targetType" value="event" />
+                <input type="hidden" name="targetId" value={event.id} />
+                <input type="hidden" name="reason" value="inappropriate" />
+                <input type="hidden" name="redirectTo" value={`/events/${event.id}`} />
+                <button type="submit" className="wire-action-compact">
+                  Report event
+                </button>
+              </form>
+            </div>
+          ) : null}
         </>
       ) : null}
     </main>
