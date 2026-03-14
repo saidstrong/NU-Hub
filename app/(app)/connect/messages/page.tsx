@@ -1,6 +1,8 @@
 /* eslint-disable @next/next/no-img-element */
 import Link from "next/link";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { FeedbackBanner } from "@/components/ui/FeedbackBanner";
+import { SectionHeader } from "@/components/ui/SectionHeader";
 import { TopBar } from "@/components/ui/TopBar";
 import { requireUser } from "@/lib/auth/session";
 import { getFriendInbox } from "@/lib/connect/data";
@@ -45,27 +47,15 @@ export default async function ConnectMessagesPage({ searchParams }: ConnectMessa
         backHref="/connect"
         actions={[{ label: "Friends", href: "/connect/friends" }]}
       />
-      {message ? (
-        <div className="rounded-xl border border-accent/35 bg-accent/10 px-3 py-2 text-[13px] text-wire-100">
-          {message}
-        </div>
-      ) : null}
-      {error ? (
-        <div className="rounded-xl border border-red-400/30 bg-red-400/10 px-3 py-2 text-[13px] text-red-200">
-          {error}
-        </div>
-      ) : null}
-      {loadError ? (
-        <div className="rounded-xl border border-red-400/30 bg-red-400/10 px-3 py-2 text-[13px] text-red-200">
-          {loadError}
-        </div>
-      ) : null}
+      {message ? <FeedbackBanner tone="success" message={message} /> : null}
+      {error ? <FeedbackBanner tone="error" message={error} /> : null}
+      {loadError ? <FeedbackBanner tone="error" message={loadError} /> : null}
 
       <section className="wire-panel">
-        <div className="mb-3 border-b border-wire-700 pb-3">
-          <h2 className="wire-section-title">Inbox</h2>
-          <p className="mt-1 wire-meta">Recent friend conversations, newest activity first.</p>
-        </div>
+        <SectionHeader
+          title="Inbox"
+          subtitle="Recent friend conversations, ordered by latest activity."
+        />
 
         {conversations.length > 0 ? (
           <div className="space-y-2.5">
@@ -84,7 +74,7 @@ export default async function ConnectMessagesPage({ searchParams }: ConnectMessa
                 <Link
                   key={conversation.conversationId}
                   href={`/connect/messages/${conversation.conversationId}`}
-                  className="block rounded-2xl border border-wire-700 bg-wire-800 px-3 py-3 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/40"
+                  className="block rounded-[var(--radius-card)] border border-wire-700 bg-wire-800 px-4 py-3 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/40"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
@@ -96,7 +86,7 @@ export default async function ConnectMessagesPage({ searchParams }: ConnectMessa
                           {replyLabel}
                         </span>
                       </div>
-                      <p className="mt-1 truncate text-[13px] text-wire-200">{conversation.lastMessagePreview}</p>
+                      <p className="mt-1 line-clamp-1 text-[13px] text-wire-200">{conversation.lastMessagePreview}</p>
                     </div>
                     <p className="wire-meta shrink-0">{formatMessageTime(conversation.lastMessageAt)}</p>
                   </div>

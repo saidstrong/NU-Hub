@@ -1,25 +1,28 @@
 import Link from "next/link";
 import { ShellButton } from "@/components/ui/ShellButton";
+import { SectionHeader } from "@/components/ui/SectionHeader";
 
 export default function WelcomePage() {
   return (
-    <main className="flex min-h-[80vh] flex-col items-center justify-center">
-      <div className="wire-panel w-full p-6 text-center">
-        <p className="wire-label">Campus Utility</p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight">NU Atrium</h1>
-        <p className="mt-3 text-sm text-wire-300">
-          A structural prototype for market, events, and student community discovery.
+    <main className="flex min-h-[82vh] flex-col items-center justify-center">
+      <section className="wire-panel w-full max-w-md">
+        <SectionHeader
+          title="NU Atrium"
+          subtitle="A focused campus platform for marketplace, events, communities, and student coordination."
+        />
+        <p className="text-[14px] leading-relaxed text-wire-200">
+          Start with your NU account to access your profile, conversations, and campus activity in one place.
         </p>
-        <div className="mt-6 space-y-3">
-          <ShellButton label="Sign Up" href="/signup" />
-          <ShellButton label="Log In" href="/login" />
+        <div className="mt-5 space-y-3">
+          <ShellButton label="Create account" href="/signup" variant="primary" />
+          <ShellButton label="Log in" href="/login" />
         </div>
-        <div className="mt-6">
-          <Link href="/login" className="text-xs text-wire-300 underline-offset-2 hover:underline">
-            Continue to sign in
+        <div className="mt-5 text-center">
+          <Link href="/login" className="wire-link inline-flex min-h-0">
+            Continue with existing account
           </Link>
         </div>
-      </div>
+      </section>
     </main>
   );
 }

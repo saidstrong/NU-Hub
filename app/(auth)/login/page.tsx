@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { FeedbackBanner } from "@/components/ui/FeedbackBanner";
+import { SectionHeader } from "@/components/ui/SectionHeader";
 import { loginAction } from "@/lib/auth/actions";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import { WireField } from "@/components/ui/WireField";
@@ -15,20 +17,19 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const { next, error, message } = await searchParams;
 
   return (
-    <main>
-      <div className="wire-panel mx-auto max-w-sm">
-        <h1 className="wire-title mb-4">Log In</h1>
-        <p className="mb-4 wire-subtitle">Sign in with your NU account.</p>
-        {message ? (
-          <div className="mb-3 rounded-xl border border-accent/35 bg-accent/10 px-3 py-2 text-[13px] text-wire-100">
-            {message}
-          </div>
-        ) : null}
-        {error ? (
-          <div className="mb-3 rounded-xl border border-red-400/30 bg-red-400/10 px-3 py-2 text-[13px] text-red-200">
-            {error}
-          </div>
-        ) : null}
+    <main className="flex min-h-[82vh] flex-col justify-center">
+      <section className="wire-panel mx-auto w-full max-w-md">
+        <SectionHeader
+          title="Log in"
+          subtitle="Sign in with your NU account to access your activity and messages."
+          actionNode={
+            <Link href="/welcome" className="wire-link">
+              Welcome
+            </Link>
+          }
+        />
+        {message ? <FeedbackBanner tone="success" message={message} className="mb-3" /> : null}
+        {error ? <FeedbackBanner tone="error" message={error} className="mb-3" /> : null}
         <form action={loginAction} className="space-y-3">
           <input type="hidden" name="next" value={next ?? ""} />
           <WireField
@@ -46,15 +47,17 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             required
             autoComplete="current-password"
           />
-          <SubmitButton label="Log in" pendingLabel="Signing in..." variant="primary" />
+          <div className="pt-1">
+            <SubmitButton label="Log in" pendingLabel="Signing in..." variant="primary" />
+          </div>
         </form>
-        <p className="mt-4 text-center text-[13px] text-wire-300">
+        <p className="mt-5 text-center text-[13px] text-wire-300">
           Need an account?{" "}
           <Link href="/signup" className="wire-link inline-flex min-h-0">
             Create one
           </Link>
         </p>
-      </div>
+      </section>
     </main>
   );
 }

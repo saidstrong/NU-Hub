@@ -1,6 +1,8 @@
 /* eslint-disable @next/next/no-img-element */
 import { notFound } from "next/navigation";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { FeedbackBanner } from "@/components/ui/FeedbackBanner";
+import { SectionHeader } from "@/components/ui/SectionHeader";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import { TopBar } from "@/components/ui/TopBar";
 import { sendFriendMessageAction } from "@/lib/connect/actions";
@@ -49,11 +51,7 @@ export default async function FriendConversationPage({
           subtitle="Friend conversation"
           backHref="/connect/messages"
         />
-        {loadError ? (
-          <div className="rounded-xl border border-red-400/30 bg-red-400/10 px-3 py-2 text-[13px] text-red-200">
-            {loadError}
-          </div>
-        ) : null}
+        {loadError ? <FeedbackBanner tone="error" message={loadError} /> : null}
         <EmptyState
           title="Conversation not available"
           description="This conversation may be unavailable for your account."
@@ -74,24 +72,13 @@ export default async function FriendConversationPage({
         subtitle={`With ${thread.counterpartName}`}
         backHref="/connect/messages"
       />
-      {message ? (
-        <div className="rounded-xl border border-accent/35 bg-accent/10 px-3 py-2 text-[13px] text-wire-100">
-          {message}
-        </div>
-      ) : null}
-      {error ? (
-        <div className="rounded-xl border border-red-400/30 bg-red-400/10 px-3 py-2 text-[13px] text-red-200">
-          {error}
-        </div>
-      ) : null}
-      {loadError ? (
-        <div className="rounded-xl border border-red-400/30 bg-red-400/10 px-3 py-2 text-[13px] text-red-200">
-          {loadError}
-        </div>
-      ) : null}
+      {message ? <FeedbackBanner tone="success" message={message} /> : null}
+      {error ? <FeedbackBanner tone="error" message={error} /> : null}
+      {loadError ? <FeedbackBanner tone="error" message={loadError} /> : null}
 
       <section className="wire-panel">
-        <div className="mb-3 flex items-center gap-2.5 border-b border-wire-700 pb-3">
+        <SectionHeader title="Conversation context" subtitle="Counterpart profile context." />
+        <div className="flex items-center gap-2.5">
           {counterpartAvatarUrl ? (
             <img
               src={counterpartAvatarUrl}
@@ -101,16 +88,14 @@ export default async function FriendConversationPage({
           ) : (
             <div className="h-9 w-9 rounded-full border border-dashed border-wire-600 bg-wire-900" />
           )}
-          <p className="truncate text-sm text-wire-100">{thread.counterpartName}</p>
+          <p className="truncate text-sm font-medium text-wire-100">{thread.counterpartName}</p>
         </div>
       </section>
 
       <section className="wire-panel">
-        <div className="mb-3 border-b border-wire-700 pb-3">
-          <h2 className="wire-section-title">Messages</h2>
-        </div>
+        <SectionHeader title="Messages" subtitle="Thread history in chronological order." />
         {thread.messages.length > 0 ? (
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             {thread.messages.map((messageItem) => {
               const senderAvatarUrl = toPublicStorageUrl("avatars", messageItem.senderAvatarPath);
 
@@ -118,8 +103,8 @@ export default async function FriendConversationPage({
                 <article
                   key={messageItem.id}
                   className={messageItem.isOwnMessage
-                    ? "ml-8 rounded-2xl border border-accent/30 bg-accent/10 px-3 py-3"
-                    : "mr-8 rounded-2xl border border-wire-700 bg-wire-800 px-3 py-3"}
+                    ? "ml-4 rounded-[var(--radius-input)] border border-accent/25 bg-accent/10 px-3 py-3 sm:ml-10"
+                    : "mr-4 rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-3 py-3 sm:mr-10"}
                 >
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex min-w-0 items-center gap-2">
@@ -144,14 +129,15 @@ export default async function FriendConversationPage({
             })}
           </div>
         ) : (
-          <p className="text-[13px] text-wire-300">
-            No messages yet. Send the first message to start the conversation.
-          </p>
+          <EmptyState
+            title="No messages yet"
+            description="Send the first message to start this conversation."
+          />
         )}
       </section>
 
       <section className="wire-panel">
-        <h2 className="mb-2 text-sm font-semibold text-wire-100">Send message</h2>
+        <SectionHeader title="Send message" subtitle="Keep it clear and actionable." />
         <form action={sendFriendMessageAction} className="space-y-2">
           <input type="hidden" name="conversationId" value={thread.conversationId} />
           <input type="hidden" name="redirectTo" value={conversationPath} />

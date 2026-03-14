@@ -1,7 +1,9 @@
 /* eslint-disable @next/next/no-img-element */
 import Link from "next/link";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { FeedbackBanner } from "@/components/ui/FeedbackBanner";
 import { PageNavigation } from "@/components/ui/PageNavigation";
+import { SectionHeader } from "@/components/ui/SectionHeader";
 import { TopBar } from "@/components/ui/TopBar";
 import { getMarketplaceConversationsPage } from "@/lib/market/data";
 import { buildPageHref, parsePageParam } from "@/lib/pagination";
@@ -55,27 +57,15 @@ export default async function MarketMessagesPage({ searchParams }: MarketMessage
         subtitle="Conversations with buyers and sellers"
         backHref="/market"
       />
-      {message ? (
-        <div className="rounded-xl border border-accent/35 bg-accent/10 px-3 py-2 text-[13px] text-wire-100">
-          {message}
-        </div>
-      ) : null}
-      {error ? (
-        <div className="rounded-xl border border-red-400/30 bg-red-400/10 px-3 py-2 text-[13px] text-red-200">
-          {error}
-        </div>
-      ) : null}
-      {loadError ? (
-        <div className="rounded-xl border border-red-400/30 bg-red-400/10 px-3 py-2 text-[13px] text-red-200">
-          {loadError}
-        </div>
-      ) : null}
+      {message ? <FeedbackBanner tone="success" message={message} /> : null}
+      {error ? <FeedbackBanner tone="error" message={error} /> : null}
+      {loadError ? <FeedbackBanner tone="error" message={loadError} /> : null}
 
       <section className="wire-panel">
-        <div className="mb-3 border-b border-wire-700 pb-3">
-          <h2 className="wire-section-title">Inbox</h2>
-          <p className="mt-1 wire-meta">Recent listing conversations, newest activity first.</p>
-        </div>
+        <SectionHeader
+          title="Inbox"
+          subtitle="Recent listing conversations, ordered by latest activity."
+        />
 
         {conversations.length > 0 ? (
           <div className="space-y-2.5">
@@ -90,7 +80,7 @@ export default async function MarketMessagesPage({ searchParams }: MarketMessage
                 <Link
                   key={conversation.id}
                   href={`/market/messages/${conversation.id}`}
-                  className="block rounded-2xl border border-wire-700 bg-wire-800 px-3 py-3 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/40"
+                  className="block rounded-[var(--radius-card)] border border-wire-700 bg-wire-800 px-4 py-3 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/40"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
@@ -100,14 +90,14 @@ export default async function MarketMessagesPage({ searchParams }: MarketMessage
                       <div className="mt-1 flex flex-wrap items-center gap-2">
                         <p className="wire-meta">With {conversation.counterpartName}</p>
                         <span className={needsReply
-                          ? "rounded-full border border-accent/40 bg-accent/10 px-2 py-0.5 text-[11px] font-medium text-accent"
+                          ? "rounded-full border border-accent/35 bg-accent/10 px-2 py-0.5 text-[11px] font-medium text-wire-100"
                           : "rounded-full border border-wire-600 bg-wire-900 px-2 py-0.5 text-[11px] font-medium text-wire-300"}
                         >
                           {replyStateLabel}
                         </span>
                       </div>
                     </div>
-                    <p className="wire-meta shrink-0 text-right">
+                    <p className="wire-meta shrink-0 text-right leading-[1.25]">
                       {timestampLabel}
                       <br />
                       <span className="text-wire-200">{formatMessageTime(timestampValue)}</span>
@@ -123,7 +113,7 @@ export default async function MarketMessagesPage({ searchParams }: MarketMessage
                     ) : (
                       <div className="h-8 w-8 rounded-full border border-dashed border-wire-600 bg-wire-900" />
                     )}
-                    <p className="truncate text-[13px] text-wire-200">{conversation.lastMessagePreview}</p>
+                    <p className="line-clamp-1 text-[13px] text-wire-200">{conversation.lastMessagePreview}</p>
                   </div>
                 </Link>
               );
@@ -138,12 +128,14 @@ export default async function MarketMessagesPage({ searchParams }: MarketMessage
           />
         ) : null}
 
-        <PageNavigation
-          previousHref={previousHref}
-          nextHref={nextHref}
-          previousLabel="Previous page"
-          nextLabel="Next page"
-        />
+        <div className="mt-4">
+          <PageNavigation
+            previousHref={previousHref}
+            nextHref={nextHref}
+            previousLabel="Previous page"
+            nextLabel="Next page"
+          />
+        </div>
       </section>
     </main>
   );
