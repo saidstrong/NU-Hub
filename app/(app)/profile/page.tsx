@@ -109,25 +109,19 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
       <section className="wire-panel">
         <SectionHeader
           title="Profile"
-          subtitle="Your personal identity page for classmates, collaborators, and communities."
+          subtitle="Your identity page."
           actionNode={
             <Link href="/profile/settings" className="wire-link">
               Settings
             </Link>
           }
         />
-        <p className="wire-meta">
-          Keep this profile clear and current so other students can understand your focus quickly.
-        </p>
       </section>
 
       {message ? <FeedbackBanner tone="success" message={message} /> : null}
 
       <section className="wire-panel">
-        <SectionHeader
-          title="Profile summary"
-          subtitle="How your identity appears across NU Hub."
-        />
+        <SectionHeader title="Profile summary" />
         <div className="flex items-start gap-4">
           {avatarUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -167,10 +161,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
         ) : null}
       </section>
 
-      <SectionCard
-        title="About"
-        subtitle="A short summary for classmates and project collaborators."
-      >
+      <SectionCard title="About">
         {profile.bio ? (
           <p className="text-[14px] leading-relaxed text-wire-200">{profile.bio}</p>
         ) : (
@@ -178,10 +169,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
         )}
       </SectionCard>
 
-      <SectionCard
-        title="Academic and campus context"
-        subtitle="Core details that help people understand your track."
-      >
+      <SectionCard title="Academic and campus context">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-4 py-3">
             <p className="wire-label">School</p>
@@ -198,10 +186,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
         </div>
       </SectionCard>
 
-      <SectionCard
-        title="Interests and goals"
-        subtitle="Helps peers understand your focus and preferred collaboration context."
-      >
+      <SectionCard title="Interests and goals">
         <div>
           <p className="mb-2 wire-label">Interests</p>
           {profile.interests.length > 0 ? (
@@ -247,10 +232,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
         </div>
       </SectionCard>
 
-      <SectionCard
-        title="Professional details (optional)"
-        subtitle="Optional context for advanced project collaboration."
-      >
+      <SectionCard title="Professional details (optional)">
         <div>
           <p className="mb-2 wire-label">Skills</p>
           {profile.skills.length > 0 ? (
@@ -343,7 +325,6 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
 
       <SectionCard
         title="Quick access"
-        subtitle="Jump to your most-used profile-adjacent spaces."
         actionLabel="Settings"
         actionHref="/profile/settings"
       >

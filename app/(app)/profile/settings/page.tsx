@@ -7,14 +7,13 @@ export default function SettingsPage() {
     <main>
       <TopBar
         title="Settings"
-        subtitle="Manage profile, notifications, and account preferences"
+        subtitle="Account preferences"
         backHref="/profile"
       />
 
       <section className="wire-panel">
         <div className="mb-4 border-b border-wire-700 pb-3">
-          <h2 className="wire-section-title">Profile and preferences</h2>
-          <p className="mt-1 wire-meta">Practical controls for your NU Atrium experience.</p>
+          <h2 className="wire-section-title">Profile</h2>
         </div>
         <div className="space-y-2">
           <Link
@@ -31,27 +30,12 @@ export default function SettingsPage() {
             <p className="text-sm font-medium text-wire-100">Notifications</p>
             <p className="mt-1 wire-meta">Review listing, event, and community updates.</p>
           </Link>
-          <Link
-            href="/profile/settings"
-            className="block rounded-xl border border-wire-700 bg-wire-800 px-3 py-3 transition-colors duration-150 hover:border-wire-600 hover:bg-wire-900"
-          >
-            <p className="text-sm font-medium text-wire-100">Privacy</p>
-            <p className="mt-1 wire-meta">Control profile visibility and sharing preferences.</p>
-          </Link>
-          <Link
-            href="/profile/settings"
-            className="block rounded-xl border border-wire-700 bg-wire-800 px-3 py-3 transition-colors duration-150 hover:border-wire-600 hover:bg-wire-900"
-          >
-            <p className="text-sm font-medium text-wire-100">Help</p>
-            <p className="mt-1 wire-meta">Get guidance for account and product basics.</p>
-          </Link>
         </div>
       </section>
 
       <section className="wire-panel">
         <div className="mb-3">
           <h2 className="wire-section-title">Account</h2>
-          <p className="mt-1 wire-meta">Session and access controls.</p>
         </div>
         <form action={logoutAction}>
           <button type="submit" className="wire-action w-full border-dashed">

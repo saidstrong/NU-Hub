@@ -32,14 +32,11 @@ export default function CampusInfoPage() {
     <main>
       <TopBar
         title="Campus Information"
-        subtitle="Essential NU references for daily student life."
+        subtitle="Campus references and contacts."
         backHref="/home"
       />
 
-      <SectionCard
-        title="Code of Conduct"
-        subtitle="Official campus conduct guidance."
-      >
+      <SectionCard title="Code of Conduct">
         <p className="mb-3 text-[14px] leading-relaxed text-wire-200">
           {campusCodeOfConduct.summary}
         </p>
@@ -56,10 +53,7 @@ export default function CampusInfoPage() {
         </div>
       </SectionCard>
 
-      <SectionCard
-        title="Campus Map"
-        subtitle="Core locations students use most often."
-      >
+      <SectionCard title="Campus Map">
         <p className="mb-3 text-[14px] leading-relaxed text-wire-200">{campusMap.summary}</p>
 
         {mapIsImage ? (
@@ -122,10 +116,7 @@ export default function CampusInfoPage() {
         </a>
       </SectionCard>
 
-      <SectionCard
-        title="Services & Prices"
-        subtitle="Open a service to view details, contacts, and pricing files."
-      >
+      <SectionCard title="Services & Prices">
         {campusServices.length > 0 ? (
           <div className="space-y-2.5">
             {campusServices.map((service) => (
@@ -155,7 +146,7 @@ export default function CampusInfoPage() {
         )}
       </SectionCard>
 
-      <SectionCard title="Important Contacts" subtitle="Support points for health, services, housing, and IT.">
+      <SectionCard title="Important Contacts">
         {importantContacts.length > 0 ? (
           <div className="space-y-2.5">
             {importantContacts.map((contact) => (

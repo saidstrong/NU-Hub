@@ -44,23 +44,17 @@ export default async function MarketHomePage({ searchParams }: MarketHomePagePro
       <section className="wire-panel">
         <SectionHeader
           title="Market"
-          subtitle="A practical student marketplace for textbooks, electronics, dorm essentials, and project tools."
+          subtitle="Student marketplace."
           actionNode={
             <Link href="/market/my-listings" className="wire-link">
               My listings
             </Link>
           }
         />
-        <p className="wire-meta">
-          Browse quickly, compare clearly, and post only when you are ready.
-        </p>
       </section>
 
       <section className="wire-panel">
-        <SectionHeader
-          title="Search"
-          subtitle="Use a keyword to find items, categories, or sellers."
-        />
+        <SectionHeader title="Search" />
         <SearchBar
           placeholder="Search marketplace"
           queryName="q"
@@ -70,10 +64,7 @@ export default async function MarketHomePage({ searchParams }: MarketHomePagePro
       </section>
 
       <section className="wire-panel">
-        <SectionHeader
-          title="Categories"
-          subtitle="Use categories to narrow listings quickly."
-        />
+        <SectionHeader title="Categories" />
         <div className="flex flex-wrap gap-2">
           {marketCategories.map((category) => (
             <Link key={category} href={`/market/category/${category.toLowerCase()}`}>
@@ -84,10 +75,7 @@ export default async function MarketHomePage({ searchParams }: MarketHomePagePro
       </section>
 
       <section className="wire-panel">
-        <SectionHeader
-          title="Actions"
-          subtitle="Post fast, then track replies and saved items."
-        />
+        <SectionHeader title="Actions" />
         <div className="wire-action-row">
           <ShellButton label="Post listing" href="/market/post" variant="primary" />
           <Link href="/market/messages" className="wire-action">
@@ -106,7 +94,6 @@ export default async function MarketHomePage({ searchParams }: MarketHomePagePro
 
       <SectionCard
         title="Recent listings"
-        subtitle="Latest published items from NU students."
         actionLabel="Saved listings"
         actionHref="/market/saved"
       >

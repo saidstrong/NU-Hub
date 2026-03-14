@@ -44,23 +44,17 @@ export default async function EventsHomePage({ searchParams }: EventsHomePagePro
       <section className="wire-panel">
         <SectionHeader
           title="Events"
-          subtitle="Discover high-signal campus events for study, projects, and student life."
+          subtitle="Campus events, at a glance."
           actionNode={
             <Link href="/events/my-events" className="wire-link">
               My events
             </Link>
           }
         />
-        <p className="wire-meta">
-          Follow upcoming opportunities, then quickly publish events for your communities and teams.
-        </p>
       </section>
 
       <section className="wire-panel">
-        <SectionHeader
-          title="Search"
-          subtitle="Find events by topic, place, or organizer."
-        />
+        <SectionHeader title="Search" />
         <SearchBar
           placeholder="Search events"
           queryName="q"
@@ -70,10 +64,7 @@ export default async function EventsHomePage({ searchParams }: EventsHomePagePro
       </section>
 
       <section className="wire-panel">
-        <SectionHeader
-          title="Actions"
-          subtitle="Use launch-ready event views and publishing actions."
-        />
+        <SectionHeader title="Actions" />
         <div className="wire-action-row">
           <ShellButton label="Create event" href="/events/create" variant="primary" />
           <Link href="/events/list" className="wire-action">
@@ -81,9 +72,6 @@ export default async function EventsHomePage({ searchParams }: EventsHomePagePro
           </Link>
         </div>
         <div className="mt-3 flex flex-wrap gap-3">
-          <Link href="/events/calendar" className="wire-link">
-            Calendar view
-          </Link>
           <Link href="/events/saved" className="wire-link">
             Saved events
           </Link>
@@ -92,7 +80,7 @@ export default async function EventsHomePage({ searchParams }: EventsHomePagePro
 
       <SectionCard
         title="This week on campus"
-        subtitle="Featured events first, then the next upcoming opportunities."
+        subtitle="Featured first, then upcoming."
         actionLabel="View all events"
         actionHref="/events/list"
       >

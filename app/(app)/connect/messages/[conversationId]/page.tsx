@@ -48,7 +48,7 @@ export default async function FriendConversationPage({
       <main>
         <TopBar
           title="Messages"
-          subtitle="Friend conversation"
+          subtitle="Conversation"
           backHref="/connect/messages"
         />
         {loadError ? <FeedbackBanner tone="error" message={loadError} /> : null}
@@ -69,7 +69,7 @@ export default async function FriendConversationPage({
     <main>
       <TopBar
         title="Messages"
-        subtitle={`With ${thread.counterpartName}`}
+        subtitle={thread.counterpartName}
         backHref="/connect/messages"
       />
       {message ? <FeedbackBanner tone="success" message={message} /> : null}
@@ -77,7 +77,7 @@ export default async function FriendConversationPage({
       {loadError ? <FeedbackBanner tone="error" message={loadError} /> : null}
 
       <section className="wire-panel">
-        <SectionHeader title="Conversation context" subtitle="Counterpart profile context." />
+        <SectionHeader title="Conversation" />
         <div className="flex items-center gap-2.5">
           {counterpartAvatarUrl ? (
             <img
@@ -93,35 +93,22 @@ export default async function FriendConversationPage({
       </section>
 
       <section className="wire-panel">
-        <SectionHeader title="Messages" subtitle="Thread history in chronological order." />
+        <SectionHeader title="Messages" />
         {thread.messages.length > 0 ? (
-          <div className="space-y-2.5">
+          <div className="space-y-2">
             {thread.messages.map((messageItem) => {
-              const senderAvatarUrl = toPublicStorageUrl("avatars", messageItem.senderAvatarPath);
-
               return (
                 <article
                   key={messageItem.id}
                   className={messageItem.isOwnMessage
-                    ? "ml-4 rounded-[var(--radius-input)] border border-accent/25 bg-accent/10 px-3 py-3 sm:ml-10"
-                    : "mr-4 rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-3 py-3 sm:mr-10"}
+                    ? "ml-auto max-w-[85%] rounded-2xl border border-accent/35 bg-accent/12 px-3 py-2.5"
+                    : "mr-auto max-w-[85%] rounded-2xl border border-wire-700 bg-wire-800 px-3 py-2.5"}
                 >
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex min-w-0 items-center gap-2">
-                      {senderAvatarUrl ? (
-                        <img
-                          src={senderAvatarUrl}
-                          alt={`${messageItem.senderName} avatar`}
-                          className="h-6 w-6 rounded-full border border-wire-700 bg-wire-900 object-cover"
-                        />
-                      ) : (
-                        <div className="h-6 w-6 rounded-full border border-dashed border-wire-600 bg-wire-900" />
-                      )}
-                      <p className="truncate text-[12px] font-medium text-wire-100">{messageItem.senderName}</p>
-                    </div>
-                    <p className="text-[11px] text-wire-300">{formatMessageTime(messageItem.createdAt)}</p>
+                  <div className="mb-1 flex items-center justify-between gap-2">
+                    <p className="truncate text-[11px] font-medium text-wire-300">{messageItem.senderName}</p>
+                    <p className="text-[10px] text-wire-400">{formatMessageTime(messageItem.createdAt)}</p>
                   </div>
-                  <p className="mt-1.5 whitespace-pre-wrap break-words text-[13px] text-wire-200">
+                  <p className="whitespace-pre-wrap break-words text-[13px] text-wire-100">
                     {messageItem.content}
                   </p>
                 </article>
@@ -132,19 +119,20 @@ export default async function FriendConversationPage({
           <EmptyState
             title="No messages yet"
             description="Send the first message to start this conversation."
+            className="py-6"
           />
         )}
       </section>
 
       <section className="wire-panel">
-        <SectionHeader title="Send message" subtitle="Keep it clear and actionable." />
+        <SectionHeader title="Send message" />
         <form action={sendFriendMessageAction} className="space-y-2">
           <input type="hidden" name="conversationId" value={thread.conversationId} />
           <input type="hidden" name="redirectTo" value={conversationPath} />
           <textarea
             name="content"
             required
-            rows={4}
+            rows={3}
             maxLength={1200}
             placeholder="Write a message..."
             className="wire-textarea-field"

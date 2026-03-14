@@ -30,25 +30,19 @@ export default async function ConnectHomePage() {
       <section className="wire-panel">
         <SectionHeader
           title="Connect"
-          subtitle="Find the right people and communities for study, projects, and campus momentum."
+          subtitle="People and communities."
           actionNode={
             <Link href="/connect/friends" className="wire-link">
               Friends
             </Link>
           }
         />
-        <p className="wire-meta">
-          Discovery first: identify aligned peers, then join circles that help you move faster.
-        </p>
       </section>
 
       {loadError ? <FeedbackBanner tone="error" message={loadError} /> : null}
 
       <section className="wire-panel">
-        <SectionHeader
-          title="Search"
-          subtitle="Look up students and communities with one query."
-        />
+        <SectionHeader title="Search" />
         <SearchBar
           placeholder="Search students and communities"
           queryName="q"
@@ -58,10 +52,7 @@ export default async function ConnectHomePage() {
       </section>
 
       <section className="wire-panel">
-        <SectionHeader
-          title="Actions"
-          subtitle="Start with people, then expand into communities and messages."
-        />
+        <SectionHeader title="Actions" />
         <div className="wire-action-row">
           <ShellButton label="Find people" href="/connect/people" variant="primary" />
           <Link href="/connect/communities" className="wire-action">
@@ -80,7 +71,6 @@ export default async function ConnectHomePage() {
 
       <SectionCard
         title="Suggested people"
-        subtitle="Students with clear academic context and collaboration intent."
         actionLabel="See all"
         actionHref="/connect/people"
       >
@@ -104,7 +94,6 @@ export default async function ConnectHomePage() {
 
       <SectionCard
         title="Suggested communities"
-        subtitle="Campus circles for project work, study support, and student-led initiatives."
         actionLabel="See all"
         actionHref="/connect/communities"
       >

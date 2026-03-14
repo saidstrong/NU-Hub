@@ -48,7 +48,7 @@ export default async function HomePage() {
       <section className="wire-panel">
         <SectionHeader
           title="NU Atrium"
-          subtitle="A focused campus dashboard for opportunities, coordination, and student utility."
+          subtitle="Your campus dashboard."
           actionNode={
             <Link href="/profile" className="wire-link">
               Profile
@@ -56,11 +56,9 @@ export default async function HomePage() {
           }
         />
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div className="space-y-2">
-            <p className="wire-label">Campus utility</p>
-            <p className="max-w-[46ch] text-[14px] leading-[22px] text-wire-200">
-              Check what matters today: active listings, upcoming events, and people or communities
-              aligned with your goals.
+          <div>
+            <p className="max-w-[44ch] text-[14px] leading-[22px] text-wire-200">
+              See what matters today across market, events, and community.
             </p>
           </div>
           <ShellButton label="Browse market" href="/market" variant="primary" block={false} />
@@ -70,10 +68,7 @@ export default async function HomePage() {
       {loadError ? <FeedbackBanner tone="error" message={loadError} /> : null}
 
       <section className="wire-panel">
-        <SectionHeader
-          title="Search"
-          subtitle="Find listings, events, people, and communities from one query."
-        />
+        <SectionHeader title="Search" />
         <SearchBar
           placeholder="Search market, events, people, communities"
           queryName="q"
@@ -83,10 +78,7 @@ export default async function HomePage() {
       </section>
 
       <section className="wire-panel">
-        <SectionHeader
-          title="Quick access"
-          subtitle="Jump into core campus workflows."
-        />
+        <SectionHeader title="Quick access" />
         <div className="grid grid-cols-2 gap-3">
           <Link
             href="/market"
@@ -133,7 +125,6 @@ export default async function HomePage() {
 
       <SectionCard
         title="Featured listings"
-        subtitle="Practical student listings worth checking today."
         actionLabel="Open market"
         actionHref="/market"
       >
@@ -159,7 +150,6 @@ export default async function HomePage() {
 
       <SectionCard
         title="Upcoming events"
-        subtitle="High-signal events for study, projects, and campus life."
         actionLabel="Open events"
         actionHref="/events"
       >
@@ -181,7 +171,6 @@ export default async function HomePage() {
 
       <SectionCard
         title="Suggested people & communities"
-        subtitle="Find aligned peers and active circles."
         actionLabel="Open connect"
         actionHref="/connect"
       >

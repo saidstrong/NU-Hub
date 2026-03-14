@@ -43,7 +43,7 @@ export default async function ConnectMessagesPage({ searchParams }: ConnectMessa
     <main>
       <TopBar
         title="Messages"
-        subtitle="Direct messages with accepted friends"
+        subtitle="Friend conversations"
         backHref="/connect"
         actions={[{ label: "Friends", href: "/connect/friends" }]}
       />
@@ -52,10 +52,7 @@ export default async function ConnectMessagesPage({ searchParams }: ConnectMessa
       {loadError ? <FeedbackBanner tone="error" message={loadError} /> : null}
 
       <section className="wire-panel">
-        <SectionHeader
-          title="Inbox"
-          subtitle="Recent friend conversations, ordered by latest activity."
-        />
+        <SectionHeader title="Inbox" />
 
         {conversations.length > 0 ? (
           <div className="space-y-2.5">
@@ -74,33 +71,34 @@ export default async function ConnectMessagesPage({ searchParams }: ConnectMessa
                 <Link
                   key={conversation.conversationId}
                   href={`/connect/messages/${conversation.conversationId}`}
-                  className="block rounded-[var(--radius-card)] border border-wire-700 bg-wire-800 px-4 py-3 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/40"
+                  className="block rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-4 py-3 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/40"
                 >
                   <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p className="truncate text-sm font-semibold text-wire-100">
-                          {conversation.counterpartName}
+                    <div className="min-w-0 flex items-start gap-2.5">
+                      {avatarUrl ? (
+                        <img
+                          src={avatarUrl}
+                          alt={`${conversation.counterpartName} avatar`}
+                          className="h-8 w-8 rounded-full border border-wire-700 bg-wire-900 object-cover"
+                        />
+                      ) : (
+                        <div className="h-8 w-8 rounded-full border border-dashed border-wire-600 bg-wire-900" />
+                      )}
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="truncate text-sm font-semibold text-wire-100">
+                            {conversation.counterpartName}
+                          </p>
+                          <span className={replyBadgeClass}>
+                            {replyLabel}
+                          </span>
+                        </div>
+                        <p className="mt-1 line-clamp-1 text-[13px] text-wire-200">
+                          {conversation.lastMessagePreview}
                         </p>
-                        <span className={replyBadgeClass}>
-                          {replyLabel}
-                        </span>
                       </div>
-                      <p className="mt-1 line-clamp-1 text-[13px] text-wire-200">{conversation.lastMessagePreview}</p>
                     </div>
-                    <p className="wire-meta shrink-0">{formatMessageTime(conversation.lastMessageAt)}</p>
-                  </div>
-                  <div className="mt-2 flex items-center gap-2.5">
-                    {avatarUrl ? (
-                      <img
-                        src={avatarUrl}
-                        alt={`${conversation.counterpartName} avatar`}
-                        className="h-8 w-8 rounded-full border border-wire-700 bg-wire-900 object-cover"
-                      />
-                    ) : (
-                      <div className="h-8 w-8 rounded-full border border-dashed border-wire-600 bg-wire-900" />
-                    )}
-                    <p className="wire-meta">Open conversation</p>
+                    <p className="shrink-0 text-[11px] text-wire-300">{formatMessageTime(conversation.lastMessageAt)}</p>
                   </div>
                 </Link>
               );
@@ -112,6 +110,7 @@ export default async function ConnectMessagesPage({ searchParams }: ConnectMessa
             description="Open an accepted friend profile and tap Message to start chatting."
             actionLabel="Find friends"
             actionHref="/connect/friends"
+            className="py-6"
           />
         ) : null}
       </section>

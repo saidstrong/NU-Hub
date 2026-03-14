@@ -54,7 +54,7 @@ export default async function MarketMessagesPage({ searchParams }: MarketMessage
     <main>
       <TopBar
         title="Messages"
-        subtitle="Conversations with buyers and sellers"
+        subtitle="Listing conversations"
         backHref="/market"
       />
       {message ? <FeedbackBanner tone="success" message={message} /> : null}
@@ -62,25 +62,21 @@ export default async function MarketMessagesPage({ searchParams }: MarketMessage
       {loadError ? <FeedbackBanner tone="error" message={loadError} /> : null}
 
       <section className="wire-panel">
-        <SectionHeader
-          title="Inbox"
-          subtitle="Recent listing conversations, ordered by latest activity."
-        />
+        <SectionHeader title="Inbox" />
 
         {conversations.length > 0 ? (
-          <div className="space-y-2.5">
+          <div className="space-y-2">
             {conversations.map((conversation) => {
               const counterpartAvatarUrl = toPublicStorageUrl("avatars", conversation.counterpartAvatarPath);
               const needsReply = conversation.lastMessageSenderId === conversation.counterpartId;
               const replyStateLabel = needsReply ? "Needs reply" : "You replied";
-              const timestampLabel = conversation.lastMessageCreatedAt ? "Last message" : "Started";
               const timestampValue = conversation.lastMessageCreatedAt ?? conversation.updatedAt;
 
               return (
                 <Link
                   key={conversation.id}
                   href={`/market/messages/${conversation.id}`}
-                  className="block rounded-[var(--radius-card)] border border-wire-700 bg-wire-800 px-4 py-3 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/40"
+                  className="block rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-4 py-3 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/40"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
@@ -88,7 +84,7 @@ export default async function MarketMessagesPage({ searchParams }: MarketMessage
                         {conversation.listingTitle}
                       </p>
                       <div className="mt-1 flex flex-wrap items-center gap-2">
-                        <p className="wire-meta">With {conversation.counterpartName}</p>
+                        <p className="wire-meta">{conversation.counterpartName}</p>
                         <span className={needsReply
                           ? "rounded-full border border-accent/35 bg-accent/10 px-2 py-0.5 text-[11px] font-medium text-wire-100"
                           : "rounded-full border border-wire-600 bg-wire-900 px-2 py-0.5 text-[11px] font-medium text-wire-300"}
@@ -97,11 +93,7 @@ export default async function MarketMessagesPage({ searchParams }: MarketMessage
                         </span>
                       </div>
                     </div>
-                    <p className="wire-meta shrink-0 text-right leading-[1.25]">
-                      {timestampLabel}
-                      <br />
-                      <span className="text-wire-200">{formatMessageTime(timestampValue)}</span>
-                    </p>
+                    <p className="text-[11px] text-wire-300">{formatMessageTime(timestampValue)}</p>
                   </div>
                   <div className="mt-2 flex items-center gap-2.5">
                     {counterpartAvatarUrl ? (
@@ -125,6 +117,7 @@ export default async function MarketMessagesPage({ searchParams }: MarketMessage
             description="Start by messaging a seller from a listing."
             actionLabel="Browse market"
             actionHref="/market"
+            className="py-6"
           />
         ) : null}
 
