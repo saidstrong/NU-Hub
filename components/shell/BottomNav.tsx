@@ -23,8 +23,8 @@ export function BottomNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed bottom-0 left-1/2 z-30 w-full max-w-md -translate-x-1/2 border-t border-wire-700 bg-wire-900/96 px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-2 backdrop-blur">
-      <ul className="grid grid-cols-5 gap-2">
+    <nav className="fixed bottom-0 left-1/2 z-30 w-full max-w-6xl -translate-x-1/2 border-t border-wire-700 bg-wire-900/96 px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-2 backdrop-blur sm:px-4">
+      <ul className="mx-auto grid max-w-[720px] grid-cols-5 gap-2">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive =

@@ -17,11 +17,7 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body className={inter.variable}>
-        <div className="mx-auto min-h-screen max-w-md bg-wire-950 shadow-[0_0_0_1px_rgba(38,44,52,0.65)]">
-          {children}
-        </div>
-      </body>
+      <body className={`${inter.variable} min-h-screen bg-wire-950`}>{children}</body>
     </html>
   );
 }

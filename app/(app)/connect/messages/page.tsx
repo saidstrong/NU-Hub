@@ -40,7 +40,7 @@ export default async function ConnectMessagesPage({ searchParams }: ConnectMessa
   }
 
   return (
-    <main>
+    <main className="mx-auto w-full max-w-4xl">
       <TopBar
         title="Messages"
         subtitle="Friend conversations"

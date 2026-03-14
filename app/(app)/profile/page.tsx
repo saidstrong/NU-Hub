@@ -161,167 +161,171 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
         ) : null}
       </section>
 
-      <SectionCard title="About">
-        {profile.bio ? (
-          <p className="text-[14px] leading-relaxed text-wire-200">{profile.bio}</p>
-        ) : (
-          <EmptyText text="Add a short bio to provide context for collaboration." />
-        )}
-      </SectionCard>
-
-      <SectionCard title="Academic and campus context">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-4 py-3">
-            <p className="wire-label">School</p>
-            <p className="mt-2 text-[14px] text-wire-100">{profile.school || "Not set"}</p>
-          </div>
-          <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-4 py-3">
-            <p className="wire-label">Major</p>
-            <p className="mt-2 text-[14px] text-wire-100">{profile.major || "Not set"}</p>
-          </div>
-          <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-4 py-3">
-            <p className="wire-label">Year</p>
-            <p className="mt-2 text-[14px] text-wire-100">{profile.year_label || "Not set"}</p>
-          </div>
-        </div>
-      </SectionCard>
-
-      <SectionCard title="Interests and goals">
-        <div>
-          <p className="mb-2 wire-label">Interests</p>
-          {profile.interests.length > 0 ? (
-            <div className="flex flex-wrap gap-2">
-              {profile.interests.map((item) => (
-                <TagChip key={item} label={item} />
-              ))}
-            </div>
+      <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+        <SectionCard title="About">
+          {profile.bio ? (
+            <p className="text-[14px] leading-relaxed text-wire-200">{profile.bio}</p>
           ) : (
-            <EmptyText text="No interests added yet." />
+            <EmptyText text="Add a short bio to provide context for collaboration." />
           )}
-        </div>
+        </SectionCard>
 
-        <div className="border-t border-wire-700 pt-4">
-          <p className="mb-2 wire-label">Goals</p>
-          {profile.goals.length > 0 ? (
-            <div className="space-y-2">
-              {profile.goals.map((goal) => (
-                <div
-                  key={goal}
-                  className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-4 py-2.5 text-[13px] text-wire-200"
-                >
-                  {goal}
-                </div>
-              ))}
+        <SectionCard title="Academic and campus context">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 xl:grid-cols-1">
+            <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-4 py-3">
+              <p className="wire-label">School</p>
+              <p className="mt-2 text-[14px] text-wire-100">{profile.school || "Not set"}</p>
             </div>
-          ) : (
-            <EmptyText text="No goals added yet." />
-          )}
-        </div>
-
-        <div className="border-t border-wire-700 pt-4">
-          <p className="mb-2 wire-label">Looking for</p>
-          {profile.looking_for.length > 0 ? (
-            <div className="flex flex-wrap gap-2">
-              {profile.looking_for.map((item, idx) => (
-                <TagChip key={item} label={item} active={idx === 0} />
-              ))}
+            <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-4 py-3">
+              <p className="wire-label">Major</p>
+              <p className="mt-2 text-[14px] text-wire-100">{profile.major || "Not set"}</p>
             </div>
-          ) : (
-            <EmptyText text="No collaboration preferences added yet." />
-          )}
-        </div>
-      </SectionCard>
-
-      <SectionCard title="Professional details (optional)">
-        <div>
-          <p className="mb-2 wire-label">Skills</p>
-          {profile.skills.length > 0 ? (
-            <div className="flex flex-wrap gap-2">
-              {profile.skills.map((item) => (
-                <TagChip key={item} label={item} />
-              ))}
-            </div>
-          ) : (
-            <EmptyText text="No skills listed." />
-          )}
-        </div>
-
-        <div className="border-t border-wire-700 pt-4">
-          <p className="mb-2 wire-label">Projects</p>
-          {projects.length > 0 ? (
-            <div className="space-y-2">
-              {projects.map((project) => (
-                <div
-                  key={`${project.title}-${project.summary ?? ""}`}
-                  className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-4 py-3"
-                >
-                  <p className="text-[13px] font-medium text-wire-100">{project.title}</p>
-                  {project.summary ? (
-                    <p className="mt-1 text-[12px] text-wire-300">{project.summary}</p>
-                  ) : null}
-                </div>
-              ))}
-            </div>
-          ) : (
-            <EmptyText text="No projects added." />
-          )}
-        </div>
-
-        {profile.resume_url || links.length > 0 ? (
-          <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-4 py-3">
-            <p className="wire-label">Links</p>
-            <div className="mt-2 space-y-2">
-              {profile.resume_url ? (
-                <p className="text-[13px] text-wire-300">
-                  Resume
-                  <span className="ml-2 text-wire-200">{profile.resume_url}</span>
-                </p>
-              ) : null}
-              {links.map((item) => (
-                <p key={item.label} className="text-[13px] text-wire-300">
-                  {item.label}
-                  <span className="ml-2 text-wire-200">{item.value}</span>
-                </p>
-              ))}
+            <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-4 py-3">
+              <p className="wire-label">Year</p>
+              <p className="mt-2 text-[14px] text-wire-100">{profile.year_label || "Not set"}</p>
             </div>
           </div>
-        ) : null}
+        </SectionCard>
+      </div>
 
-        {hasExtras ? (
-          <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-4 py-3">
-            <p className="wire-label">Social & personal</p>
-            <div className="mt-2 space-y-2">
-              {extras.telegram ? (
-                <p className="text-[13px] text-wire-300">
-                  Telegram
-                  <span className="ml-2 text-wire-200">{extras.telegram}</span>
-                </p>
-              ) : null}
-              {extras.instagram ? (
-                <p className="text-[13px] text-wire-300">
-                  Instagram
-                  <span className="ml-2 text-wire-200">{extras.instagram}</span>
-                </p>
-              ) : null}
-              {extras.relationshipStatus ? (
-                <p className="text-[13px] text-wire-300">
-                  Relationship status
-                  <span className="ml-2 text-wire-200">{extras.relationshipStatus}</span>
-                </p>
-              ) : null}
+      <div className="grid gap-6 xl:grid-cols-2">
+        <SectionCard title="Interests and goals">
+          <div>
+            <p className="mb-2 wire-label">Interests</p>
+            {profile.interests.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {profile.interests.map((item) => (
+                  <TagChip key={item} label={item} />
+                ))}
+              </div>
+            ) : (
+              <EmptyText text="No interests added yet." />
+            )}
+          </div>
+
+          <div className="border-t border-wire-700 pt-4">
+            <p className="mb-2 wire-label">Goals</p>
+            {profile.goals.length > 0 ? (
+              <div className="space-y-2">
+                {profile.goals.map((goal) => (
+                  <div
+                    key={goal}
+                    className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-4 py-2.5 text-[13px] text-wire-200"
+                  >
+                    {goal}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <EmptyText text="No goals added yet." />
+            )}
+          </div>
+
+          <div className="border-t border-wire-700 pt-4">
+            <p className="mb-2 wire-label">Looking for</p>
+            {profile.looking_for.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {profile.looking_for.map((item, idx) => (
+                  <TagChip key={item} label={item} active={idx === 0} />
+                ))}
+              </div>
+            ) : (
+              <EmptyText text="No collaboration preferences added yet." />
+            )}
+          </div>
+        </SectionCard>
+
+        <SectionCard title="Professional details (optional)">
+          <div>
+            <p className="mb-2 wire-label">Skills</p>
+            {profile.skills.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {profile.skills.map((item) => (
+                  <TagChip key={item} label={item} />
+                ))}
+              </div>
+            ) : (
+              <EmptyText text="No skills listed." />
+            )}
+          </div>
+
+          <div className="border-t border-wire-700 pt-4">
+            <p className="mb-2 wire-label">Projects</p>
+            {projects.length > 0 ? (
+              <div className="space-y-2">
+                {projects.map((project) => (
+                  <div
+                    key={`${project.title}-${project.summary ?? ""}`}
+                    className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-4 py-3"
+                  >
+                    <p className="text-[13px] font-medium text-wire-100">{project.title}</p>
+                    {project.summary ? (
+                      <p className="mt-1 text-[12px] text-wire-300">{project.summary}</p>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <EmptyText text="No projects added." />
+            )}
+          </div>
+
+          {profile.resume_url || links.length > 0 ? (
+            <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-4 py-3">
+              <p className="wire-label">Links</p>
+              <div className="mt-2 space-y-2">
+                {profile.resume_url ? (
+                  <p className="text-[13px] text-wire-300">
+                    Resume
+                    <span className="ml-2 text-wire-200">{profile.resume_url}</span>
+                  </p>
+                ) : null}
+                {links.map((item) => (
+                  <p key={item.label} className="text-[13px] text-wire-300">
+                    {item.label}
+                    <span className="ml-2 text-wire-200">{item.value}</span>
+                  </p>
+                ))}
+              </div>
             </div>
-          </div>
-        ) : null}
+          ) : null}
 
-        {!profile.resume_url && links.length === 0 && !hasExtras ? (
-          <div className="rounded-[var(--radius-input)] border border-dashed border-wire-600 bg-wire-900/60 px-4 py-3">
-            <p className="text-[13px] font-medium text-wire-200">No CV or profile links added</p>
-            <p className="mt-1 wire-meta">
-              Optional. Add only if it helps with campus opportunities and collaboration.
-            </p>
-          </div>
-        ) : null}
-      </SectionCard>
+          {hasExtras ? (
+            <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-4 py-3">
+              <p className="wire-label">Social & personal</p>
+              <div className="mt-2 space-y-2">
+                {extras.telegram ? (
+                  <p className="text-[13px] text-wire-300">
+                    Telegram
+                    <span className="ml-2 text-wire-200">{extras.telegram}</span>
+                  </p>
+                ) : null}
+                {extras.instagram ? (
+                  <p className="text-[13px] text-wire-300">
+                    Instagram
+                    <span className="ml-2 text-wire-200">{extras.instagram}</span>
+                  </p>
+                ) : null}
+                {extras.relationshipStatus ? (
+                  <p className="text-[13px] text-wire-300">
+                    Relationship status
+                    <span className="ml-2 text-wire-200">{extras.relationshipStatus}</span>
+                  </p>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
+
+          {!profile.resume_url && links.length === 0 && !hasExtras ? (
+            <div className="rounded-[var(--radius-input)] border border-dashed border-wire-600 bg-wire-900/60 px-4 py-3">
+              <p className="text-[13px] font-medium text-wire-200">No CV or profile links added</p>
+              <p className="mt-1 wire-meta">
+                Optional. Add only if it helps with campus opportunities and collaboration.
+              </p>
+            </div>
+          ) : null}
+        </SectionCard>
+      </div>
 
       <SectionCard
         title="Quick access"

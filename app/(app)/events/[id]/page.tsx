@@ -107,122 +107,126 @@ export default async function EventDetailPage({ params, searchParams }: EventDet
         />
       ) : null}
 
-      {coverUrl ? (
-        <SectionCard title="Cover" subtitle="Visual context for this event.">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={coverUrl}
-            alt={event.title}
-            className="h-48 w-full rounded-[var(--radius-input)] border border-wire-700 bg-wire-900 object-cover"
-          />
-        </SectionCard>
-      ) : (
-        <div className="wire-inline-empty">No cover image uploaded.</div>
-      )}
+      <div className="grid gap-6 xl:grid-cols-[1.45fr_1fr]">
+        <div className="space-y-6">
+          {coverUrl ? (
+            <SectionCard title="Cover" subtitle="Visual context for this event.">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={coverUrl}
+                alt={event.title}
+                className="h-56 w-full rounded-[var(--radius-input)] border border-wire-700 bg-wire-900 object-cover"
+              />
+            </SectionCard>
+          ) : (
+            <div className="wire-inline-empty">No cover image uploaded.</div>
+          )}
 
-      <SectionCard
-        title="Event summary"
-        subtitle="Core details for attendance planning."
-      >
-        <div className="space-y-2">
-          <p className="wire-meta">Date / Time: {dateLabel}</p>
-          <p className="wire-meta">Location: {event.location}</p>
-          <p className="wire-meta">Organizer: {organizerLabel}</p>
-          {organizerMeta ? <p className="wire-meta">Context: {organizerMeta}</p> : null}
-        </div>
-      </SectionCard>
-
-      <SectionCard
-        title="Description"
-        subtitle="Additional context from the organizer."
-      >
-        <p className="text-[14px] leading-relaxed text-wire-200">
-          {event.description || "No additional event description provided."}
-        </p>
-      </SectionCard>
-
-      {!isDraft ? (
-        <>
           <SectionCard
-            title="RSVP"
-            subtitle="Set intent and track participation signals."
+            title="Description"
+            subtitle="Additional context from the organizer."
           >
-            <div className="mb-3 grid grid-cols-2 gap-2">
-              <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-3 py-2">
-                <p className="wire-label">Going</p>
-                <p className="mt-1 text-[14px] font-medium text-wire-100">{rsvpCounts.going}</p>
-              </div>
-              <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-3 py-2">
-                <p className="wire-label">Interested</p>
-                <p className="mt-1 text-[14px] font-medium text-wire-100">{rsvpCounts.interested}</p>
-              </div>
-              <p className="col-span-2 wire-meta">
-                Your RSVP:{" "}
-                {participationStatus === "going"
-                  ? "Going"
-                  : participationStatus === "interested"
-                    ? "Interested"
-                    : "Not set"}
-              </p>
-            </div>
+            <p className="text-[14px] leading-relaxed text-wire-200">
+              {event.description || "No additional event description provided."}
+            </p>
+          </SectionCard>
+        </div>
 
-            <div className="wire-action-row">
-              <form action={setEventParticipationAction} className="w-full">
-                <input type="hidden" name="eventId" value={event.id} />
-                <input type="hidden" name="status" value="going" />
-                <input type="hidden" name="redirectTo" value={`/events/${event.id}`} />
-                <button type="submit" className={goingActive ? "wire-action-primary w-full" : "wire-action w-full"}>
-                  {goingActive ? "Going" : "Mark going"}
-                </button>
-              </form>
-              <form action={setEventParticipationAction} className="w-full">
-                <input type="hidden" name="eventId" value={event.id} />
-                <input type="hidden" name="status" value="interested" />
-                <input type="hidden" name="redirectTo" value={`/events/${event.id}`} />
-                <button type="submit" className={interestedActive ? "wire-action-primary w-full" : "wire-action w-full"}>
-                  {interestedActive ? "Interested" : "Mark interested"}
-                </button>
-              </form>
+        <div className="space-y-6">
+          <SectionCard
+            title="Event summary"
+            subtitle="Core details for attendance planning."
+          >
+            <div className="space-y-2">
+              <p className="wire-meta">Date / Time: {dateLabel}</p>
+              <p className="wire-meta">Location: {event.location}</p>
+              <p className="wire-meta">Organizer: {organizerLabel}</p>
+              {organizerMeta ? <p className="wire-meta">Context: {organizerMeta}</p> : null}
             </div>
+          </SectionCard>
 
-            {isOwner ? (
-              <div className="mt-3">
-                <ShellButton label="Edit event" href={`/events/${event.id}/edit`} variant="primary" />
+          {!isDraft ? (
+            <SectionCard
+              title="RSVP"
+              subtitle="Set intent and track participation signals."
+            >
+              <div className="mb-3 grid grid-cols-2 gap-2">
+                <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-3 py-2">
+                  <p className="wire-label">Going</p>
+                  <p className="mt-1 text-[14px] font-medium text-wire-100">{rsvpCounts.going}</p>
+                </div>
+                <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-3 py-2">
+                  <p className="wire-label">Interested</p>
+                  <p className="mt-1 text-[14px] font-medium text-wire-100">{rsvpCounts.interested}</p>
+                </div>
+                <p className="col-span-2 wire-meta">
+                  Your RSVP:{" "}
+                  {participationStatus === "going"
+                    ? "Going"
+                    : participationStatus === "interested"
+                      ? "Interested"
+                      : "Not set"}
+                </p>
               </div>
-            ) : null}
 
-            <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <form action={toggleSavedEventAction} className="w-full">
-                <input type="hidden" name="eventId" value={event.id} />
-                <input type="hidden" name="redirectTo" value={`/events/${event.id}`} />
-                <button type="submit" className="wire-action w-full">
-                  {isSaved ? "Unsave event" : "Save event"}
-                </button>
-              </form>
-              <form action={clearEventParticipationAction} className="w-full">
-                <input type="hidden" name="eventId" value={event.id} />
-                <input type="hidden" name="redirectTo" value={`/events/${event.id}`} />
-                <button type="submit" className="wire-action w-full">
-                  Clear RSVP
-                </button>
-              </form>
-            </div>
-            {!isOwner ? (
-              <div className="mt-3">
-                <form action={reportContentAction}>
-                  <input type="hidden" name="targetType" value="event" />
-                  <input type="hidden" name="targetId" value={event.id} />
-                  <input type="hidden" name="reason" value="inappropriate" />
+              <div className="wire-action-row">
+                <form action={setEventParticipationAction} className="w-full">
+                  <input type="hidden" name="eventId" value={event.id} />
+                  <input type="hidden" name="status" value="going" />
                   <input type="hidden" name="redirectTo" value={`/events/${event.id}`} />
-                  <button type="submit" className="wire-action-ghost">
-                    Report event
+                  <button type="submit" className={goingActive ? "wire-action-primary w-full" : "wire-action w-full"}>
+                    {goingActive ? "Going" : "Mark going"}
+                  </button>
+                </form>
+                <form action={setEventParticipationAction} className="w-full">
+                  <input type="hidden" name="eventId" value={event.id} />
+                  <input type="hidden" name="status" value="interested" />
+                  <input type="hidden" name="redirectTo" value={`/events/${event.id}`} />
+                  <button type="submit" className={interestedActive ? "wire-action-primary w-full" : "wire-action w-full"}>
+                    {interestedActive ? "Interested" : "Mark interested"}
                   </button>
                 </form>
               </div>
-            ) : null}
-          </SectionCard>
-        </>
-      ) : null}
+
+              {isOwner ? (
+                <div className="mt-3">
+                  <ShellButton label="Edit event" href={`/events/${event.id}/edit`} variant="primary" />
+                </div>
+              ) : null}
+
+              <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <form action={toggleSavedEventAction} className="w-full">
+                  <input type="hidden" name="eventId" value={event.id} />
+                  <input type="hidden" name="redirectTo" value={`/events/${event.id}`} />
+                  <button type="submit" className="wire-action w-full">
+                    {isSaved ? "Unsave event" : "Save event"}
+                  </button>
+                </form>
+                <form action={clearEventParticipationAction} className="w-full">
+                  <input type="hidden" name="eventId" value={event.id} />
+                  <input type="hidden" name="redirectTo" value={`/events/${event.id}`} />
+                  <button type="submit" className="wire-action w-full">
+                    Clear RSVP
+                  </button>
+                </form>
+              </div>
+              {!isOwner ? (
+                <div className="mt-3">
+                  <form action={reportContentAction}>
+                    <input type="hidden" name="targetType" value="event" />
+                    <input type="hidden" name="targetId" value={event.id} />
+                    <input type="hidden" name="reason" value="inappropriate" />
+                    <input type="hidden" name="redirectTo" value={`/events/${event.id}`} />
+                    <button type="submit" className="wire-action-ghost">
+                      Report event
+                    </button>
+                  </form>
+                </div>
+              ) : null}
+            </SectionCard>
+          ) : null}
+        </div>
+      </div>
     </main>
   );
 }

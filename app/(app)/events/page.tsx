@@ -98,7 +98,7 @@ export default async function EventsHomePage({ searchParams }: EventsHomePagePro
         {upcomingEvents.length > 0 ? (
           <div className="mt-4 border-t border-wire-700 pt-4">
             <p className="mb-3 wire-label">Upcoming</p>
-            <div className="wire-list">
+            <div className="grid gap-3 xl:grid-cols-2">
               {upcomingEvents.map((event) => (
                 <EventCard key={event.id} event={toEventCardData(event)} href={`/events/${event.id}`} />
               ))}

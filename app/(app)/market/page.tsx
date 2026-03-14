@@ -99,7 +99,7 @@ export default async function MarketHomePage({ searchParams }: MarketHomePagePro
       >
         {loadError ? <FeedbackBanner tone="error" message={loadError} className="mb-3" /> : null}
         {listings.length > 0 ? (
-          <div className="wire-list">
+          <div className="grid gap-3 xl:grid-cols-2">
             {listings.map((listing) => (
               <ListingCard
                 key={listing.id}

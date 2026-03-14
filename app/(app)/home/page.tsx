@@ -57,7 +57,7 @@ export default async function HomePage() {
         />
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="max-w-[44ch] text-[14px] leading-[22px] text-wire-200">
+            <p className="max-w-[52ch] text-[14px] leading-[22px] text-wire-200">
               See what matters today across market, events, and community.
             </p>
           </div>
@@ -79,7 +79,7 @@ export default async function HomePage() {
 
       <section className="wire-panel">
         <SectionHeader title="Quick access" />
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
           <Link
             href="/market"
             className="wire-card wire-hover flex min-h-[108px] flex-col justify-between rounded-[var(--radius-card)] p-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
@@ -123,51 +123,53 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <SectionCard
-        title="Featured listings"
-        actionLabel="Open market"
-        actionHref="/market"
-      >
-        {listings.length > 0 ? (
-          <div className="wire-list">
-            {listings.map((listing) => (
-              <ListingCard
-                key={listing.id}
-                listing={toListingCardData(listing)}
-                href={`/market/item/${listing.id}`}
-              />
-            ))}
-          </div>
-        ) : !loadError ? (
-          <EmptyState
-            title="No listings yet"
-            description="Published market listings will appear here."
-            actionLabel="Browse market"
-            actionHref="/market"
-          />
-        ) : null}
-      </SectionCard>
+      <div className="grid gap-6 xl:grid-cols-2">
+        <SectionCard
+          title="Featured listings"
+          actionLabel="Open market"
+          actionHref="/market"
+        >
+          {listings.length > 0 ? (
+            <div className="wire-list">
+              {listings.map((listing) => (
+                <ListingCard
+                  key={listing.id}
+                  listing={toListingCardData(listing)}
+                  href={`/market/item/${listing.id}`}
+                />
+              ))}
+            </div>
+          ) : !loadError ? (
+            <EmptyState
+              title="No listings yet"
+              description="Published market listings will appear here."
+              actionLabel="Browse market"
+              actionHref="/market"
+            />
+          ) : null}
+        </SectionCard>
 
-      <SectionCard
-        title="Upcoming events"
-        actionLabel="Open events"
-        actionHref="/events"
-      >
-        {events.length > 0 ? (
-          <div className="wire-list">
-            {events.map((event) => (
-              <EventCard key={event.id} event={toEventCardData(event)} href={`/events/${event.id}`} />
-            ))}
-          </div>
-        ) : !loadError ? (
-          <EmptyState
-            title="No upcoming events"
-            description="Published campus events will appear here."
-            actionLabel="Browse events"
-            actionHref="/events"
-          />
-        ) : null}
-      </SectionCard>
+        <SectionCard
+          title="Upcoming events"
+          actionLabel="Open events"
+          actionHref="/events"
+        >
+          {events.length > 0 ? (
+            <div className="wire-list">
+              {events.map((event) => (
+                <EventCard key={event.id} event={toEventCardData(event)} href={`/events/${event.id}`} />
+              ))}
+            </div>
+          ) : !loadError ? (
+            <EmptyState
+              title="No upcoming events"
+              description="Published campus events will appear here."
+              actionLabel="Browse events"
+              actionHref="/events"
+            />
+          ) : null}
+        </SectionCard>
+      </div>
 
       <SectionCard
         title="Suggested people & communities"

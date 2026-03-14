@@ -49,7 +49,7 @@ export default async function MarketConversationPage({
 
   if (!thread) {
     return (
-      <main>
+      <main className="mx-auto w-full max-w-4xl">
         <TopBar
           title="Conversation"
           subtitle="Conversation"
@@ -70,7 +70,7 @@ export default async function MarketConversationPage({
   const conversationPath = `/market/messages/${thread.conversationId}`;
 
   return (
-    <main>
+    <main className="mx-auto w-full max-w-4xl">
       <TopBar
         title="Conversation"
         subtitle={thread.counterpartName}
@@ -115,8 +115,8 @@ export default async function MarketConversationPage({
                 <article
                   key={messageItem.id}
                   className={messageItem.isOwnMessage
-                    ? "ml-auto max-w-[85%] rounded-2xl border border-accent/35 bg-accent/12 px-3 py-2.5"
-                    : "mr-auto max-w-[85%] rounded-2xl border border-wire-700 bg-wire-800 px-3 py-2.5"}
+                    ? "ml-auto max-w-[88%] rounded-2xl border border-accent/35 bg-accent/12 px-3 py-2.5 sm:max-w-[78%] xl:max-w-[68%]"
+                    : "mr-auto max-w-[88%] rounded-2xl border border-wire-700 bg-wire-800 px-3 py-2.5 sm:max-w-[78%] xl:max-w-[68%]"}
                 >
                   <div className="mb-1 flex items-center justify-between gap-2">
                     <p className="truncate text-[11px] font-medium text-wire-300">{messageItem.senderName}</p>

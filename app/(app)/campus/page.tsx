@@ -36,89 +36,91 @@ export default function CampusInfoPage() {
         backHref="/home"
       />
 
-      <SectionCard title="Code of Conduct">
-        <p className="mb-3 text-[14px] leading-relaxed text-wire-200">
-          {campusCodeOfConduct.summary}
-        </p>
-        <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-4 py-3">
-          <p className="text-sm font-medium text-wire-100">{campusCodeOfConduct.title}</p>
+      <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
+        <SectionCard title="Code of Conduct">
+          <p className="mb-3 text-[14px] leading-relaxed text-wire-200">
+            {campusCodeOfConduct.summary}
+          </p>
+          <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-4 py-3">
+            <p className="text-sm font-medium text-wire-100">{campusCodeOfConduct.title}</p>
+            <a
+              href={campusCodeOfConduct.assetUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="wire-action-primary mt-3 inline-flex w-auto px-4"
+            >
+              Open PDF
+            </a>
+          </div>
+        </SectionCard>
+
+        <SectionCard title="Campus Map">
+          <p className="mb-3 text-[14px] leading-relaxed text-wire-200">{campusMap.summary}</p>
+
+          {mapIsImage ? (
+            <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 p-3">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={campusMap.assetUrl}
+                alt="NU campus map"
+                className="h-52 w-full rounded-[var(--radius-input)] border border-wire-700 object-cover"
+              />
+              <a
+                href={campusMap.assetUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="wire-action-primary mt-3 inline-flex w-auto px-4"
+              >
+                Open map
+              </a>
+            </div>
+          ) : mapIsPdf ? (
+            <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-4 py-3">
+              <p className="text-sm font-medium text-wire-100">{campusMap.title}</p>
+              <p className="mt-1 wire-meta">Map is provided as a PDF document.</p>
+              <a
+                href={campusMap.assetUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="wire-action-primary mt-3 inline-flex w-auto px-4"
+              >
+                Open map document
+              </a>
+            </div>
+          ) : (
+            <EmptyState
+              title="Map asset unavailable"
+              description="Map reference file is not currently available."
+            />
+          )}
+
+          <div className="mt-4 grid gap-2.5 sm:grid-cols-2">
+            {campusMap.locations.map((location) => (
+              <div
+                key={location.name}
+                className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-4 py-3"
+              >
+                <p className="text-sm font-medium text-wire-100">{location.name}</p>
+                <p className="mt-1 text-[13px] text-wire-300">{location.area}</p>
+                {location.note ? <p className="mt-1 text-[13px] text-wire-200">{location.note}</p> : null}
+              </div>
+            ))}
+          </div>
+
           <a
-            href={campusCodeOfConduct.assetUrl}
+            href={campusMap.externalMapUrl}
             target="_blank"
             rel="noreferrer"
-            className="wire-action-primary mt-3 inline-flex w-auto px-4"
+            className="wire-link mt-3 inline-flex"
           >
-            Open PDF
+            {campusMap.externalMapLabel}
           </a>
-        </div>
-      </SectionCard>
-
-      <SectionCard title="Campus Map">
-        <p className="mb-3 text-[14px] leading-relaxed text-wire-200">{campusMap.summary}</p>
-
-        {mapIsImage ? (
-          <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 p-3">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={campusMap.assetUrl}
-              alt="NU campus map"
-              className="h-52 w-full rounded-[var(--radius-input)] border border-wire-700 object-cover"
-            />
-            <a
-              href={campusMap.assetUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="wire-action-primary mt-3 inline-flex w-auto px-4"
-            >
-              Open map
-            </a>
-          </div>
-        ) : mapIsPdf ? (
-          <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-4 py-3">
-            <p className="text-sm font-medium text-wire-100">{campusMap.title}</p>
-            <p className="mt-1 wire-meta">Map is provided as a PDF document.</p>
-            <a
-              href={campusMap.assetUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="wire-action-primary mt-3 inline-flex w-auto px-4"
-            >
-              Open map document
-            </a>
-          </div>
-        ) : (
-          <EmptyState
-            title="Map asset unavailable"
-            description="Map reference file is not currently available."
-          />
-        )}
-
-        <div className="mt-4 space-y-2.5">
-          {campusMap.locations.map((location) => (
-            <div
-              key={location.name}
-              className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-4 py-3"
-            >
-              <p className="text-sm font-medium text-wire-100">{location.name}</p>
-              <p className="mt-1 text-[13px] text-wire-300">{location.area}</p>
-              {location.note ? <p className="mt-1 text-[13px] text-wire-200">{location.note}</p> : null}
-            </div>
-          ))}
-        </div>
-
-        <a
-          href={campusMap.externalMapUrl}
-          target="_blank"
-          rel="noreferrer"
-          className="wire-link mt-3 inline-flex"
-        >
-          {campusMap.externalMapLabel}
-        </a>
-      </SectionCard>
+        </SectionCard>
+      </div>
 
       <SectionCard title="Services & Prices">
         {campusServices.length > 0 ? (
-          <div className="space-y-2.5">
+          <div className="grid gap-2.5 xl:grid-cols-2">
             {campusServices.map((service) => (
               <div
                 key={service.slug}
@@ -148,7 +150,7 @@ export default function CampusInfoPage() {
 
       <SectionCard title="Important Contacts">
         {importantContacts.length > 0 ? (
-          <div className="space-y-2.5">
+          <div className="grid gap-2.5 xl:grid-cols-2">
             {importantContacts.map((contact) => (
               <div
                 key={contact.name}

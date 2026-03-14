@@ -128,136 +128,143 @@ export default async function PersonProfilePage({ params, searchParams }: Person
       {error ? <FeedbackBanner tone="error" message={error} /> : null}
       {loadError ? <FeedbackBanner tone="error" message={loadError} /> : null}
 
-      <SectionCard title="Bio" subtitle="Snapshot of academic and collaboration context.">
-        <p className="text-[14px] leading-relaxed text-wire-200">
-          {person.bio || "No bio provided yet."}
-        </p>
-      </SectionCard>
+      <div className="grid gap-6 xl:grid-cols-[1.45fr_1fr]">
+        <div className="space-y-6">
+          <SectionCard title="Bio" subtitle="Snapshot of academic and collaboration context.">
+            <p className="text-[14px] leading-relaxed text-wire-200">
+              {person.bio || "No bio provided yet."}
+            </p>
+          </SectionCard>
 
-      <SectionCard title="Looking for" subtitle="Current collaboration intent.">
-        <div className="flex flex-wrap gap-2">
-          {person.looking_for.length > 0 ? (
-            person.looking_for.map((entry) => <TagChip key={entry} label={entry} />)
-          ) : (
-            <div className="wire-inline-empty">
-              No collaboration preferences shared.
+          <SectionCard title="Looking for" subtitle="Current collaboration intent.">
+            <div className="flex flex-wrap gap-2">
+              {person.looking_for.length > 0 ? (
+                person.looking_for.map((entry) => <TagChip key={entry} label={entry} />)
+              ) : (
+                <div className="wire-inline-empty">
+                  No collaboration preferences shared.
+                </div>
+              )}
             </div>
-          )}
-        </div>
-      </SectionCard>
+          </SectionCard>
 
-      <SectionCard title="Goals" subtitle="Academic or project goals shared by this student.">
-        {person.goals.length > 0 ? (
-          <div className="space-y-2">
-            {person.goals.map((goal) => (
-              <div
-                key={goal}
-                className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-4 py-2.5 text-[13px] text-wire-200"
-              >
-                {goal}
+          <SectionCard title="Goals" subtitle="Academic or project goals shared by this student.">
+            {person.goals.length > 0 ? (
+              <div className="space-y-2">
+                {person.goals.map((goal) => (
+                  <div
+                    key={goal}
+                    className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-4 py-2.5 text-[13px] text-wire-200"
+                  >
+                    {goal}
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        ) : (
-          <p className="wire-inline-empty">No goals shared yet.</p>
-        )}
-      </SectionCard>
-
-      <SectionCard title="Professional context (optional)" subtitle="Optional collaboration context.">
-        <div>
-          <p className="mb-2 wire-meta">Skills</p>
-          <div className="flex flex-wrap gap-2">
-            {person.skills.length > 0 ? (
-              person.skills.map((skill) => <TagChip key={skill} label={skill} />)
             ) : (
-              <p className="wire-inline-empty">No skills listed.</p>
+              <p className="wire-inline-empty">No goals shared yet.</p>
             )}
-          </div>
+          </SectionCard>
         </div>
-        <div className="border-t border-wire-700 pt-4">
-          <p className="mb-2 wire-meta">Links</p>
-          <div className="space-y-1.5 text-[13px] text-wire-300">
-            {person.resume_url ? <p>Resume: {person.resume_url}</p> : null}
-            {typeof links.github === "string" ? <p>GitHub: {links.github}</p> : null}
-            {typeof links.linkedin === "string" ? <p>LinkedIn: {links.linkedin}</p> : null}
-            {typeof links.portfolio === "string" ? <p>Portfolio: {links.portfolio}</p> : null}
-            {!person.resume_url &&
-            typeof links.github !== "string" &&
-            typeof links.linkedin !== "string" &&
-            typeof links.portfolio !== "string" ? (
-              <p className="wire-inline-empty">No professional links shared.</p>
-            ) : null}
-          </div>
-        </div>
-      </SectionCard>
-      {!isSelfProfile ? (
-        <section className="wire-panel">
-          <SectionHeader
-            title="Relationship"
-            subtitle="Manage friend connection and messaging actions."
-          />
-          {friendship?.status === "accepted" ? (
-            <div className="wire-action-row">
-              <form action={startFriendConversationAction} className="w-full">
-                <input type="hidden" name="friendId" value={person.user_id} />
-                <input type="hidden" name="redirectTo" value={`/connect/people/${person.user_id}`} />
-                <button type="submit" className="wire-action-primary w-full">
-                  Message
-                </button>
-              </form>
-              <button type="button" className="wire-action w-full" disabled>
-                Friends
-              </button>
+
+        <div className="space-y-6">
+          <SectionCard title="Professional context (optional)" subtitle="Optional collaboration context.">
+            <div>
+              <p className="mb-2 wire-meta">Skills</p>
+              <div className="flex flex-wrap gap-2">
+                {person.skills.length > 0 ? (
+                  person.skills.map((skill) => <TagChip key={skill} label={skill} />)
+                ) : (
+                  <p className="wire-inline-empty">No skills listed.</p>
+                )}
+              </div>
             </div>
-          ) : friendship?.status === "pending" && friendship.requester_id === user.id ? (
-            <div className="wire-action-row">
-              <button type="button" className="wire-action w-full" disabled>
-                Request sent
-              </button>
-              <form action={cancelFriendRequestAction} className="w-full">
-                <input type="hidden" name="friendshipId" value={friendship.id} />
-                <input type="hidden" name="redirectTo" value={`/connect/people/${person.user_id}`} />
-                <button type="submit" className="wire-action w-full">
-                  Cancel
-                </button>
-              </form>
+            <div className="border-t border-wire-700 pt-4">
+              <p className="mb-2 wire-meta">Links</p>
+              <div className="space-y-1.5 text-[13px] text-wire-300">
+                {person.resume_url ? <p>Resume: {person.resume_url}</p> : null}
+                {typeof links.github === "string" ? <p>GitHub: {links.github}</p> : null}
+                {typeof links.linkedin === "string" ? <p>LinkedIn: {links.linkedin}</p> : null}
+                {typeof links.portfolio === "string" ? <p>Portfolio: {links.portfolio}</p> : null}
+                {!person.resume_url &&
+                typeof links.github !== "string" &&
+                typeof links.linkedin !== "string" &&
+                typeof links.portfolio !== "string" ? (
+                  <p className="wire-inline-empty">No professional links shared.</p>
+                ) : null}
+              </div>
             </div>
-          ) : friendship?.status === "pending" ? (
-            <div className="wire-action-row">
-              <form action={acceptFriendRequestAction} className="w-full">
-                <input type="hidden" name="friendshipId" value={friendship.id} />
-                <input type="hidden" name="redirectTo" value={`/connect/people/${person.user_id}`} />
-                <button type="submit" className="wire-action-primary w-full">
-                  Accept
-                </button>
-              </form>
-              <form action={rejectFriendRequestAction} className="w-full">
-                <input type="hidden" name="friendshipId" value={friendship.id} />
-                <input type="hidden" name="redirectTo" value={`/connect/people/${person.user_id}`} />
-                <button type="submit" className="wire-action w-full">
-                  Reject
-                </button>
-              </form>
-            </div>
+          </SectionCard>
+
+          {!isSelfProfile ? (
+            <section className="wire-panel">
+              <SectionHeader
+                title="Relationship"
+                subtitle="Manage friend connection and messaging actions."
+              />
+              {friendship?.status === "accepted" ? (
+                <div className="wire-action-row">
+                  <form action={startFriendConversationAction} className="w-full">
+                    <input type="hidden" name="friendId" value={person.user_id} />
+                    <input type="hidden" name="redirectTo" value={`/connect/people/${person.user_id}`} />
+                    <button type="submit" className="wire-action-primary w-full">
+                      Message
+                    </button>
+                  </form>
+                  <button type="button" className="wire-action w-full" disabled>
+                    Friends
+                  </button>
+                </div>
+              ) : friendship?.status === "pending" && friendship.requester_id === user.id ? (
+                <div className="wire-action-row">
+                  <button type="button" className="wire-action w-full" disabled>
+                    Request sent
+                  </button>
+                  <form action={cancelFriendRequestAction} className="w-full">
+                    <input type="hidden" name="friendshipId" value={friendship.id} />
+                    <input type="hidden" name="redirectTo" value={`/connect/people/${person.user_id}`} />
+                    <button type="submit" className="wire-action w-full">
+                      Cancel
+                    </button>
+                  </form>
+                </div>
+              ) : friendship?.status === "pending" ? (
+                <div className="wire-action-row">
+                  <form action={acceptFriendRequestAction} className="w-full">
+                    <input type="hidden" name="friendshipId" value={friendship.id} />
+                    <input type="hidden" name="redirectTo" value={`/connect/people/${person.user_id}`} />
+                    <button type="submit" className="wire-action-primary w-full">
+                      Accept
+                    </button>
+                  </form>
+                  <form action={rejectFriendRequestAction} className="w-full">
+                    <input type="hidden" name="friendshipId" value={friendship.id} />
+                    <input type="hidden" name="redirectTo" value={`/connect/people/${person.user_id}`} />
+                    <button type="submit" className="wire-action w-full">
+                      Reject
+                    </button>
+                  </form>
+                </div>
+              ) : (
+                <form action={sendFriendRequestAction} className="w-full">
+                  <input type="hidden" name="addresseeId" value={person.user_id} />
+                  <input type="hidden" name="redirectTo" value={`/connect/people/${person.user_id}`} />
+                  <button type="submit" className="wire-action-primary w-full">
+                    Add friend
+                  </button>
+                </form>
+              )}
+            </section>
           ) : (
-            <form action={sendFriendRequestAction} className="w-full">
-              <input type="hidden" name="addresseeId" value={person.user_id} />
-              <input type="hidden" name="redirectTo" value={`/connect/people/${person.user_id}`} />
-              <button type="submit" className="wire-action-primary w-full">
-                Add friend
-              </button>
-            </form>
+            <section className="wire-panel">
+              <SectionHeader
+                title="Relationship"
+                subtitle="Your friend network and messaging."
+              />
+              <ShellButton label="View friends" href="/connect/friends" variant="default" />
+            </section>
           )}
-        </section>
-      ) : (
-        <section className="wire-panel">
-          <SectionHeader
-            title="Relationship"
-            subtitle="Your friend network and messaging."
-          />
-          <ShellButton label="View friends" href="/connect/friends" variant="default" />
-        </section>
-      )}
+        </div>
+      </div>
     </main>
   );
 }

@@ -69,51 +69,53 @@ export default async function ConnectHomePage() {
         </div>
       </section>
 
-      <SectionCard
-        title="Suggested people"
-        actionLabel="See all"
-        actionHref="/connect/people"
-      >
-        {people.length > 0 ? (
-          <div className="wire-list">
-            {people.map((person) => (
-              <PersonCard
-                key={person.user_id}
-                person={toPersonCardData(person)}
-                href={`/connect/people/${person.user_id}`}
-              />
-            ))}
-          </div>
-        ) : !loadError ? (
-          <EmptyState
-            title="No people discovered yet"
-            description="Profiles with completed onboarding will appear here."
-          />
-        ) : null}
-      </SectionCard>
+      <div className="grid gap-6 xl:grid-cols-2">
+        <SectionCard
+          title="Suggested people"
+          actionLabel="See all"
+          actionHref="/connect/people"
+        >
+          {people.length > 0 ? (
+            <div className="wire-list">
+              {people.map((person) => (
+                <PersonCard
+                  key={person.user_id}
+                  person={toPersonCardData(person)}
+                  href={`/connect/people/${person.user_id}`}
+                />
+              ))}
+            </div>
+          ) : !loadError ? (
+            <EmptyState
+              title="No people discovered yet"
+              description="Profiles with completed onboarding will appear here."
+            />
+          ) : null}
+        </SectionCard>
 
-      <SectionCard
-        title="Suggested communities"
-        actionLabel="See all"
-        actionHref="/connect/communities"
-      >
-        {communities.length > 0 ? (
-          <div className="wire-list">
-            {communities.map((entry) => (
-              <CommunityCard
-                key={entry.community.id}
-                community={toCommunityCardData(entry.community, entry.memberCount)}
-                href={`/connect/communities/${entry.community.id}`}
-              />
-            ))}
-          </div>
-        ) : !loadError ? (
-          <EmptyState
-            title="No communities yet"
-            description="Student communities will appear here once published."
-          />
-        ) : null}
-      </SectionCard>
+        <SectionCard
+          title="Suggested communities"
+          actionLabel="See all"
+          actionHref="/connect/communities"
+        >
+          {communities.length > 0 ? (
+            <div className="wire-list">
+              {communities.map((entry) => (
+                <CommunityCard
+                  key={entry.community.id}
+                  community={toCommunityCardData(entry.community, entry.memberCount)}
+                  href={`/connect/communities/${entry.community.id}`}
+                />
+              ))}
+            </div>
+          ) : !loadError ? (
+            <EmptyState
+              title="No communities yet"
+              description="Student communities will appear here once published."
+            />
+          ) : null}
+        </SectionCard>
+      </div>
     </main>
   );
 }

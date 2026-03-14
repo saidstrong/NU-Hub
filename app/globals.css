@@ -48,17 +48,17 @@ a {
 }
 
 main {
-  @apply flex flex-col gap-6 pb-1;
+  @apply flex flex-col gap-6 pb-1 xl:gap-7;
 }
 
 @layer components {
   .wire-topbar {
-    @apply rounded-[var(--radius-page-card)] border bg-wire-900 px-5 py-4;
+    @apply rounded-[var(--radius-page-card)] border bg-wire-900 px-5 py-4 sm:px-6;
     border-color: var(--border-default);
   }
 
   .wire-panel {
-    @apply rounded-[var(--radius-page-card)] border bg-wire-900 p-5;
+    @apply rounded-[var(--radius-page-card)] border bg-wire-900 p-5 sm:p-6;
     border-color: var(--border-default);
   }
 

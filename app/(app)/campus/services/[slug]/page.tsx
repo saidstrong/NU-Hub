@@ -47,24 +47,26 @@ export default async function CampusServiceDetailPage({ params }: CampusServiceD
         backHref="/campus"
       />
 
-      <SectionCard title="Overview" subtitle="What this service provides.">
-        <p className="text-[14px] leading-relaxed text-wire-200">{service.description}</p>
-      </SectionCard>
+      <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+        <SectionCard title="Overview" subtitle="What this service provides.">
+          <p className="text-[14px] leading-relaxed text-wire-200">{service.description}</p>
+        </SectionCard>
 
-      <SectionCard title="Service details" subtitle="Location, contact, and availability.">
-        <div className="grid grid-cols-2 gap-2 text-[12px]">
-          <p className="text-wire-300">Location</p>
-          <p className="text-wire-200">{valueOrFallback(service.location)}</p>
-          <p className="text-wire-300">Contact</p>
-          <p className="text-wire-200">{valueOrFallback(service.contactName)}</p>
-          <p className="text-wire-300">Email</p>
-          <p className="text-wire-200">{valueOrFallback(service.contactEmail)}</p>
-          <p className="text-wire-300">Phone</p>
-          <p className="text-wire-200">{valueOrFallback(service.contactPhone)}</p>
-          <p className="text-wire-300">Hours</p>
-          <p className="text-wire-200">{valueOrFallback(service.hours)}</p>
-        </div>
-      </SectionCard>
+        <SectionCard title="Service details" subtitle="Location, contact, and availability.">
+          <div className="grid grid-cols-2 gap-2 text-[12px]">
+            <p className="text-wire-300">Location</p>
+            <p className="text-wire-200">{valueOrFallback(service.location)}</p>
+            <p className="text-wire-300">Contact</p>
+            <p className="text-wire-200">{valueOrFallback(service.contactName)}</p>
+            <p className="text-wire-300">Email</p>
+            <p className="text-wire-200">{valueOrFallback(service.contactEmail)}</p>
+            <p className="text-wire-300">Phone</p>
+            <p className="text-wire-200">{valueOrFallback(service.contactPhone)}</p>
+            <p className="text-wire-300">Hours</p>
+            <p className="text-wire-200">{valueOrFallback(service.hours)}</p>
+          </div>
+        </SectionCard>
+      </div>
 
       <SectionCard title="Pricing asset" subtitle="Open the latest pricing reference file if available.">
         {hasPriceAsset ? (
@@ -110,7 +112,7 @@ export default async function CampusServiceDetailPage({ params }: CampusServiceD
       </SectionCard>
 
       <section className="wire-panel">
-        <ShellButton label="Back to campus information" href="/campus" variant="default" />
+        <ShellButton label="Back to campus information" href="/campus" variant="default" block={false} />
       </section>
     </main>
   );

@@ -51,7 +51,7 @@ export default async function MarketMessagesPage({ searchParams }: MarketMessage
   const nextHref = hasMore ? buildPageHref("/market/messages", page + 1) : undefined;
 
   return (
-    <main>
+    <main className="mx-auto w-full max-w-4xl">
       <TopBar
         title="Messages"
         subtitle="Listing conversations"
