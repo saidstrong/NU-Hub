@@ -73,16 +73,16 @@ export default async function MarketHomePage({ searchParams }: MarketHomePagePro
       <section className="wire-panel">
         <SectionHeader
           title="Categories and filters"
-          subtitle="Refine what you see without overwhelming the feed."
+          subtitle="Keep filters lightweight and let listings stay the primary focus."
         />
         <div className="mb-4 flex flex-wrap gap-2">
           {marketCategories.map((category) => (
             <Link key={category} href={`/market/category/${category.toLowerCase()}`}>
-              <TagChip label={category} tone="status" />
+              <TagChip label={category} />
             </Link>
           ))}
         </div>
-        <FilterRow filters={["Newest", "Price", "Condition", "Pickup"]} activeIndex={0} />
+        <FilterRow filters={["Newest", "Price", "Condition", "Pickup"]} activeIndex={-1} />
       </section>
 
       <section className="wire-panel">
@@ -131,12 +131,14 @@ export default async function MarketHomePage({ searchParams }: MarketHomePagePro
             actionHref="/market/post"
           />
         ) : null}
-        <PageNavigation
-          previousHref={previousHref}
-          nextHref={nextHref}
-          previousLabel="Previous page"
-          nextLabel="Next page"
-        />
+        <div className="mt-4">
+          <PageNavigation
+            previousHref={previousHref}
+            nextHref={nextHref}
+            previousLabel="Previous page"
+            nextLabel="Next page"
+          />
+        </div>
       </SectionCard>
     </main>
   );

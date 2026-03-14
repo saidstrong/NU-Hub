@@ -69,12 +69,18 @@ export default async function HomePage() {
 
       {loadError ? <FeedbackBanner tone="error" message={loadError} /> : null}
 
-      <SearchBar
-        placeholder="Search market, events, people, communities"
-        queryName="q"
-        defaultValue=""
-        action="/search"
-      />
+      <section className="wire-panel">
+        <SectionHeader
+          title="Search"
+          subtitle="Find listings, events, people, and communities from one query."
+        />
+        <SearchBar
+          placeholder="Search market, events, people, communities"
+          queryName="q"
+          defaultValue=""
+          action="/search"
+        />
+      </section>
 
       <section className="wire-panel">
         <SectionHeader
@@ -84,7 +90,7 @@ export default async function HomePage() {
         <div className="grid grid-cols-2 gap-3">
           <Link
             href="/market"
-            className="wire-card wire-hover flex min-h-[104px] flex-col justify-between rounded-[var(--radius-card)] p-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+            className="wire-card wire-hover flex min-h-[108px] flex-col justify-between rounded-[var(--radius-card)] p-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
           >
             <ShoppingBag className="h-5 w-5 text-wire-100" aria-hidden="true" />
             <div>
@@ -94,7 +100,7 @@ export default async function HomePage() {
           </Link>
           <Link
             href="/events"
-            className="wire-card wire-hover flex min-h-[104px] flex-col justify-between rounded-[var(--radius-card)] p-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+            className="wire-card wire-hover flex min-h-[108px] flex-col justify-between rounded-[var(--radius-card)] p-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
           >
             <CalendarDays className="h-5 w-5 text-wire-100" aria-hidden="true" />
             <div>
@@ -104,7 +110,7 @@ export default async function HomePage() {
           </Link>
           <Link
             href="/connect"
-            className="wire-card wire-hover flex min-h-[104px] flex-col justify-between rounded-[var(--radius-card)] p-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+            className="wire-card wire-hover flex min-h-[108px] flex-col justify-between rounded-[var(--radius-card)] p-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
           >
             <Users className="h-5 w-5 text-wire-100" aria-hidden="true" />
             <div>
@@ -114,7 +120,7 @@ export default async function HomePage() {
           </Link>
           <Link
             href="/campus"
-            className="wire-card wire-hover flex min-h-[104px] flex-col justify-between rounded-[var(--radius-card)] p-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+            className="wire-card wire-hover flex min-h-[108px] flex-col justify-between rounded-[var(--radius-card)] p-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
           >
             <Compass className="h-5 w-5 text-wire-100" aria-hidden="true" />
             <div>
@@ -193,7 +199,7 @@ export default async function HomePage() {
                 href={`/connect/communities/${communities[0].community.id}`}
               />
             ) : null}
-            <Link href="/connect" className="wire-action-ghost inline-flex w-fit gap-2">
+            <Link href="/connect" className="wire-link inline-flex w-fit gap-1.5">
               See more suggestions
               <ArrowRight className="h-4 w-4" aria-hidden="true" />
             </Link>

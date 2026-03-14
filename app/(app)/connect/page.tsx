@@ -70,8 +70,8 @@ export default async function ConnectHomePage() {
           Explore people and communities aligned with your study goals, projects, and interests.
         </p>
         <div className="flex flex-wrap gap-2">
-          {lookingForChips.map((chip, idx) => (
-            <TagChip key={chip} label={chip} active={idx === 0} tone="status" />
+          {lookingForChips.map((chip) => (
+            <TagChip key={chip} label={chip} />
           ))}
         </div>
       </section>

@@ -75,14 +75,14 @@ export default async function EventsHomePage({ searchParams }: EventsHomePagePro
       <section className="wire-panel">
         <SectionHeader
           title="Categories and filters"
-          subtitle="Keep filters light and focus on what is happening next."
+          subtitle="Keep filters light and focus on the strongest upcoming opportunities."
         />
         <div className="mb-4 flex flex-wrap gap-2">
-          {eventCategories.map((category, idx) => (
-            <TagChip key={category} label={category} active={idx === 0} tone="status" />
+          {eventCategories.map((category) => (
+            <TagChip key={category} label={category} />
           ))}
         </div>
-        <FilterRow filters={["This week", "Campus", "Saved"]} activeIndex={0} />
+        <FilterRow filters={["This week", "Campus", "Saved"]} activeIndex={-1} />
       </section>
 
       <section className="wire-panel">
@@ -133,16 +133,18 @@ export default async function EventsHomePage({ searchParams }: EventsHomePagePro
             </div>
           </div>
         ) : featuredEvent && !loadError ? (
-          <p className="mt-4 wire-meta">No additional upcoming events yet.</p>
+          <p className="wire-inline-empty mt-4">No additional upcoming events yet.</p>
         ) : null}
       </SectionCard>
 
-      <PageNavigation
-        previousHref={previousHref}
-        nextHref={nextHref}
-        previousLabel="Previous page"
-        nextLabel="Next page"
-      />
+      <div className="mt-[-6px]">
+        <PageNavigation
+          previousHref={previousHref}
+          nextHref={nextHref}
+          previousLabel="Previous page"
+          nextLabel="Next page"
+        />
+      </div>
     </main>
   );
 }

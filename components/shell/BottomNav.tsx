@@ -23,7 +23,7 @@ export function BottomNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed bottom-0 left-1/2 z-30 w-full max-w-md -translate-x-1/2 border-t border-wire-700 bg-wire-900/96 px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-2.5 backdrop-blur">
+    <nav className="fixed bottom-0 left-1/2 z-30 w-full max-w-md -translate-x-1/2 border-t border-wire-700 bg-wire-900/96 px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-2 backdrop-blur">
       <ul className="grid grid-cols-5 gap-2">
         {navItems.map((item) => {
           const Icon = item.icon;
@@ -43,8 +43,8 @@ export function BottomNav() {
                     : "border-wire-700/80 text-wire-300 hover:border-wire-600 hover:bg-wire-800/80 hover:text-wire-100",
                 )}
               >
-                <Icon className="h-4 w-4" aria-hidden="true" />
-                <span className="text-[11px] font-medium leading-none">{item.label}</span>
+                <Icon className="h-[18px] w-[18px]" aria-hidden="true" />
+                <span className="text-[11px] font-medium leading-[1.1]">{item.label}</span>
               </Link>
             </li>
           );

@@ -206,11 +206,15 @@ main {
   }
 
   .wire-action-row {
-    @apply grid grid-cols-2 gap-3 pt-2;
+    @apply grid grid-cols-1 gap-3 pt-2 sm:grid-cols-2;
   }
 
   .wire-action-row-single {
     @apply pt-2;
+  }
+
+  .wire-inline-empty {
+    @apply rounded-[var(--radius-input)] border border-dashed border-wire-600 bg-wire-900/60 px-4 py-3 text-[13px] text-wire-300;
   }
 }
 

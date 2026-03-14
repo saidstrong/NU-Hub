@@ -86,7 +86,7 @@ export default async function CommunityProfilePage({
   const ownerMeta = [ownerProfile?.school, ownerProfile?.major, ownerProfile?.year_label]
     .map((value) => value?.trim())
     .filter(Boolean)
-    .join(" - ");
+    .join(" • ");
   const joinActionLabel = community.join_type === "open" ? "Join community" : "Request to join";
   const joinPendingLabel = community.join_type === "open" ? "Joining..." : "Submitting...";
   const statusLabel =
@@ -157,7 +157,7 @@ export default async function CommunityProfilePage({
       {loadError ? <FeedbackBanner tone="error" message={loadError} /> : null}
 
       <SectionCard title="Description" subtitle="Community purpose and scope.">
-        <p className="text-[14px] text-wire-200">{community.description}</p>
+        <p className="text-[14px] leading-relaxed text-wire-200">{community.description}</p>
       </SectionCard>
 
       <SectionCard title="Posts" subtitle="Recent updates from joined members.">
@@ -184,7 +184,7 @@ export default async function CommunityProfilePage({
             </div>
           </form>
         ) : (
-          <p className="text-[13px] text-wire-300">Join this community to post updates.</p>
+          <p className="wire-inline-empty">Join this community to post updates.</p>
         )}
 
         <div className="border-t border-wire-700 pt-4">
@@ -249,7 +249,7 @@ export default async function CommunityProfilePage({
               })}
             </div>
           ) : (
-            <p className="text-[13px] text-wire-300">No posts yet. Be the first to share an update.</p>
+            <p className="wire-inline-empty">No posts yet. Be the first to share an update.</p>
           )}
         </div>
       </SectionCard>
@@ -297,7 +297,7 @@ export default async function CommunityProfilePage({
             ) : null}
           </div>
         ) : (
-          <p className="text-[13px] text-wire-300">No joined members yet.</p>
+          <p className="wire-inline-empty">No joined members yet.</p>
         )}
       </SectionCard>
 

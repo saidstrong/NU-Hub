@@ -73,7 +73,7 @@ export default async function MarketItemDetailPage({
   const sellerMeta = [seller?.school, seller?.major, seller?.year_label]
     .map((value) => value?.trim())
     .filter(Boolean)
-    .join(" - ");
+    .join(" • ");
   const sellerAvatarUrl = toPublicStorageUrl("avatars", seller?.avatar_path);
 
   return (
@@ -122,7 +122,7 @@ export default async function MarketItemDetailPage({
           ) : null}
         </SectionCard>
       ) : (
-        <div className="wire-placeholder h-44" />
+        <div className="wire-inline-empty">No listing images uploaded.</div>
       )}
 
       <SectionCard

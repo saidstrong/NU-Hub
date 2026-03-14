@@ -73,7 +73,7 @@ export default async function PersonProfilePage({ params, searchParams }: Person
 
   const personCard = toPersonCardData(person);
   const isSelfProfile = person.user_id === user.id;
-  const subtitle = `${personCard.major} - ${personCard.year}`;
+  const subtitle = `${personCard.major} • ${personCard.year}`;
   const avatarUrl = toPublicStorageUrl("avatars", person.avatar_path);
   const name = personCard.name || "NU student";
   const links =
@@ -139,7 +139,7 @@ export default async function PersonProfilePage({ params, searchParams }: Person
           {person.looking_for.length > 0 ? (
             person.looking_for.map((entry) => <TagChip key={entry} label={entry} />)
           ) : (
-            <div className="rounded-xl border border-dashed border-wire-600 bg-wire-900/60 px-3 py-2 text-[13px] text-wire-300">
+            <div className="wire-inline-empty">
               No collaboration preferences shared.
             </div>
           )}
@@ -159,7 +159,7 @@ export default async function PersonProfilePage({ params, searchParams }: Person
             ))}
           </div>
         ) : (
-          <p className="text-[13px] text-wire-300">No goals shared yet.</p>
+          <p className="wire-inline-empty">No goals shared yet.</p>
         )}
       </SectionCard>
 
@@ -170,7 +170,7 @@ export default async function PersonProfilePage({ params, searchParams }: Person
             {person.skills.length > 0 ? (
               person.skills.map((skill) => <TagChip key={skill} label={skill} />)
             ) : (
-              <p className="text-[13px] text-wire-300">No skills listed.</p>
+              <p className="wire-inline-empty">No skills listed.</p>
             )}
           </div>
         </div>
@@ -185,7 +185,7 @@ export default async function PersonProfilePage({ params, searchParams }: Person
             typeof links.github !== "string" &&
             typeof links.linkedin !== "string" &&
             typeof links.portfolio !== "string" ? (
-              <p>No professional links shared.</p>
+              <p className="wire-inline-empty">No professional links shared.</p>
             ) : null}
           </div>
         </div>

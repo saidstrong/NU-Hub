@@ -75,7 +75,7 @@ export default async function EventDetailPage({ params, searchParams }: EventDet
   const organizerMeta = [organizer?.school, organizer?.major, organizer?.year_label]
     .map((value) => value?.trim())
     .filter(Boolean)
-    .join(" - ");
+    .join(" • ");
   const coverUrl = toPublicStorageUrl("event-images", event.cover_path);
 
   return (
@@ -117,7 +117,7 @@ export default async function EventDetailPage({ params, searchParams }: EventDet
           />
         </SectionCard>
       ) : (
-        <div className="wire-placeholder h-40" />
+        <div className="wire-inline-empty">No cover image uploaded.</div>
       )}
 
       <SectionCard
@@ -147,10 +147,16 @@ export default async function EventDetailPage({ params, searchParams }: EventDet
             title="RSVP"
             subtitle="Set intent and track participation signals."
           >
-            <div className="mb-3 space-y-1">
-              <p className="wire-meta">Going: {rsvpCounts.going}</p>
-              <p className="wire-meta">Interested: {rsvpCounts.interested}</p>
-              <p className="wire-meta">
+            <div className="mb-3 grid grid-cols-2 gap-2">
+              <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-3 py-2">
+                <p className="wire-label">Going</p>
+                <p className="mt-1 text-[14px] font-medium text-wire-100">{rsvpCounts.going}</p>
+              </div>
+              <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-3 py-2">
+                <p className="wire-label">Interested</p>
+                <p className="mt-1 text-[14px] font-medium text-wire-100">{rsvpCounts.interested}</p>
+              </div>
+              <p className="col-span-2 wire-meta">
                 Your RSVP:{" "}
                 {participationStatus === "going"
                   ? "Going"

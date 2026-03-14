@@ -25,7 +25,7 @@ type ProfilePageProps = {
 
 function joinLine(parts: Array<string | null>): string {
   const safeParts = parts.map((part) => (part ?? "").trim()).filter(Boolean);
-  return safeParts.length > 0 ? safeParts.join(" - ") : "Campus student profile";
+  return safeParts.length > 0 ? safeParts.join(" • ") : "Campus student profile";
 }
 
 function parseProjects(projects: unknown): Array<{ title: string; summary?: string }> {
@@ -63,7 +63,7 @@ function parseLinks(links: unknown): Array<{ label: string; value: string }> {
 
 function EmptyText({ text }: { text: string }) {
   return (
-    <div className="rounded-[var(--radius-input)] border border-dashed border-wire-600 bg-wire-900/60 px-4 py-3 text-[13px] text-wire-300">
+    <div className="wire-inline-empty">
       {text}
     </div>
   );
@@ -177,7 +177,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
         subtitle="Helps peers understand your focus and preferred collaboration context."
       >
         <div>
-          <p className="mb-2 wire-meta">Interests</p>
+          <p className="mb-2 wire-label">Interests</p>
           {profile.interests.length > 0 ? (
             <div className="flex flex-wrap gap-2">
               {profile.interests.map((item) => (
@@ -190,7 +190,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
         </div>
 
         <div className="border-t border-wire-700 pt-4">
-          <p className="mb-2 wire-meta">Goals</p>
+          <p className="mb-2 wire-label">Goals</p>
           {profile.goals.length > 0 ? (
             <div className="space-y-2">
               {profile.goals.map((goal) => (
@@ -208,7 +208,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
         </div>
 
         <div className="border-t border-wire-700 pt-4">
-          <p className="mb-2 wire-meta">Looking for</p>
+          <p className="mb-2 wire-label">Looking for</p>
           {profile.looking_for.length > 0 ? (
             <div className="flex flex-wrap gap-2">
               {profile.looking_for.map((item, idx) => (
@@ -226,7 +226,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
         subtitle="Optional context for advanced project collaboration."
       >
         <div>
-          <p className="mb-2 wire-meta">Skills</p>
+          <p className="mb-2 wire-label">Skills</p>
           {profile.skills.length > 0 ? (
             <div className="flex flex-wrap gap-2">
               {profile.skills.map((item) => (
@@ -239,7 +239,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
         </div>
 
         <div className="border-t border-wire-700 pt-4">
-          <p className="mb-2 wire-meta">Projects</p>
+          <p className="mb-2 wire-label">Projects</p>
           {projects.length > 0 ? (
             <div className="space-y-2">
               {projects.map((project) => (
