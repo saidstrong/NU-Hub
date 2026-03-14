@@ -1,18 +1,19 @@
-import { FormSection } from "@/components/ui/FormSection";
-import { ProfileHeader } from "@/components/ui/ProfileHeader";
+import Link from "next/link";
+import { FeedbackBanner } from "@/components/ui/FeedbackBanner";
 import { QuickAccessGrid } from "@/components/ui/QuickAccessGrid";
+import { SectionHeader } from "@/components/ui/SectionHeader";
 import { SectionCard } from "@/components/ui/SectionCard";
+import { ShellButton } from "@/components/ui/ShellButton";
 import { TagChip } from "@/components/ui/TagChip";
-import { TopBar } from "@/components/ui/TopBar";
 import { getCurrentProfile } from "@/lib/profile/data";
 import { toPublicStorageUrl } from "@/lib/validation/media";
 
 const quickAccessItems = [
-  { label: "My Listings", href: "/market/my-listings", meta: "Active and sold posts" },
+  { label: "My Listings", href: "/market/my-listings", meta: "Track active and sold items" },
   { label: "Saved Listings", href: "/market/saved", meta: "Items to revisit" },
-  { label: "My Events", href: "/events/my-events", meta: "Interested and joined" },
+  { label: "My Events", href: "/events/my-events", meta: "Going and interested activity" },
   { label: "Saved Events", href: "/events/saved", meta: "Events to track" },
-  { label: "My Communities", href: "/connect/my-communities", meta: "Joined and created groups" },
+  { label: "My Communities", href: "/connect/my-communities", meta: "Joined and created circles" },
   { label: "Notifications", href: "/profile/notifications", meta: "Recent updates" },
 ];
 
@@ -62,7 +63,7 @@ function parseLinks(links: unknown): Array<{ label: string; value: string }> {
 
 function EmptyText({ text }: { text: string }) {
   return (
-    <div className="rounded-xl border border-dashed border-wire-600 bg-wire-900/60 px-3 py-2.5 text-[13px] text-wire-300">
+    <div className="rounded-[var(--radius-input)] border border-dashed border-wire-600 bg-wire-900/60 px-4 py-3 text-[13px] text-wire-300">
       {text}
     </div>
   );
@@ -74,57 +75,106 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
   const projects = parseProjects(profile.projects);
   const links = parseLinks(profile.links);
   const avatarUrl = toPublicStorageUrl("avatars", profile.avatar_path);
+  const name = profile.full_name || "NU student";
+  const profileContext = subtitle || "Campus student profile";
 
   return (
     <main>
-      <TopBar
-        title="Profile"
-        subtitle="Your campus identity and collaboration profile"
-        actions={[{ label: "Settings", href: "/profile/settings" }]}
-      />
-      {message ? (
-        <div className="rounded-xl border border-accent/35 bg-accent/10 px-3 py-2 text-[13px] text-wire-100">
-          {message}
+      <section className="wire-panel">
+        <SectionHeader
+          title="Profile"
+          subtitle="Your personal identity page for classmates, collaborators, and communities."
+          actionNode={
+            <Link href="/profile/settings" className="wire-link">
+              Settings
+            </Link>
+          }
+        />
+        <p className="wire-meta">
+          Keep this profile clear and current so other students can understand your focus quickly.
+        </p>
+      </section>
+
+      {message ? <FeedbackBanner tone="success" message={message} /> : null}
+
+      <section className="wire-panel">
+        <SectionHeader
+          title="Profile summary"
+          subtitle="How your identity appears across NU Hub."
+        />
+        <div className="flex items-start gap-4">
+          {avatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={avatarUrl}
+              alt={`${name} avatar`}
+              className="h-16 w-16 shrink-0 rounded-full border border-wire-700 bg-wire-900 object-cover"
+            />
+          ) : (
+            <div className="h-16 w-16 shrink-0 rounded-full border border-dashed border-wire-600 bg-wire-900" />
+          )}
+          <div className="min-w-0">
+            <p className="wire-label">Campus identity</p>
+            <h2 className="mt-1 truncate text-[30px] font-semibold leading-[36px] tracking-tight text-wire-100">
+              {name}
+            </h2>
+            <p className="mt-2 text-[14px] text-wire-300">{profileContext}</p>
+          </div>
         </div>
-      ) : null}
 
-      <ProfileHeader
-        name={profile.full_name || "NU student"}
-        subtitle={subtitle}
-        contextLabel="Campus profile"
-        tags={profile.interests.slice(0, 3)}
-        avatarUrl={avatarUrl}
-        actions={[{ label: "Edit profile", href: "/profile/edit" }]}
-      />
+        <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <ShellButton label="Edit profile" href="/profile/edit" variant="primary" />
+          <Link href="/profile/settings" className="wire-action w-full">
+            Profile settings
+          </Link>
+        </div>
 
-      <FormSection
+        {profile.interests.length > 0 ? (
+          <div className="mt-5 border-t border-wire-700 pt-4">
+            <p className="mb-2 wire-label">Top interests</p>
+            <div className="flex flex-wrap gap-2">
+              {profile.interests.slice(0, 3).map((item) => (
+                <TagChip key={item} label={item} />
+              ))}
+            </div>
+          </div>
+        ) : null}
+      </section>
+
+      <SectionCard
         title="About"
-        description="Short context for classmates, collaborators, and communities."
+        subtitle="A short summary for classmates and project collaborators."
       >
         {profile.bio ? (
-          <p className="text-sm leading-relaxed text-wire-200">{profile.bio}</p>
+          <p className="text-[14px] leading-relaxed text-wire-200">{profile.bio}</p>
         ) : (
-          <EmptyText text="Add a short bio to give classmates context for collaboration." />
+          <EmptyText text="Add a short bio to provide context for collaboration." />
         )}
-        <div className="grid grid-cols-3 gap-2">
-          <div className="rounded-xl border border-wire-700 bg-wire-800 px-3 py-2.5">
-            <p className="wire-meta">School</p>
-            <p className="mt-1 text-sm text-wire-100">{profile.school || "Not set"}</p>
+      </SectionCard>
+
+      <SectionCard
+        title="Academic and campus context"
+        subtitle="Core details that help people understand your track."
+      >
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-4 py-3">
+            <p className="wire-label">School</p>
+            <p className="mt-2 text-[14px] text-wire-100">{profile.school || "Not set"}</p>
           </div>
-          <div className="rounded-xl border border-wire-700 bg-wire-800 px-3 py-2.5">
-            <p className="wire-meta">Major</p>
-            <p className="mt-1 text-sm text-wire-100">{profile.major || "Not set"}</p>
+          <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-4 py-3">
+            <p className="wire-label">Major</p>
+            <p className="mt-2 text-[14px] text-wire-100">{profile.major || "Not set"}</p>
           </div>
-          <div className="rounded-xl border border-wire-700 bg-wire-800 px-3 py-2.5">
-            <p className="wire-meta">Year</p>
-            <p className="mt-1 text-sm text-wire-100">{profile.year_label || "Not set"}</p>
+          <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-4 py-3">
+            <p className="wire-label">Year</p>
+            <p className="mt-2 text-[14px] text-wire-100">{profile.year_label || "Not set"}</p>
           </div>
         </div>
-      </FormSection>
+      </SectionCard>
 
-      <FormSection
+      <SectionCard
         title="Interests and goals"
-        description="Helps peers understand your focus and preferred collaboration context."
+        subtitle="Helps peers understand your focus and preferred collaboration context."
       >
         <div>
           <p className="mb-2 wire-meta">Interests</p>
@@ -139,14 +189,14 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
           )}
         </div>
 
-        <div className="border-t border-wire-700 pt-3">
+        <div className="border-t border-wire-700 pt-4">
           <p className="mb-2 wire-meta">Goals</p>
           {profile.goals.length > 0 ? (
             <div className="space-y-2">
               {profile.goals.map((goal) => (
                 <div
                   key={goal}
-                  className="rounded-xl border border-wire-700 bg-wire-800 px-3 py-2 text-[13px] text-wire-200"
+                  className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-4 py-2.5 text-[13px] text-wire-200"
                 >
                   {goal}
                 </div>
@@ -157,7 +207,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
           )}
         </div>
 
-        <div className="border-t border-wire-700 pt-3">
+        <div className="border-t border-wire-700 pt-4">
           <p className="mb-2 wire-meta">Looking for</p>
           {profile.looking_for.length > 0 ? (
             <div className="flex flex-wrap gap-2">
@@ -169,11 +219,11 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
             <EmptyText text="No collaboration preferences added yet." />
           )}
         </div>
-      </FormSection>
+      </SectionCard>
 
-      <FormSection
+      <SectionCard
         title="Professional details (optional)"
-        description="Lightweight context for project and community collaboration."
+        subtitle="Optional context for advanced project collaboration."
       >
         <div>
           <p className="mb-2 wire-meta">Skills</p>
@@ -188,14 +238,14 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
           )}
         </div>
 
-        <div className="border-t border-wire-700 pt-3">
+        <div className="border-t border-wire-700 pt-4">
           <p className="mb-2 wire-meta">Projects</p>
           {projects.length > 0 ? (
             <div className="space-y-2">
               {projects.map((project) => (
                 <div
                   key={`${project.title}-${project.summary ?? ""}`}
-                  className="rounded-xl border border-wire-700 bg-wire-800 px-3 py-2"
+                  className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-4 py-3"
                 >
                   <p className="text-[13px] font-medium text-wire-100">{project.title}</p>
                   {project.summary ? (
@@ -210,32 +260,39 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
         </div>
 
         {profile.resume_url || links.length > 0 ? (
-          <div className="rounded-xl border border-wire-700 bg-wire-800 px-3 py-3">
-            <p className="text-[13px] font-medium text-wire-100">Links</p>
-            <div className="mt-2 space-y-1.5">
+          <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-4 py-3">
+            <p className="wire-label">Links</p>
+            <div className="mt-2 space-y-2">
               {profile.resume_url ? (
-                <p className="text-[12px] text-wire-300">
-                  Resume: <span className="text-wire-200">{profile.resume_url}</span>
+                <p className="text-[13px] text-wire-300">
+                  Resume
+                  <span className="ml-2 text-wire-200">{profile.resume_url}</span>
                 </p>
               ) : null}
               {links.map((item) => (
-                <p key={item.label} className="text-[12px] text-wire-300">
-                  {item.label}: <span className="text-wire-200">{item.value}</span>
+                <p key={item.label} className="text-[13px] text-wire-300">
+                  {item.label}
+                  <span className="ml-2 text-wire-200">{item.value}</span>
                 </p>
               ))}
             </div>
           </div>
         ) : (
-          <div className="rounded-xl border border-dashed border-wire-600 bg-wire-900/60 px-3 py-3">
+          <div className="rounded-[var(--radius-input)] border border-dashed border-wire-600 bg-wire-900/60 px-4 py-3">
             <p className="text-[13px] font-medium text-wire-200">No CV or profile links added</p>
             <p className="mt-1 wire-meta">
               Optional. Add only if it helps with campus opportunities and collaboration.
             </p>
           </div>
         )}
-      </FormSection>
+      </SectionCard>
 
-      <SectionCard title="Quick Access" actionLabel="Settings" actionHref="/profile/settings">
+      <SectionCard
+        title="Quick access"
+        subtitle="Jump to your most-used profile-adjacent spaces."
+        actionLabel="Settings"
+        actionHref="/profile/settings"
+      >
         <QuickAccessGrid items={quickAccessItems} columns={2} />
       </SectionCard>
     </main>
