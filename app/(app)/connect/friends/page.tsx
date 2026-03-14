@@ -44,7 +44,6 @@ export default async function ConnectFriendsPage({ searchParams }: ConnectFriend
     <main>
       <TopBar
         title="Friends"
-        subtitle="Requests and current friends"
         backHref="/connect"
         actions={[{ label: "People", href: "/connect/people" }]}
       />
@@ -67,7 +66,6 @@ export default async function ConnectFriendsPage({ searchParams }: ConnectFriend
       <section className="wire-panel">
         <div className="mb-3 border-b border-wire-700 pb-3">
           <h2 className="wire-section-title">Incoming requests</h2>
-          <p className="mt-1 wire-meta">Accept or reject pending friend requests.</p>
         </div>
         {requests.length > 0 ? (
           <div className="space-y-2.5">
@@ -131,7 +129,6 @@ export default async function ConnectFriendsPage({ searchParams }: ConnectFriend
       <section className="wire-panel">
         <div className="mb-3 border-b border-wire-700 pb-3">
           <h2 className="wire-section-title">Friends</h2>
-          <p className="mt-1 wire-meta">Students you are connected with.</p>
         </div>
         {friends.length > 0 ? (
           <div className="space-y-2.5">

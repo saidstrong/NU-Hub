@@ -50,7 +50,6 @@ export default async function PersonProfilePage({ params, searchParams }: Person
         <section className="wire-panel">
           <SectionHeader
             title="Student profile"
-            subtitle="Campus identity and collaboration context."
             actionNode={
               <Link href="/connect/people" className="wire-link">
                 Back to people
@@ -73,7 +72,7 @@ export default async function PersonProfilePage({ params, searchParams }: Person
 
   const personCard = toPersonCardData(person);
   const isSelfProfile = person.user_id === user.id;
-  const subtitle = `${personCard.major} • ${personCard.year}`;
+  const subtitle = `${personCard.major} - ${personCard.year}`;
   const avatarUrl = toPublicStorageUrl("avatars", person.avatar_path);
   const name = personCard.name || "NU student";
   const links =
@@ -86,7 +85,6 @@ export default async function PersonProfilePage({ params, searchParams }: Person
       <section className="wire-panel">
         <SectionHeader
           title="Student profile"
-          subtitle="Campus identity and collaboration context."
           actionNode={
             <Link href="/connect/people" className="wire-link">
               Back to people
@@ -197,10 +195,7 @@ export default async function PersonProfilePage({ params, searchParams }: Person
 
           {!isSelfProfile ? (
             <section className="wire-panel">
-              <SectionHeader
-                title="Relationship"
-                subtitle="Manage friend connection and messaging actions."
-              />
+              <SectionHeader title="Relationship" />
               {friendship?.status === "accepted" ? (
                 <div className="wire-action-row">
                   <form action={startFriendConversationAction} className="w-full">
@@ -256,10 +251,7 @@ export default async function PersonProfilePage({ params, searchParams }: Person
             </section>
           ) : (
             <section className="wire-panel">
-              <SectionHeader
-                title="Relationship"
-                subtitle="Your friend network and messaging."
-              />
+              <SectionHeader title="Relationship" />
               <ShellButton label="View friends" href="/connect/friends" variant="default" />
             </section>
           )}

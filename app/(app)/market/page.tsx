@@ -44,7 +44,6 @@ export default async function MarketHomePage({ searchParams }: MarketHomePagePro
       <section className="wire-panel">
         <SectionHeader
           title="Market"
-          subtitle="Student marketplace."
           actionNode={
             <Link href="/market/my-listings" className="wire-link">
               My listings
@@ -53,8 +52,7 @@ export default async function MarketHomePage({ searchParams }: MarketHomePagePro
         />
       </section>
 
-      <section className="wire-panel">
-        <SectionHeader title="Search" />
+      <section className="wire-panel py-4">
         <SearchBar
           placeholder="Search marketplace"
           queryName="q"
@@ -63,30 +61,30 @@ export default async function MarketHomePage({ searchParams }: MarketHomePagePro
         />
       </section>
 
-      <section className="wire-panel">
-        <SectionHeader title="Categories" />
-        <div className="flex flex-wrap gap-2">
+      <section className="wire-panel py-4">
+        <div className="-mx-1 flex snap-x snap-mandatory gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {marketCategories.map((category) => (
-            <Link key={category} href={`/market/category/${category.toLowerCase()}`}>
+            <Link
+              key={category}
+              href={`/market/category/${category.toLowerCase()}`}
+              className="shrink-0 snap-start"
+            >
               <TagChip label={category} />
             </Link>
           ))}
         </div>
       </section>
 
-      <section className="wire-panel">
-        <SectionHeader title="Actions" />
-        <div className="wire-action-row">
-          <ShellButton label="Post listing" href="/market/post" variant="primary" />
+      <section className="wire-panel py-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <ShellButton label="Post listing" href="/market/post" variant="primary" block={false} />
           <Link href="/market/messages" className="wire-action">
             Messages
           </Link>
-        </div>
-        <div className="mt-3 flex flex-wrap gap-3">
-          <Link href="/market/saved" className="wire-link">
+          <Link href="/market/saved" className="wire-action-compact">
             Saved listings
           </Link>
-          <Link href="/market/my-listings" className="wire-link">
+          <Link href="/market/my-listings" className="wire-action-compact">
             Listing status
           </Link>
         </div>

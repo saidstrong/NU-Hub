@@ -1,5 +1,4 @@
 import { EmptyState } from "@/components/ui/EmptyState";
-import { FilterRow } from "@/components/ui/FilterRow";
 import { PersonCard } from "@/components/ui/PersonCard";
 import { SearchBar } from "@/components/ui/SearchBar";
 import { SectionCard } from "@/components/ui/SectionCard";
@@ -20,7 +19,6 @@ export default async function PeopleDiscoveryPage() {
     <main>
       <TopBar
         title="People"
-        subtitle="Find peers for study, projects, and aligned interests"
         backHref="/connect"
       />
       {loadError ? (
@@ -29,11 +27,6 @@ export default async function PeopleDiscoveryPage() {
         </div>
       ) : null}
       <SearchBar placeholder="Find students" />
-
-      <section className="wire-panel">
-        <p className="wire-section-title mb-3">Refine people</p>
-        <FilterRow filters={["All", "Study Peers", "Project Collaborators", "By Major", "By Year"]} />
-      </section>
 
       <SectionCard title="Students You May Work With">
         {people.length > 0 ? (

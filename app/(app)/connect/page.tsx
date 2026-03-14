@@ -30,7 +30,6 @@ export default async function ConnectHomePage() {
       <section className="wire-panel">
         <SectionHeader
           title="Connect"
-          subtitle="People and communities."
           actionNode={
             <Link href="/connect/friends" className="wire-link">
               Friends
@@ -41,8 +40,7 @@ export default async function ConnectHomePage() {
 
       {loadError ? <FeedbackBanner tone="error" message={loadError} /> : null}
 
-      <section className="wire-panel">
-        <SectionHeader title="Search" />
+      <section className="wire-panel py-4">
         <SearchBar
           placeholder="Search students and communities"
           queryName="q"
@@ -51,19 +49,16 @@ export default async function ConnectHomePage() {
         />
       </section>
 
-      <section className="wire-panel">
-        <SectionHeader title="Actions" />
-        <div className="wire-action-row">
-          <ShellButton label="Find people" href="/connect/people" variant="primary" />
+      <section className="wire-panel py-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <ShellButton label="Find people" href="/connect/people" variant="primary" block={false} />
           <Link href="/connect/communities" className="wire-action">
             Communities
           </Link>
-        </div>
-        <div className="mt-3 flex flex-wrap gap-3">
-          <Link href="/connect/messages" className="wire-link">
+          <Link href="/connect/messages" className="wire-action-compact">
             Messages
           </Link>
-          <Link href="/connect/my-communities" className="wire-link">
+          <Link href="/connect/my-communities" className="wire-action-compact">
             My communities
           </Link>
         </div>

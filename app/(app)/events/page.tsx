@@ -44,7 +44,6 @@ export default async function EventsHomePage({ searchParams }: EventsHomePagePro
       <section className="wire-panel">
         <SectionHeader
           title="Events"
-          subtitle="Campus events, at a glance."
           actionNode={
             <Link href="/events/my-events" className="wire-link">
               My events
@@ -53,8 +52,7 @@ export default async function EventsHomePage({ searchParams }: EventsHomePagePro
         />
       </section>
 
-      <section className="wire-panel">
-        <SectionHeader title="Search" />
+      <section className="wire-panel py-4">
         <SearchBar
           placeholder="Search events"
           queryName="q"
@@ -63,16 +61,13 @@ export default async function EventsHomePage({ searchParams }: EventsHomePagePro
         />
       </section>
 
-      <section className="wire-panel">
-        <SectionHeader title="Actions" />
-        <div className="wire-action-row">
-          <ShellButton label="Create event" href="/events/create" variant="primary" />
+      <section className="wire-panel py-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <ShellButton label="Create event" href="/events/create" variant="primary" block={false} />
           <Link href="/events/list" className="wire-action">
             Event list
           </Link>
-        </div>
-        <div className="mt-3 flex flex-wrap gap-3">
-          <Link href="/events/saved" className="wire-link">
+          <Link href="/events/saved" className="wire-action-compact">
             Saved events
           </Link>
         </div>

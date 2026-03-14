@@ -2,7 +2,6 @@
 import { notFound } from "next/navigation";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FeedbackBanner } from "@/components/ui/FeedbackBanner";
-import { SectionHeader } from "@/components/ui/SectionHeader";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import { TopBar } from "@/components/ui/TopBar";
 import { sendFriendMessageAction } from "@/lib/connect/actions";
@@ -48,7 +47,6 @@ export default async function FriendConversationPage({
       <main className="mx-auto w-full max-w-4xl">
         <TopBar
           title="Messages"
-          subtitle="Conversation"
           backHref="/connect/messages"
         />
         {loadError ? <FeedbackBanner tone="error" message={loadError} /> : null}
@@ -76,8 +74,7 @@ export default async function FriendConversationPage({
       {error ? <FeedbackBanner tone="error" message={error} /> : null}
       {loadError ? <FeedbackBanner tone="error" message={loadError} /> : null}
 
-      <section className="wire-panel">
-        <SectionHeader title="Conversation" />
+      <section className="wire-panel py-4">
         <div className="flex items-center gap-2.5">
           {counterpartAvatarUrl ? (
             <img
@@ -92,25 +89,26 @@ export default async function FriendConversationPage({
         </div>
       </section>
 
-      <section className="wire-panel">
-        <SectionHeader title="Messages" />
+      <section className="wire-panel py-4">
         {thread.messages.length > 0 ? (
-          <div className="space-y-2">
+          <div className="space-y-3 rounded-[var(--radius-card)] border border-wire-700 bg-wire-950/55 p-3 sm:p-4">
             {thread.messages.map((messageItem) => {
+              const senderLabel = messageItem.isOwnMessage ? "You" : messageItem.senderName;
+
               return (
                 <article
                   key={messageItem.id}
                   className={messageItem.isOwnMessage
-                    ? "ml-auto max-w-[88%] rounded-2xl border border-accent/35 bg-accent/12 px-3 py-2.5 sm:max-w-[78%] xl:max-w-[68%]"
-                    : "mr-auto max-w-[88%] rounded-2xl border border-wire-700 bg-wire-800 px-3 py-2.5 sm:max-w-[78%] xl:max-w-[68%]"}
+                    ? "ml-auto max-w-[88%] rounded-2xl rounded-br-md border border-accent/45 bg-accent/18 px-3 py-2.5 sm:max-w-[78%] xl:max-w-[68%]"
+                    : "mr-auto max-w-[88%] rounded-2xl rounded-bl-md border border-wire-700 bg-wire-800 px-3 py-2.5 sm:max-w-[78%] xl:max-w-[68%]"}
                 >
-                  <div className="mb-1 flex items-center justify-between gap-2">
-                    <p className="truncate text-[11px] font-medium text-wire-300">{messageItem.senderName}</p>
-                    <p className="text-[10px] text-wire-400">{formatMessageTime(messageItem.createdAt)}</p>
-                  </div>
+                  <p className="mb-1 truncate text-[10px] font-medium uppercase tracking-[0.06em] text-wire-400">
+                    {senderLabel}
+                  </p>
                   <p className="whitespace-pre-wrap break-words text-[13px] text-wire-100">
                     {messageItem.content}
                   </p>
+                  <p className="mt-1.5 text-right text-[10px] text-wire-400">{formatMessageTime(messageItem.createdAt)}</p>
                 </article>
               );
             })}
@@ -124,9 +122,11 @@ export default async function FriendConversationPage({
         )}
       </section>
 
-      <section className="wire-panel">
-        <SectionHeader title="Send message" />
-        <form action={sendFriendMessageAction} className="space-y-2">
+      <section className="wire-panel py-4">
+        <form
+          action={sendFriendMessageAction}
+          className="space-y-2 rounded-[var(--radius-card)] border border-wire-700 bg-wire-950/45 p-3 sm:p-4"
+        >
           <input type="hidden" name="conversationId" value={thread.conversationId} />
           <input type="hidden" name="redirectTo" value={conversationPath} />
           <textarea
@@ -137,11 +137,12 @@ export default async function FriendConversationPage({
             placeholder="Write a message..."
             className="wire-textarea-field"
           />
-          <div className="wire-action-row-single">
+          <div className="wire-action-row-single sm:flex sm:justify-end">
             <SubmitButton
               label="Send message"
               pendingLabel="Sending..."
               variant="primary"
+              className="sm:w-auto sm:min-w-[132px]"
             />
           </div>
         </form>

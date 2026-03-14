@@ -109,7 +109,6 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
       <section className="wire-panel">
         <SectionHeader
           title="Profile"
-          subtitle="Your identity page."
           actionNode={
             <Link href="/profile/settings" className="wire-link">
               Settings

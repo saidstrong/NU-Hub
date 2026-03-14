@@ -15,7 +15,6 @@ import { PersonCard } from "@/components/ui/PersonCard";
 import { SearchBar } from "@/components/ui/SearchBar";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { SectionCard } from "@/components/ui/SectionCard";
-import { ShellButton } from "@/components/ui/ShellButton";
 import {
   getCommunities,
   getPeopleDiscovery,
@@ -48,27 +47,17 @@ export default async function HomePage() {
       <section className="wire-panel">
         <SectionHeader
           title="NU Atrium"
-          subtitle="Your campus dashboard."
           actionNode={
             <Link href="/profile" className="wire-link">
               Profile
             </Link>
           }
         />
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="max-w-[52ch] text-[14px] leading-[22px] text-wire-200">
-              See what matters today across market, events, and community.
-            </p>
-          </div>
-          <ShellButton label="Browse market" href="/market" variant="primary" block={false} />
-        </div>
       </section>
 
       {loadError ? <FeedbackBanner tone="error" message={loadError} /> : null}
 
-      <section className="wire-panel">
-        <SectionHeader title="Search" />
+      <section className="wire-panel py-4">
         <SearchBar
           placeholder="Search market, events, people, communities"
           queryName="q"
@@ -140,12 +129,12 @@ export default async function HomePage() {
               ))}
             </div>
           ) : !loadError ? (
-            <EmptyState
-              title="No listings yet"
-              description="Published market listings will appear here."
-              actionLabel="Browse market"
-              actionHref="/market"
-            />
+          <EmptyState
+            title="No listings yet"
+            description="Published market listings will appear here."
+            actionLabel="Open market"
+            actionHref="/market"
+          />
           ) : null}
         </SectionCard>
 
