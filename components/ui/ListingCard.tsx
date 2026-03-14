@@ -27,11 +27,11 @@ export function ListingCard({ listing, href }: ListingCardProps) {
           <img
             src={listing.imageUrl}
             alt={listing.title}
-            className="h-[84px] w-[84px] shrink-0 rounded-xl border border-wire-700 bg-wire-900 object-cover sm:h-[90px] sm:w-[90px]"
+            className="h-[86px] w-[108px] shrink-0 rounded-xl border border-wire-700 bg-wire-900 object-cover object-center sm:h-[96px] sm:w-[124px]"
             loading="lazy"
           />
         ) : (
-          <div className="wire-placeholder h-[84px] w-[84px] shrink-0 sm:h-[90px] sm:w-[90px]" />
+          <div className="wire-placeholder h-[86px] w-[108px] shrink-0 sm:h-[96px] sm:w-[124px]" />
         )}
         <div className="min-w-0 flex-1">
           <div className="mb-1 flex items-start justify-between gap-2">

@@ -50,15 +50,14 @@ export default async function MarketHomePage({ searchParams }: MarketHomePagePro
             </Link>
           }
         />
-      </section>
-
-      <section className="wire-panel py-4">
-        <SearchBar
-          placeholder="Search marketplace"
-          queryName="q"
-          defaultValue=""
-          action="/search"
-        />
+        <div className="mt-3">
+          <SearchBar
+            placeholder="Search marketplace"
+            queryName="q"
+            defaultValue=""
+            action="/search"
+          />
+        </div>
       </section>
 
       <section className="wire-panel py-4">
@@ -81,10 +80,12 @@ export default async function MarketHomePage({ searchParams }: MarketHomePagePro
           <Link href="/market/messages" className="wire-action">
             Messages
           </Link>
-          <Link href="/market/saved" className="wire-action-compact">
+        </div>
+        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+          <Link href="/market/saved" className="wire-link">
             Saved listings
           </Link>
-          <Link href="/market/my-listings" className="wire-action-compact">
+          <Link href="/market/my-listings" className="wire-link">
             Listing status
           </Link>
         </div>

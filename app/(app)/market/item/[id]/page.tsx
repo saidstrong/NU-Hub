@@ -108,16 +108,16 @@ export default async function MarketItemDetailPage({
               <img
                 src={coverImageUrl}
                 alt={listing.title}
-                className="h-60 w-full rounded-[var(--radius-input)] border border-wire-700 bg-wire-900 object-cover sm:h-[22rem]"
+                className="aspect-[4/3] w-full rounded-[var(--radius-input)] border border-wire-700 bg-wire-900 object-cover object-center sm:aspect-[16/10]"
               />
               {extraImageUrls.length > 0 ? (
-                <div className="-mx-1 mt-3 flex snap-x snap-mandatory gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:grid sm:grid-cols-4 sm:overflow-visible sm:px-0">
+                <div className="-mx-1 mt-3 flex snap-x snap-mandatory gap-2.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:grid sm:grid-cols-4 sm:overflow-visible sm:px-0">
                   {extraImageUrls.map((imageUrl, index) => (
                     <img
                       key={`${imageUrl}-${index}`}
                       src={imageUrl}
                       alt={`${listing.title} ${index + 2}`}
-                      className="h-20 w-28 shrink-0 snap-start rounded-[var(--radius-input)] border border-wire-700 bg-wire-900 object-cover sm:h-16 sm:w-full"
+                      className="aspect-[4/3] w-28 shrink-0 snap-start rounded-[var(--radius-input)] border border-wire-700 bg-wire-900 object-cover object-center sm:w-full"
                     />
                   ))}
                 </div>

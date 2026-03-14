@@ -50,15 +50,14 @@ export default async function EventsHomePage({ searchParams }: EventsHomePagePro
             </Link>
           }
         />
-      </section>
-
-      <section className="wire-panel py-4">
-        <SearchBar
-          placeholder="Search events"
-          queryName="q"
-          defaultValue=""
-          action="/search"
-        />
+        <div className="mt-3">
+          <SearchBar
+            placeholder="Search events"
+            queryName="q"
+            defaultValue=""
+            action="/search"
+          />
+        </div>
       </section>
 
       <section className="wire-panel py-4">

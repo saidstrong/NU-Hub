@@ -36,18 +36,17 @@ export default async function ConnectHomePage() {
             </Link>
           }
         />
+        <div className="mt-3">
+          <SearchBar
+            placeholder="Search students and communities"
+            queryName="q"
+            defaultValue=""
+            action="/search"
+          />
+        </div>
       </section>
 
       {loadError ? <FeedbackBanner tone="error" message={loadError} /> : null}
-
-      <section className="wire-panel py-4">
-        <SearchBar
-          placeholder="Search students and communities"
-          queryName="q"
-          defaultValue=""
-          action="/search"
-        />
-      </section>
 
       <section className="wire-panel py-4">
         <div className="flex flex-wrap items-center gap-2">

@@ -120,7 +120,6 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
       {message ? <FeedbackBanner tone="success" message={message} /> : null}
 
       <section className="wire-panel">
-        <SectionHeader title="Profile summary" />
         <div className="flex items-start gap-4">
           {avatarUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
