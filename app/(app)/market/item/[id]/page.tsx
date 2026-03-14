@@ -1,7 +1,11 @@
 /* eslint-disable @next/next/no-img-element */
 import Link from "next/link";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { TopBar } from "@/components/ui/TopBar";
+import { FeedbackBanner } from "@/components/ui/FeedbackBanner";
+import { SectionCard } from "@/components/ui/SectionCard";
+import { SectionHeader } from "@/components/ui/SectionHeader";
+import { ShellButton } from "@/components/ui/ShellButton";
+import { TagChip } from "@/components/ui/TagChip";
 import { notFound } from "next/navigation";
 import { startListingConversationAction, toggleSavedListingAction } from "@/lib/market/actions";
 import { reportContentAction } from "@/lib/moderation/actions";
@@ -41,16 +45,18 @@ export default async function MarketItemDetailPage({
   if (!detail || !detail.listing) {
     return (
       <main>
-        <TopBar
-          title="Listing"
-          subtitle="Listing overview and seller information"
-          backHref="/market"
-        />
-        {loadError ? (
-          <div className="rounded-xl border border-red-400/30 bg-red-400/10 px-3 py-2 text-[13px] text-red-200">
-            {loadError}
-          </div>
-        ) : null}
+        <section className="wire-panel">
+          <SectionHeader
+            title="Listing"
+            subtitle="Listing overview and seller context."
+            actionNode={
+              <Link href="/market" className="wire-link">
+                Back to market
+              </Link>
+            }
+          />
+        </section>
+        {loadError ? <FeedbackBanner tone="error" message={loadError} /> : null}
         <EmptyState
           title="Listing not available"
           description="This listing may have been removed or is no longer visible."
@@ -72,71 +78,71 @@ export default async function MarketItemDetailPage({
 
   return (
     <main>
-      <TopBar
-        title="Listing"
-        subtitle="Listing overview and seller information"
-        backHref="/market"
-      />
-      {message ? (
-        <div className="rounded-xl border border-accent/35 bg-accent/10 px-3 py-2 text-[13px] text-wire-100">
-          {message}
+      <section className="wire-panel">
+        <SectionHeader
+          title="Listing"
+          subtitle="Practical listing details and seller context."
+          actionNode={
+            <Link href="/market" className="wire-link">
+              Back to market
+            </Link>
+          }
+        />
+        <h2 className="text-[28px] font-semibold leading-[34px] tracking-tight text-wire-100">{listing.title}</h2>
+        <p className="mt-1 text-[20px] font-semibold text-wire-100">{formatPriceKzt(listing.price_kzt)}</p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <TagChip label={listing.category} active />
+          <TagChip label={listing.condition} tone="status" />
+          <TagChip label={formatStatusLabel(listing.status)} tone="status" />
         </div>
-      ) : null}
-      {error ? (
-        <div className="rounded-xl border border-red-400/30 bg-red-400/10 px-3 py-2 text-[13px] text-red-200">
-          {error}
-        </div>
-      ) : null}
+        <p className="mt-3 wire-meta">Pickup: {listing.pickup_location}</p>
+      </section>
+
+      {message ? <FeedbackBanner tone="success" message={message} /> : null}
+      {error ? <FeedbackBanner tone="error" message={error} /> : null}
 
       {coverImageUrl ? (
-        <section className="wire-panel">
+        <SectionCard title="Images" subtitle="Preview and item condition context.">
           <img
             src={coverImageUrl}
             alt={listing.title}
-            className="h-44 w-full rounded-xl border border-wire-700 bg-wire-900 object-cover"
+            className="h-48 w-full rounded-[var(--radius-input)] border border-wire-700 bg-wire-900 object-cover"
           />
           {extraImageUrls.length > 0 ? (
-            <div className="mt-2 grid grid-cols-4 gap-2">
+            <div className="mt-3 grid grid-cols-4 gap-2">
               {extraImageUrls.map((imageUrl, index) => (
                 <img
                   key={`${imageUrl}-${index}`}
                   src={imageUrl}
                   alt={`${listing.title} ${index + 2}`}
-                  className="h-16 w-full rounded-xl border border-wire-700 bg-wire-900 object-cover"
+                  className="h-16 w-full rounded-[var(--radius-input)] border border-wire-700 bg-wire-900 object-cover"
                 />
               ))}
             </div>
           ) : null}
-        </section>
+        </SectionCard>
       ) : (
         <div className="wire-placeholder h-44" />
       )}
 
-      <div className="wire-panel">
-        <h2 className="text-[18px] font-semibold tracking-tight text-wire-100">{listing.title}</h2>
-        <p className="mt-1 text-[15px] font-medium text-wire-200">{formatPriceKzt(listing.price_kzt)}</p>
-        <div className="mt-3 space-y-1">
-          <p className="wire-meta">Category: {listing.category}</p>
-          <p className="wire-meta">Condition: {listing.condition}</p>
-          <p className="wire-meta">Pickup: {listing.pickup_location}</p>
-          <p className="wire-meta">Status: {formatStatusLabel(listing.status)}</p>
-        </div>
-      </div>
-
-      <div className="wire-panel">
-        <h3 className="mb-2 text-sm font-semibold text-wire-100">Description</h3>
-        <p className="text-[13px] leading-relaxed text-wire-200">
+      <SectionCard
+        title="Description"
+        subtitle="Seller-provided details for decision making."
+      >
+        <p className="text-[14px] leading-relaxed text-wire-200">
           {listing.description || "No description provided."}
         </p>
-      </div>
+      </SectionCard>
 
-      <div className="wire-panel">
-        <h3 className="mb-2 text-sm font-semibold text-wire-100">Seller</h3>
+      <SectionCard
+        title="Seller"
+        subtitle="Owner profile and campus context."
+      >
         <Link
           href={`/connect/people/${listing.seller_id}`}
-          className="block rounded-xl px-1 py-1 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/40"
+          className="block rounded-[var(--radius-input)] px-1 py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
         >
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-3 py-2.5">
             {sellerAvatarUrl ? (
               <img
                 src={sellerAvatarUrl}
@@ -152,43 +158,51 @@ export default async function MarketItemDetailPage({
             </div>
           </div>
         </Link>
-      </div>
+      </SectionCard>
 
-      <div className="wire-action-row">
-        <form action={toggleSavedListingAction} className="w-full">
-          <input type="hidden" name="listingId" value={listing.id} />
-          <input type="hidden" name="redirectTo" value={`/market/item/${listing.id}`} />
-          <button type="submit" className="wire-action w-full">
-            {isSaved ? "Unsave listing" : "Save listing"}
-          </button>
-        </form>
-        {isOwner ? (
-          <Link href={`/market/item/${listing.id}/edit`} className="wire-action-primary w-full">
-            Edit listing
-          </Link>
-        ) : (
-          <form action={startListingConversationAction} className="w-full">
+      <section className="wire-panel">
+        <SectionHeader
+          title="Actions"
+          subtitle="Primary next step plus lightweight utilities."
+        />
+        <div className="wire-action-row">
+          {isOwner ? (
+            <ShellButton
+              label="Edit listing"
+              href={`/market/item/${listing.id}/edit`}
+              variant="primary"
+            />
+          ) : (
+            <form action={startListingConversationAction} className="w-full">
+              <input type="hidden" name="listingId" value={listing.id} />
+              <input type="hidden" name="redirectTo" value={`/market/item/${listing.id}`} />
+              <button type="submit" className="wire-action-primary w-full">
+                Message seller
+              </button>
+            </form>
+          )}
+          <form action={toggleSavedListingAction} className="w-full">
             <input type="hidden" name="listingId" value={listing.id} />
             <input type="hidden" name="redirectTo" value={`/market/item/${listing.id}`} />
-            <button type="submit" className="wire-action-primary w-full">
-              Message seller
-            </button>
-          </form>
-        )}
-      </div>
-      {!isOwner ? (
-        <div className="wire-action-row-single">
-          <form action={reportContentAction}>
-            <input type="hidden" name="targetType" value="listing" />
-            <input type="hidden" name="targetId" value={listing.id} />
-            <input type="hidden" name="reason" value="inappropriate" />
-            <input type="hidden" name="redirectTo" value={`/market/item/${listing.id}`} />
-            <button type="submit" className="wire-action-compact">
-              Report listing
+            <button type="submit" className="wire-action w-full">
+              {isSaved ? "Unsave listing" : "Save listing"}
             </button>
           </form>
         </div>
-      ) : null}
+        {!isOwner ? (
+          <div className="mt-3">
+            <form action={reportContentAction}>
+              <input type="hidden" name="targetType" value="listing" />
+              <input type="hidden" name="targetId" value={listing.id} />
+              <input type="hidden" name="reason" value="inappropriate" />
+              <input type="hidden" name="redirectTo" value={`/market/item/${listing.id}`} />
+              <button type="submit" className="wire-action-ghost">
+                Report listing
+              </button>
+            </form>
+          </div>
+        ) : null}
+      </section>
     </main>
   );
 }
