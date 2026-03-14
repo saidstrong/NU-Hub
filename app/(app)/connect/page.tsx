@@ -7,10 +7,6 @@ import { SearchBar } from "@/components/ui/SearchBar";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { ShellButton } from "@/components/ui/ShellButton";
-import { TagChip } from "@/components/ui/TagChip";
-import {
-  lookingForChips,
-} from "@/lib/mock-data";
 import {
   getCommunities,
   getPeopleDiscovery,
@@ -59,21 +55,6 @@ export default async function ConnectHomePage() {
           defaultValue=""
           action="/search"
         />
-      </section>
-
-      <section className="wire-panel">
-        <SectionHeader
-          title="Discovery focus"
-          subtitle="Keep filters lightweight and focus on strong identity signals."
-        />
-        <p className="mb-3 wire-meta">
-          Explore people and communities aligned with your study goals, projects, and interests.
-        </p>
-        <div className="flex flex-wrap gap-2">
-          {lookingForChips.map((chip) => (
-            <TagChip key={chip} label={chip} />
-          ))}
-        </div>
       </section>
 
       <section className="wire-panel">

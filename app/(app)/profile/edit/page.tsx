@@ -14,7 +14,14 @@ type EditProfilePageProps = {
 
 function linksToDefaults(links: unknown) {
   if (!links || typeof links !== "object" || Array.isArray(links)) {
-    return { github: "", linkedin: "", portfolio: "" };
+    return {
+      github: "",
+      linkedin: "",
+      portfolio: "",
+      telegram: "",
+      instagram: "",
+      relationship_status: "",
+    };
   }
 
   const source = links as Record<string, unknown>;
@@ -22,6 +29,10 @@ function linksToDefaults(links: unknown) {
     github: typeof source.github === "string" ? source.github : "",
     linkedin: typeof source.linkedin === "string" ? source.linkedin : "",
     portfolio: typeof source.portfolio === "string" ? source.portfolio : "",
+    telegram: typeof source.telegram === "string" ? source.telegram : "",
+    instagram: typeof source.instagram === "string" ? source.instagram : "",
+    relationship_status:
+      typeof source.relationship_status === "string" ? source.relationship_status : "",
   };
 }
 
@@ -125,6 +136,23 @@ export default async function EditProfilePage({ searchParams }: EditProfilePageP
           <WireField label="GitHub" name="githubUrl" defaultValue={linkDefaults.github} />
           <WireField label="LinkedIn" name="linkedinUrl" defaultValue={linkDefaults.linkedin} />
           <WireField label="Portfolio" name="portfolioUrl" defaultValue={linkDefaults.portfolio} />
+          <WireField
+            label="Telegram"
+            name="telegramNickname"
+            defaultValue={linkDefaults.telegram}
+            placeholder="@nickname"
+          />
+          <WireField
+            label="Instagram"
+            name="instagramNickname"
+            defaultValue={linkDefaults.instagram}
+            placeholder="@nickname"
+          />
+          <WireField
+            label="Relationship status"
+            name="relationshipStatus"
+            defaultValue={linkDefaults.relationship_status}
+          />
         </FormSection>
 
         <div className="wire-action-row">

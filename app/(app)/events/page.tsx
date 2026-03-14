@@ -1,15 +1,12 @@
 import Link from "next/link";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FeedbackBanner } from "@/components/ui/FeedbackBanner";
-import { FilterRow } from "@/components/ui/FilterRow";
 import { EventCard } from "@/components/ui/EventCard";
 import { PageNavigation } from "@/components/ui/PageNavigation";
 import { SearchBar } from "@/components/ui/SearchBar";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { ShellButton } from "@/components/ui/ShellButton";
-import { TagChip } from "@/components/ui/TagChip";
-import { eventCategories } from "@/lib/mock-data";
 import { getPublishedEventsPage, toEventCardData } from "@/lib/events/data";
 import { buildPageHref, parsePageParam } from "@/lib/pagination";
 
@@ -74,21 +71,8 @@ export default async function EventsHomePage({ searchParams }: EventsHomePagePro
 
       <section className="wire-panel">
         <SectionHeader
-          title="Categories and filters"
-          subtitle="Keep filters light and focus on the strongest upcoming opportunities."
-        />
-        <div className="mb-4 flex flex-wrap gap-2">
-          {eventCategories.map((category) => (
-            <TagChip key={category} label={category} />
-          ))}
-        </div>
-        <FilterRow filters={["This week", "Campus", "Saved"]} activeIndex={-1} />
-      </section>
-
-      <section className="wire-panel">
-        <SectionHeader
           title="Actions"
-          subtitle="Create and navigate event views quickly."
+          subtitle="Use launch-ready event views and publishing actions."
         />
         <div className="wire-action-row">
           <ShellButton label="Create event" href="/events/create" variant="primary" />

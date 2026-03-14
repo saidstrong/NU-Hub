@@ -25,7 +25,7 @@ type ProfilePageProps = {
 
 function joinLine(parts: Array<string | null>): string {
   const safeParts = parts.map((part) => (part ?? "").trim()).filter(Boolean);
-  return safeParts.length > 0 ? safeParts.join(" • ") : "Campus student profile";
+  return safeParts.length > 0 ? safeParts.join(" | ") : "Campus student profile";
 }
 
 function parseProjects(projects: unknown): Array<{ title: string; summary?: string }> {
@@ -61,6 +61,30 @@ function parseLinks(links: unknown): Array<{ label: string; value: string }> {
     .filter((item): item is { label: string; value: string } => item !== null);
 }
 
+function parseProfileExtras(links: unknown): {
+  telegram: string | null;
+  instagram: string | null;
+  relationshipStatus: string | null;
+} {
+  if (!links || typeof links !== "object" || Array.isArray(links)) {
+    return { telegram: null, instagram: null, relationshipStatus: null };
+  }
+
+  const source = links as Record<string, unknown>;
+  const readValue = (key: string): string | null => {
+    const value = source[key];
+    if (typeof value !== "string") return null;
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  };
+
+  return {
+    telegram: readValue("telegram"),
+    instagram: readValue("instagram"),
+    relationshipStatus: readValue("relationship_status"),
+  };
+}
+
 function EmptyText({ text }: { text: string }) {
   return (
     <div className="wire-inline-empty">
@@ -74,6 +98,8 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
   const subtitle = joinLine([profile.school, profile.major, profile.year_label]);
   const projects = parseProjects(profile.projects);
   const links = parseLinks(profile.links);
+  const extras = parseProfileExtras(profile.links);
+  const hasExtras = Boolean(extras.telegram || extras.instagram || extras.relationshipStatus);
   const avatarUrl = toPublicStorageUrl("avatars", profile.avatar_path);
   const name = profile.full_name || "NU student";
   const profileContext = subtitle || "Campus student profile";
@@ -277,14 +303,42 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
               ))}
             </div>
           </div>
-        ) : (
+        ) : null}
+
+        {hasExtras ? (
+          <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-4 py-3">
+            <p className="wire-label">Social & personal</p>
+            <div className="mt-2 space-y-2">
+              {extras.telegram ? (
+                <p className="text-[13px] text-wire-300">
+                  Telegram
+                  <span className="ml-2 text-wire-200">{extras.telegram}</span>
+                </p>
+              ) : null}
+              {extras.instagram ? (
+                <p className="text-[13px] text-wire-300">
+                  Instagram
+                  <span className="ml-2 text-wire-200">{extras.instagram}</span>
+                </p>
+              ) : null}
+              {extras.relationshipStatus ? (
+                <p className="text-[13px] text-wire-300">
+                  Relationship status
+                  <span className="ml-2 text-wire-200">{extras.relationshipStatus}</span>
+                </p>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
+
+        {!profile.resume_url && links.length === 0 && !hasExtras ? (
           <div className="rounded-[var(--radius-input)] border border-dashed border-wire-600 bg-wire-900/60 px-4 py-3">
             <p className="text-[13px] font-medium text-wire-200">No CV or profile links added</p>
             <p className="mt-1 wire-meta">
               Optional. Add only if it helps with campus opportunities and collaboration.
             </p>
           </div>
-        )}
+        ) : null}
       </SectionCard>
 
       <SectionCard

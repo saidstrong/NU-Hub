@@ -1,9 +1,12 @@
+import Link from "next/link";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { SectionCard } from "@/components/ui/SectionCard";
+import { ShellButton } from "@/components/ui/ShellButton";
 import { TopBar } from "@/components/ui/TopBar";
 import {
-  campusMapInfo,
+  campusCodeOfConduct,
+  campusMap,
   campusServices,
-  codeOfConductItems,
   importantContacts,
 } from "@/lib/campus/data";
 
@@ -13,46 +16,94 @@ function valueOrFallback(value: string | undefined, fallback = "Not listed"): st
   return trimmed || fallback;
 }
 
+function isImageAsset(assetUrl: string): boolean {
+  return /\.(png|jpe?g|webp|gif|svg)$/i.test(assetUrl);
+}
+
+function isPdfAsset(assetUrl: string): boolean {
+  return /\.pdf$/i.test(assetUrl);
+}
+
 export default function CampusInfoPage() {
+  const mapIsImage = isImageAsset(campusMap.assetUrl);
+  const mapIsPdf = isPdfAsset(campusMap.assetUrl);
+
   return (
     <main>
       <TopBar
         title="Campus Information"
-        subtitle="Practical NU references for everyday student life"
+        subtitle="Essential NU references for daily student life."
         backHref="/home"
       />
 
-      <SectionCard title="Code of Conduct">
-        <p className="mb-3 wire-meta">
-          Core expectations for respectful, safe, and responsible campus participation.
+      <SectionCard
+        title="Code of Conduct"
+        subtitle="Official campus conduct guidance."
+      >
+        <p className="mb-3 text-[14px] leading-relaxed text-wire-200">
+          {campusCodeOfConduct.summary}
         </p>
-        <div className="space-y-2.5">
-          {codeOfConductItems.map((item) => (
-            <div key={item.title} className="rounded-xl border border-wire-700 bg-wire-800 px-3 py-2.5">
-              <p className="text-sm font-medium text-wire-100">{item.title}</p>
-              <p className="mt-1 text-[13px] text-wire-200">{item.detail}</p>
-            </div>
-          ))}
+        <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-4 py-3">
+          <p className="text-sm font-medium text-wire-100">{campusCodeOfConduct.title}</p>
+          <a
+            href={campusCodeOfConduct.assetUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="wire-action-primary mt-3 inline-flex w-auto px-4"
+          >
+            Open PDF
+          </a>
         </div>
       </SectionCard>
 
-      <SectionCard title="Campus Map">
-        <p className="mb-3 wire-meta">
-          Key places students use most often. Use the map link for directions.
-        </p>
-        <a
-          href={campusMapInfo.externalMapUrl}
-          target="_blank"
-          rel="noreferrer"
-          className="wire-link inline-flex"
-        >
-          {campusMapInfo.externalMapLabel}
-        </a>
-        <div className="mt-3 space-y-2.5">
-          {campusMapInfo.locations.map((location) => (
+      <SectionCard
+        title="Campus Map"
+        subtitle="Core locations students use most often."
+      >
+        <p className="mb-3 text-[14px] leading-relaxed text-wire-200">{campusMap.summary}</p>
+
+        {mapIsImage ? (
+          <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 p-3">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={campusMap.assetUrl}
+              alt="NU campus map"
+              className="h-52 w-full rounded-[var(--radius-input)] border border-wire-700 object-cover"
+            />
+            <a
+              href={campusMap.assetUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="wire-action-primary mt-3 inline-flex w-auto px-4"
+            >
+              Open map
+            </a>
+          </div>
+        ) : mapIsPdf ? (
+          <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-4 py-3">
+            <p className="text-sm font-medium text-wire-100">{campusMap.title}</p>
+            <p className="mt-1 wire-meta">Map is provided as a PDF document.</p>
+            <a
+              href={campusMap.assetUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="wire-action-primary mt-3 inline-flex w-auto px-4"
+            >
+              Open map document
+            </a>
+          </div>
+        ) : (
+          <EmptyState
+            title="Map asset unavailable"
+            description="Map reference file is not currently available."
+          />
+        )}
+
+        <div className="mt-4 space-y-2.5">
+          {campusMap.locations.map((location) => (
             <div
               key={location.name}
-              className="rounded-xl border border-wire-700 bg-wire-800 px-3 py-2.5"
+              className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-4 py-3"
             >
               <p className="text-sm font-medium text-wire-100">{location.name}</p>
               <p className="mt-1 text-[13px] text-wire-300">{location.area}</p>
@@ -60,49 +111,80 @@ export default function CampusInfoPage() {
             </div>
           ))}
         </div>
+
+        <a
+          href={campusMap.externalMapUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="wire-link mt-3 inline-flex"
+        >
+          {campusMap.externalMapLabel}
+        </a>
       </SectionCard>
 
-      <SectionCard title="Services & Prices">
-        <p className="mb-3 wire-meta">
-          High-use student services. Confirm final rates and terms with the relevant office.
-        </p>
-        <div className="space-y-2.5">
-          {campusServices.map((service) => (
-            <div key={service.name} className="rounded-xl border border-wire-700 bg-wire-800 px-3 py-2.5">
-              <p className="text-sm font-medium text-wire-100">{service.name}</p>
-              <div className="mt-2 grid grid-cols-2 gap-2 text-[12px]">
-                <p className="text-wire-300">Location</p>
-                <p className="text-wire-200">{valueOrFallback(service.location)}</p>
-                <p className="text-wire-300">Price</p>
-                <p className="text-wire-200">{valueOrFallback(service.price, "Check with office")}</p>
+      <SectionCard
+        title="Services & Prices"
+        subtitle="Open a service to view details, contacts, and pricing files."
+      >
+        {campusServices.length > 0 ? (
+          <div className="space-y-2.5">
+            {campusServices.map((service) => (
+              <div
+                key={service.slug}
+                className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-4 py-3"
+              >
+                <p className="text-sm font-medium text-wire-100">{service.name}</p>
+                <p className="mt-1 text-[13px] text-wire-200">{service.description}</p>
+                <p className="mt-1 wire-meta">{valueOrFallback(service.location, "Location not listed")}</p>
+                <div className="mt-3">
+                  <ShellButton
+                    label="View service details"
+                    href={`/campus/services/${service.slug}`}
+                    block={false}
+                    variant="default"
+                  />
+                </div>
               </div>
-              {service.note ? <p className="mt-2 text-[13px] text-wire-200">{service.note}</p> : null}
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <EmptyState
+            title="No services listed"
+            description="Campus service references will appear here."
+          />
+        )}
       </SectionCard>
 
-      <SectionCard title="Important Contacts">
-        <p className="mb-3 wire-meta">Support points for health, services, housing, and IT needs.</p>
-        <div className="space-y-2.5">
-          {importantContacts.map((contact) => (
-            <div key={contact.name} className="rounded-xl border border-wire-700 bg-wire-800 px-3 py-2.5">
-              <p className="text-sm font-medium text-wire-100">{contact.name}</p>
-              <p className="mt-1 text-[13px] text-wire-300">{contact.department}</p>
-              {contact.role ? <p className="mt-1 text-[13px] text-wire-300">{contact.role}</p> : null}
-              <div className="mt-2 grid grid-cols-2 gap-2 text-[12px]">
-                <p className="text-wire-300">Email</p>
-                <p className="text-wire-200">{valueOrFallback(contact.email)}</p>
-                <p className="text-wire-300">Phone</p>
-                <p className="text-wire-200">{valueOrFallback(contact.phone)}</p>
-                <p className="text-wire-300">Office</p>
-                <p className="text-wire-200">{valueOrFallback(contact.office)}</p>
-                <p className="text-wire-300">Hours</p>
-                <p className="text-wire-200">{valueOrFallback(contact.hours)}</p>
+      <SectionCard title="Important Contacts" subtitle="Support points for health, services, housing, and IT.">
+        {importantContacts.length > 0 ? (
+          <div className="space-y-2.5">
+            {importantContacts.map((contact) => (
+              <div
+                key={contact.name}
+                className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-4 py-3"
+              >
+                <p className="text-sm font-medium text-wire-100">{contact.name}</p>
+                <p className="mt-1 text-[13px] text-wire-300">{contact.department}</p>
+                {contact.role ? <p className="mt-1 text-[13px] text-wire-300">{contact.role}</p> : null}
+                <div className="mt-2 grid grid-cols-2 gap-2 text-[12px]">
+                  <p className="text-wire-300">Email</p>
+                  <p className="text-wire-200">{valueOrFallback(contact.email)}</p>
+                  <p className="text-wire-300">Phone</p>
+                  <p className="text-wire-200">{valueOrFallback(contact.phone)}</p>
+                  <p className="text-wire-300">Office</p>
+                  <p className="text-wire-200">{valueOrFallback(contact.office)}</p>
+                  <p className="text-wire-300">Hours</p>
+                  <p className="text-wire-200">{valueOrFallback(contact.hours)}</p>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <EmptyState
+            title="No contacts available"
+            description="Campus contact references will appear here."
+          />
+        )}
       </SectionCard>
     </main>
   );

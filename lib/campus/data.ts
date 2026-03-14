@@ -1,9 +1,13 @@
-export type ConductItem = {
+export type CampusDocument = {
   title: string;
-  detail: string;
+  summary: string;
+  assetUrl: string;
 };
 
-export type CampusMapInfo = {
+export type CampusMapResource = {
+  title: string;
+  summary: string;
+  assetUrl: string;
   externalMapLabel: string;
   externalMapUrl: string;
   locations: Array<{
@@ -14,10 +18,15 @@ export type CampusMapInfo = {
 };
 
 export type CampusService = {
+  slug: string;
   name: string;
+  description: string;
   location?: string;
-  price?: string;
-  note?: string;
+  contactName?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  hours?: string;
+  priceAssetUrl?: string;
 };
 
 export type CampusContact = {
@@ -30,27 +39,18 @@ export type CampusContact = {
   hours?: string;
 };
 
-export const codeOfConductItems: ConductItem[] = [
-  {
-    title: "Respect and safety",
-    detail: "Treat peers, faculty, and staff with respect. Harassment and discrimination are not acceptable.",
-  },
-  {
-    title: "Academic integrity",
-    detail: "Submit your own work and follow NU academic honesty and citation requirements.",
-  },
-  {
-    title: "Campus responsibility",
-    detail: "Use facilities responsibly, follow residence rules, and report unsafe situations promptly.",
-  },
-  {
-    title: "Digital conduct",
-    detail: "Use university systems ethically and avoid misuse of campus networks and digital resources.",
-  },
-];
+export const campusCodeOfConduct: CampusDocument = {
+  title: "NU Student Code of Conduct",
+  summary:
+    "Official conduct guidance for respectful behavior, academic integrity, and safe campus participation.",
+  assetUrl: "/campus/code-of-conduct.pdf",
+};
 
-export const campusMapInfo: CampusMapInfo = {
-  externalMapLabel: "Open NU campus map",
+export const campusMap: CampusMapResource = {
+  title: "NU Campus Map",
+  summary: "Core campus locations for classes, services, housing, and student support.",
+  assetUrl: "/campus/campus-map.pdf",
+  externalMapLabel: "Open external campus map",
   externalMapUrl: "https://www.google.com/maps/search/Nazarbayev+University",
   locations: [
     {
@@ -61,12 +61,12 @@ export const campusMapInfo: CampusMapInfo = {
     {
       name: "Library",
       area: "Academic zone",
-      note: "Study spaces, research help, and printing points.",
+      note: "Study spaces, printing points, and research support.",
     },
     {
       name: "Student Services Center",
       area: "Administrative zone",
-      note: "Enrollment, official documents, and student support services.",
+      note: "Enrollment, student letters, and service requests.",
     },
     {
       name: "Sports Center",
@@ -76,40 +76,55 @@ export const campusMapInfo: CampusMapInfo = {
     {
       name: "Dormitory Offices",
       area: "Residential zone",
-      note: "Housing support, room requests, and residence guidance.",
+      note: "Housing support and residence guidance.",
     },
   ],
 };
 
 export const campusServices: CampusService[] = [
   {
+    slug: "dormitory-accommodation",
     name: "Dormitory accommodation",
+    description: "Housing support, move-in guidance, and residence-related fee references.",
     location: "Residence offices",
-    price: "By residence plan",
-    note: "Confirm current semester rates with housing staff.",
+    contactName: "Dormitory Office",
+    contactEmail: "housing@nu.edu.kz",
+    contactPhone: "+7 (7172) 70 55 11",
+    hours: "Mon-Fri, 09:00-18:00",
   },
   {
-    name: "Laundry",
+    slug: "laundry-services",
+    name: "Laundry services",
+    description: "Residential laundry points with pay-per-cycle usage.",
     location: "Residential buildings",
-    price: "Pay-per-cycle",
-    note: "Rates vary by machine type and residence.",
+    contactName: "Dormitory Office",
+    contactEmail: "housing@nu.edu.kz",
   },
   {
+    slug: "sport-center-access",
     name: "Sports Center access",
+    description: "Student access and pass options for gym and sports facilities.",
     location: "NU Sports Center",
-    price: "Student pass or membership",
-    note: "Check front desk for latest access rules.",
+    contactName: "Sports Center Front Desk",
+    hours: "Daily, 08:00-22:00",
+    priceAssetUrl: "/campus/services/sport-center-prices.jpg",
   },
   {
+    slug: "printing-copying",
     name: "Printing and copying",
+    description: "Printing support for study materials and coursework.",
     location: "Library and service points",
-    price: "Per page",
-    note: "B/W and color rates may differ by location.",
+    contactName: "Library Service Desk",
   },
   {
+    slug: "official-document-support",
     name: "Official document support",
+    description: "Student letters, enrollment confirmations, and official document requests.",
     location: "Student Services Center",
-    note: "Processing timelines vary by request type.",
+    contactName: "Student Services Center",
+    contactEmail: "studentservices@nu.edu.kz",
+    contactPhone: "+7 (7172) 70 90 00",
+    hours: "Mon-Fri, 09:00-18:00",
   },
 ];
 
@@ -150,3 +165,11 @@ export const importantContacts: CampusContact[] = [
     hours: "Mon-Fri, 09:00-18:00",
   },
 ];
+
+export function getCampusServiceBySlug(slug: string): CampusService | null {
+  return campusServices.find((service) => service.slug === slug) ?? null;
+}
+
+export function getCampusServiceSlugs(): string[] {
+  return campusServices.map((service) => service.slug);
+}

@@ -17,6 +17,15 @@ const optionalUrl = z
   })
   .transform((value) => (value.length > 0 ? value : null));
 
+const optionalNickname = z
+  .string()
+  .trim()
+  .max(40, "Nickname is too long.")
+  .refine((value) => value.length === 0 || /^@?[a-zA-Z0-9._]+$/.test(value), {
+    message: "Use letters, numbers, dots, underscores, and optional leading @.",
+  })
+  .transform((value) => (value.length > 0 ? value : null));
+
 const chipsArray = z.array(
   z
     .string()
@@ -58,6 +67,9 @@ export const onboardingProfessionalSchema = z.object({
   githubUrl: optionalUrl,
   linkedinUrl: optionalUrl,
   portfolioUrl: optionalUrl,
+  telegramNickname: optionalNickname,
+  instagramNickname: optionalNickname,
+  relationshipStatus: optionalText(40),
 });
 
 export const editProfileSchema = z.object({

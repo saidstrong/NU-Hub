@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FeedbackBanner } from "@/components/ui/FeedbackBanner";
-import { FilterRow } from "@/components/ui/FilterRow";
 import { ListingCard } from "@/components/ui/ListingCard";
 import { PageNavigation } from "@/components/ui/PageNavigation";
 import { SearchBar } from "@/components/ui/SearchBar";
@@ -72,17 +71,16 @@ export default async function MarketHomePage({ searchParams }: MarketHomePagePro
 
       <section className="wire-panel">
         <SectionHeader
-          title="Categories and filters"
-          subtitle="Keep filters lightweight and let listings stay the primary focus."
+          title="Categories"
+          subtitle="Use categories to narrow listings quickly."
         />
-        <div className="mb-4 flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2">
           {marketCategories.map((category) => (
             <Link key={category} href={`/market/category/${category.toLowerCase()}`}>
               <TagChip label={category} />
             </Link>
           ))}
         </div>
-        <FilterRow filters={["Newest", "Price", "Condition", "Pickup"]} activeIndex={-1} />
       </section>
 
       <section className="wire-panel">

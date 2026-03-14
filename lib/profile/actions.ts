@@ -50,11 +50,17 @@ function toLinksObject(values: {
   githubUrl: string | null;
   linkedinUrl: string | null;
   portfolioUrl: string | null;
+  telegramNickname?: string | null;
+  instagramNickname?: string | null;
+  relationshipStatus?: string | null;
 }) {
   return {
     ...(values.githubUrl ? { github: values.githubUrl } : {}),
     ...(values.linkedinUrl ? { linkedin: values.linkedinUrl } : {}),
     ...(values.portfolioUrl ? { portfolio: values.portfolioUrl } : {}),
+    ...(values.telegramNickname ? { telegram: values.telegramNickname } : {}),
+    ...(values.instagramNickname ? { instagram: values.instagramNickname } : {}),
+    ...(values.relationshipStatus ? { relationship_status: values.relationshipStatus } : {}),
   };
 }
 
@@ -168,6 +174,9 @@ export async function completeOnboardingAction(formData: FormData) {
     githubUrl: getStringValue(formData, "githubUrl"),
     linkedinUrl: getStringValue(formData, "linkedinUrl"),
     portfolioUrl: getStringValue(formData, "portfolioUrl"),
+    telegramNickname: getStringValue(formData, "telegramNickname"),
+    instagramNickname: getStringValue(formData, "instagramNickname"),
+    relationshipStatus: getStringValue(formData, "relationshipStatus"),
   });
 
   if (!parsed.success) {
