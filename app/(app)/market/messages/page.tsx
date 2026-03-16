@@ -5,7 +5,7 @@ import { FeedbackBanner } from "@/components/ui/FeedbackBanner";
 import { PageNavigation } from "@/components/ui/PageNavigation";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { TopBar } from "@/components/ui/TopBar";
-import { getMarketplaceConversationsPage } from "@/lib/market/data";
+import { formatPriceKzt, formatStatusLabel, getMarketplaceConversationsPage } from "@/lib/market/data";
 import { buildPageHref, parsePageParam } from "@/lib/pagination";
 import { toPublicStorageUrl } from "@/lib/validation/media";
 
@@ -65,46 +65,68 @@ export default async function MarketMessagesPage({ searchParams }: MarketMessage
         <SectionHeader title="Inbox" />
 
         {conversations.length > 0 ? (
-          <div className="space-y-2">
+          <div className="space-y-2.5">
             {conversations.map((conversation) => {
               const counterpartAvatarUrl = toPublicStorageUrl("avatars", conversation.counterpartAvatarPath);
               const needsReply = conversation.lastMessageSenderId === conversation.counterpartId;
               const replyStateLabel = needsReply ? "Needs reply" : "You replied";
               const timestampValue = conversation.lastMessageCreatedAt ?? conversation.updatedAt;
+              const listingStatusLabel = conversation.listingStatus
+                ? formatStatusLabel(conversation.listingStatus)
+                : null;
 
               return (
                 <Link
                   key={conversation.id}
                   href={`/market/messages/${conversation.id}`}
-                  className="block rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-4 py-3 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/40"
+                  className="block rounded-[var(--radius-card)] border border-wire-700 bg-wire-800 px-3.5 py-3.5 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/40 sm:px-4"
                 >
                   <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-wire-100">
-                        {conversation.listingTitle}
-                      </p>
-                      <div className="mt-1 flex flex-wrap items-center gap-2">
-                        <p className="wire-meta">{conversation.counterpartName}</p>
-                        <span className={needsReply
-                          ? "rounded-full border border-accent/35 bg-accent/10 px-2 py-0.5 text-[11px] font-medium text-wire-100"
-                          : "rounded-full border border-wire-600 bg-wire-900 px-2 py-0.5 text-[11px] font-medium text-wire-300"}
-                        >
-                          {replyStateLabel}
-                        </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2.5">
+                        {counterpartAvatarUrl ? (
+                          <img
+                            src={counterpartAvatarUrl}
+                            alt={`${conversation.counterpartName} avatar`}
+                            className="h-8 w-8 rounded-full border border-wire-700 bg-wire-900 object-cover"
+                          />
+                        ) : (
+                          <div className="h-8 w-8 rounded-full border border-dashed border-wire-600 bg-wire-900" />
+                        )}
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium text-wire-100">{conversation.counterpartName}</p>
+                          <span className={needsReply
+                            ? "mt-0.5 inline-flex rounded-full border border-accent/35 bg-accent/10 px-2 py-0.5 text-[11px] font-medium text-wire-100"
+                            : "mt-0.5 inline-flex rounded-full border border-wire-600 bg-wire-900 px-2 py-0.5 text-[11px] font-medium text-wire-300"}
+                          >
+                            {replyStateLabel}
+                          </span>
+                        </div>
                       </div>
                     </div>
                     <p className="text-[11px] text-wire-300">{formatMessageTime(timestampValue)}</p>
                   </div>
-                  <div className="mt-2 flex items-center gap-2.5">
-                    {counterpartAvatarUrl ? (
+
+                  <div className="mt-3 flex items-center gap-2.5 rounded-[var(--radius-input)] border border-wire-700 bg-wire-900/60 p-2.5">
+                    {conversation.listingCoverImageUrl ? (
                       <img
-                        src={counterpartAvatarUrl}
-                        alt={`${conversation.counterpartName} avatar`}
-                        className="h-8 w-8 rounded-full border border-wire-700 bg-wire-900 object-cover"
+                        src={conversation.listingCoverImageUrl}
+                        alt={`${conversation.listingTitle} preview`}
+                        className="h-11 w-11 shrink-0 rounded-[10px] border border-wire-700 bg-wire-900 object-cover"
                       />
                     ) : (
-                      <div className="h-8 w-8 rounded-full border border-dashed border-wire-600 bg-wire-900" />
+                      <div className="h-11 w-11 shrink-0 rounded-[10px] border border-dashed border-wire-600 bg-wire-900" />
                     )}
+                    <div className="min-w-0">
+                      <p className="truncate text-[13px] font-medium text-wire-100">{conversation.listingTitle}</p>
+                      <p className="mt-0.5 text-[11px] text-wire-300">
+                        {conversation.listingPriceKzt !== null ? formatPriceKzt(conversation.listingPriceKzt) : "Price unavailable"}
+                        {listingStatusLabel ? ` • ${listingStatusLabel}` : ""}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-2.5">
                     <p className="line-clamp-1 text-[13px] text-wire-200">{conversation.lastMessagePreview}</p>
                   </div>
                 </Link>
@@ -114,8 +136,8 @@ export default async function MarketMessagesPage({ searchParams }: MarketMessage
         ) : !loadError ? (
           <EmptyState
             title="No conversations yet"
-            description="Start by messaging a seller from a listing."
-            actionLabel="Browse market"
+            description="Message a seller from any listing to start a conversation."
+            actionLabel="Open market"
             actionHref="/market"
             className="py-6"
           />

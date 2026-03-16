@@ -28,9 +28,9 @@ type ProfileIdentity = Pick<
   Database["public"]["Tables"]["profiles"]["Row"],
   "user_id" | "full_name" | "avatar_path"
 >;
-type ListingTitleRow = Pick<
+type ListingContextRow = Pick<
   ListingRow,
-  "id" | "title"
+  "id" | "title" | "price_kzt" | "status"
 >;
 
 export type ListingCardData = {
@@ -51,6 +51,9 @@ export type MarketplaceConversationListItem = {
   id: string;
   listingId: string;
   listingTitle: string;
+  listingPriceKzt: number | null;
+  listingStatus: ListingStatus | null;
+  listingCoverImageUrl: string | null;
   counterpartId: string;
   counterpartName: string;
   counterpartAvatarPath: string | null;
@@ -77,6 +80,9 @@ export type MarketplaceConversationThread = {
   conversationId: string;
   listingId: string;
   listingTitle: string;
+  listingPriceKzt: number | null;
+  listingStatus: ListingStatus | null;
+  listingCoverImageUrl: string | null;
   listingHref: string | null;
   currentUserId: string;
   counterpartId: string;
@@ -521,9 +527,9 @@ export async function getMarketplaceConversationsPage(
       listingIds.length > 0
         ? supabase
             .from("listings")
-            .select("id, title")
+            .select("id, title, price_kzt, status")
             .in("id", listingIds)
-        : Promise.resolve({ data: [] as ListingTitleRow[], error: null }),
+        : Promise.resolve({ data: [] as ListingContextRow[], error: null }),
       counterpartIds.length > 0
         ? supabase
             .from("profiles")
@@ -545,6 +551,7 @@ export async function getMarketplaceConversationsPage(
     const listingMap = new Map((listingsResult.data ?? []).map((listing) => [listing.id, listing]));
     const counterpartMap = new Map((profilesResult.data ?? []).map((profile) => [profile.user_id, profile]));
     const lastMessageMap = new Map<string, Pick<MessageRow, "content" | "created_at" | "sender_id">>();
+    const coverImageMap = await getCoverImageMap(supabase, listingIds);
 
     for (const message of messagesResult.data ?? []) {
       if (!lastMessageMap.has(message.conversation_id)) {
@@ -568,6 +575,9 @@ export async function getMarketplaceConversationsPage(
           id: conversation.id,
           listingId: conversation.listing_id,
           listingTitle: listing?.title?.trim() || "Listing unavailable",
+          listingPriceKzt: listing?.price_kzt ?? null,
+          listingStatus: listing?.status ?? null,
+          listingCoverImageUrl: coverImageMap.get(conversation.listing_id) ?? null,
           counterpartId,
           counterpartName: normalizeName(counterpart?.full_name),
           counterpartAvatarPath: counterpart?.avatar_path ?? null,
@@ -646,7 +656,7 @@ export async function getMarketplaceConversationThread(
     const [listingResult, profilesResult, messagesResult] = await Promise.all([
       supabase
         .from("listings")
-        .select("id, title")
+        .select("id, title, price_kzt, status")
         .eq("id", conversation.listing_id)
         .maybeSingle(),
       supabase
@@ -670,11 +680,17 @@ export async function getMarketplaceConversationThread(
     const counterpartProfile = profileMap.get(counterpartId);
     const listingTitle = listingResult.data?.title?.trim() || "Listing unavailable";
     const listingHref = listingResult.data ? `/market/item/${listingResult.data.id}` : null;
+    const listingCoverImageUrl = listingResult.data
+      ? (await getCoverImageMap(supabase, [listingResult.data.id])).get(listingResult.data.id) ?? null
+      : null;
 
     return {
       conversationId: conversation.id,
       listingId: conversation.listing_id,
       listingTitle,
+      listingPriceKzt: listingResult.data?.price_kzt ?? null,
+      listingStatus: listingResult.data?.status ?? null,
+      listingCoverImageUrl,
       listingHref,
       currentUserId: user.id,
       counterpartId,
