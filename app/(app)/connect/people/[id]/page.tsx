@@ -14,7 +14,7 @@ import {
   startFriendConversationAction,
   sendFriendRequestAction,
 } from "@/lib/connect/actions";
-import { getFriendshipWithPerson, getPersonProfile, toPersonCardData } from "@/lib/connect/data";
+import { getFriendshipWithPerson, getPersonProfile } from "@/lib/connect/data";
 import { toPublicStorageUrl } from "@/lib/validation/media";
 import { isUuid } from "@/lib/validation/uuid";
 
@@ -70,11 +70,17 @@ export default async function PersonProfilePage({ params, searchParams }: Person
     );
   }
 
-  const personCard = toPersonCardData(person);
   const isSelfProfile = person.user_id === user.id;
-  const subtitle = `${personCard.major} - ${personCard.year}`;
+  const academicLabel = [person.school, person.major, person.year_label]
+    .map((value) => value?.trim())
+    .filter(Boolean)
+    .join(" • ");
+  const hasBio = typeof person.bio === "string" && person.bio.trim().length > 0;
   const avatarUrl = toPublicStorageUrl("avatars", person.avatar_path);
-  const name = personCard.name || "NU student";
+  const name =
+    typeof person.full_name === "string" && person.full_name.trim().length > 0
+      ? person.full_name.trim()
+      : "NU student";
   const links =
     person.links && typeof person.links === "object" && !Array.isArray(person.links)
       ? (person.links as Record<string, unknown>)
@@ -87,6 +93,28 @@ export default async function PersonProfilePage({ params, searchParams }: Person
     typeof links.instagram === "string" && links.instagram.trim().length > 0
       ? links.instagram.trim()
       : null;
+  const telegramLabel = telegramNickname
+    ? (telegramNickname.startsWith("@") ? telegramNickname : `@${telegramNickname}`)
+    : null;
+  const instagramLabel = instagramNickname
+    ? (instagramNickname.startsWith("@") ? instagramNickname : `@${instagramNickname}`)
+    : null;
+  const hasProfessionalLinks =
+    Boolean(person.resume_url) ||
+    typeof links.github === "string" ||
+    typeof links.linkedin === "string" ||
+    typeof links.portfolio === "string" ||
+    Boolean(telegramLabel) ||
+    Boolean(instagramLabel);
+  const relationshipSummary = isSelfProfile
+    ? "Manage your friend connections."
+    : friendship?.status === "accepted"
+      ? "You are friends."
+      : friendship?.status === "pending" && friendship.requester_id === user.id
+        ? "Friend request sent."
+        : friendship?.status === "pending"
+          ? "This student sent you a friend request."
+          : "Not connected yet.";
 
   return (
     <main>
@@ -112,17 +140,18 @@ export default async function PersonProfilePage({ params, searchParams }: Person
           )}
           <div className="min-w-0">
             <p className="wire-label">Campus profile</p>
-            <h2 className="mt-1 truncate text-[30px] font-semibold leading-[36px] tracking-tight text-wire-100">
+            <h2 className="mt-1 text-[30px] font-semibold leading-[36px] tracking-tight break-words text-wire-100">
               {name}
             </h2>
-            <p className="mt-2 text-[14px] text-wire-300">{subtitle}</p>
+            <p className="mt-2 text-[14px] text-wire-300">{academicLabel || "Academic details not shared"}</p>
+            <p className="mt-1 text-[12px] text-wire-400">NU Atrium student profile</p>
           </div>
         </div>
-        {personCard.interests.length > 0 ? (
+        {person.interests.length > 0 ? (
           <div className="mt-5 border-t border-wire-700 pt-4">
             <p className="mb-2 wire-label">Focus areas</p>
             <div className="flex flex-wrap gap-2">
-              {personCard.interests.map((entry) => (
+              {person.interests.map((entry) => (
                 <TagChip key={entry} label={entry} />
               ))}
             </div>
@@ -136,9 +165,9 @@ export default async function PersonProfilePage({ params, searchParams }: Person
 
       <div className="grid gap-6 xl:grid-cols-[1.45fr_1fr]">
         <div className="space-y-6">
-          <SectionCard title="Bio" subtitle="Snapshot of academic and collaboration context.">
+          <SectionCard title="About" subtitle="Shared profile summary.">
             <p className="text-[14px] leading-relaxed text-wire-200">
-              {person.bio || "No bio provided yet."}
+              {hasBio ? person.bio?.trim() : "No bio provided yet."}
             </p>
           </SectionCard>
 
@@ -191,14 +220,9 @@ export default async function PersonProfilePage({ params, searchParams }: Person
                 {typeof links.github === "string" ? <p>GitHub: {links.github}</p> : null}
                 {typeof links.linkedin === "string" ? <p>LinkedIn: {links.linkedin}</p> : null}
                 {typeof links.portfolio === "string" ? <p>Portfolio: {links.portfolio}</p> : null}
-                {telegramNickname ? <p>Telegram: {telegramNickname}</p> : null}
-                {instagramNickname ? <p>Instagram: {instagramNickname}</p> : null}
-                {!person.resume_url &&
-                typeof links.github !== "string" &&
-                typeof links.linkedin !== "string" &&
-                typeof links.portfolio !== "string" &&
-                !telegramNickname &&
-                !instagramNickname ? (
+                {telegramLabel ? <p>Telegram: {telegramLabel}</p> : null}
+                {instagramLabel ? <p>Instagram: {instagramLabel}</p> : null}
+                {!hasProfessionalLinks ? (
                   <p className="wire-inline-empty">No professional links shared.</p>
                 ) : null}
               </div>
@@ -208,8 +232,9 @@ export default async function PersonProfilePage({ params, searchParams }: Person
           {!isSelfProfile ? (
             <section className="wire-panel">
               <SectionHeader title="Relationship" />
+              <p className="mb-3 wire-meta">{relationshipSummary}</p>
               {friendship?.status === "accepted" ? (
-                <div className="wire-action-row">
+                <div className="space-y-2">
                   <form action={startFriendConversationAction} className="w-full">
                     <input type="hidden" name="friendId" value={person.user_id} />
                     <input type="hidden" name="redirectTo" value={`/connect/people/${person.user_id}`} />
@@ -222,7 +247,7 @@ export default async function PersonProfilePage({ params, searchParams }: Person
                   </button>
                 </div>
               ) : friendship?.status === "pending" && friendship.requester_id === user.id ? (
-                <div className="wire-action-row">
+                <div className="space-y-2">
                   <button type="button" className="wire-action w-full" disabled>
                     Request sent
                   </button>
@@ -235,7 +260,7 @@ export default async function PersonProfilePage({ params, searchParams }: Person
                   </form>
                 </div>
               ) : friendship?.status === "pending" ? (
-                <div className="wire-action-row">
+                <div className="space-y-2">
                   <form action={acceptFriendRequestAction} className="w-full">
                     <input type="hidden" name="friendshipId" value={friendship.id} />
                     <input type="hidden" name="redirectTo" value={`/connect/people/${person.user_id}`} />
@@ -264,6 +289,7 @@ export default async function PersonProfilePage({ params, searchParams }: Person
           ) : (
             <section className="wire-panel">
               <SectionHeader title="Relationship" />
+              <p className="mb-3 wire-meta">{relationshipSummary}</p>
               <ShellButton label="View friends" href="/connect/friends" variant="default" />
             </section>
           )}
