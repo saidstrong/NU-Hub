@@ -132,6 +132,8 @@ export type FriendInboxConversation = {
   counterpartId: string;
   counterpartName: string;
   counterpartAvatarPath: string | null;
+  counterpartMajor: string | null;
+  counterpartYearLabel: string | null;
   lastMessagePreview: string;
   lastMessageSenderId: string | null;
   lastMessageAt: string;
@@ -151,6 +153,8 @@ export type FriendConversationThread = {
   counterpartId: string;
   counterpartName: string;
   counterpartAvatarPath: string | null;
+  counterpartMajor: string | null;
+  counterpartYearLabel: string | null;
   messages: FriendMessageThreadItem[];
 };
 export type CommunityListEntry = {
@@ -458,10 +462,10 @@ export async function getFriendInbox(userId: string, limit = 25): Promise<Friend
       counterpartIds.length > 0
         ? supabase
             .from("profiles")
-            .select("user_id, full_name, avatar_path")
+            .select("user_id, full_name, avatar_path, major, year_label")
             .in("user_id", counterpartIds)
         : Promise.resolve({
-            data: [] as Pick<ProfileRow, "user_id" | "full_name" | "avatar_path">[],
+            data: [] as Pick<ProfileRow, "user_id" | "full_name" | "avatar_path" | "major" | "year_label">[],
             error: null,
           }),
       supabase
@@ -500,6 +504,8 @@ export async function getFriendInbox(userId: string, limit = 25): Promise<Friend
         counterpartId,
         counterpartName: fallbackText(counterpartProfile?.full_name, "NU student"),
         counterpartAvatarPath: counterpartProfile?.avatar_path ?? null,
+        counterpartMajor: counterpartProfile?.major ?? null,
+        counterpartYearLabel: counterpartProfile?.year_label ?? null,
         lastMessagePreview: toMessagePreview(lastMessage?.content ?? ""),
         lastMessageSenderId: lastMessage?.sender_id ?? null,
         lastMessageAt: lastMessage?.created_at ?? conversation.created_at,
@@ -570,7 +576,7 @@ export async function getFriendConversationThread(
     const [profilesResult, messagesResult] = await Promise.all([
       supabase
         .from("profiles")
-        .select("user_id, full_name, avatar_path")
+        .select("user_id, full_name, avatar_path, major, year_label")
         .in("user_id", dedupeStrings([conversation.user_a_id, conversation.user_b_id])),
       supabase
         .from("friend_messages")
@@ -593,6 +599,8 @@ export async function getFriendConversationThread(
       counterpartId,
       counterpartName: fallbackText(counterpartProfile?.full_name, "NU student"),
       counterpartAvatarPath: counterpartProfile?.avatar_path ?? null,
+      counterpartMajor: counterpartProfile?.major ?? null,
+      counterpartYearLabel: counterpartProfile?.year_label ?? null,
       messages: (messagesResult.data ?? []).map((message) => {
         const senderProfile = profileMap.get(message.sender_id);
         const isOwnMessage = message.sender_id === user.id;

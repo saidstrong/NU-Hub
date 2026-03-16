@@ -7,7 +7,7 @@ import type { Database } from "@/types/database";
 export type NotificationRow = Database["public"]["Tables"]["notifications"]["Row"];
 export type NotificationListRow = Pick<
   NotificationRow,
-  "id" | "type" | "title" | "message" | "link" | "is_read" | "created_at"
+  "id" | "type" | "title" | "message" | "link" | "is_read" | "created_at" | "payload"
 >;
 export type PaginatedNotificationResult = {
   notifications: NotificationListRow[];
@@ -45,7 +45,7 @@ export async function getMyNotificationsPage(
 
     const { data, error } = await supabase
       .from("notifications")
-      .select("id, type, title, message, link, is_read, created_at")
+      .select("id, type, title, message, link, is_read, created_at, payload")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
       .order("id", { ascending: false })

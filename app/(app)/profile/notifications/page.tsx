@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { FeedbackBanner } from "@/components/ui/FeedbackBanner";
 import { PageNavigation } from "@/components/ui/PageNavigation";
 import { TopBar } from "@/components/ui/TopBar";
 import { markAllNotificationsReadAction, markNotificationReadAction } from "@/lib/notifications/actions";
@@ -25,6 +26,52 @@ function formatNotificationType(type: "market" | "events" | "community" | "syste
   if (type === "community") return "Community";
   if (type === "market") return "Market";
   return "System";
+}
+
+function formatNotificationKind(kind: string): string | null {
+  if (kind === "community_post_created") return "New post";
+  if (kind === "event_rsvp_created") return "RSVP";
+  if (kind === "community_join_request_submitted") return "Join request";
+  if (kind === "community_request_approved") return "Request approved";
+  if (kind === "community_request_rejected") return "Request rejected";
+  return null;
+}
+
+function readPayloadKind(payload: unknown): string | null {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    return null;
+  }
+
+  const candidate = (payload as Record<string, unknown>).kind;
+  return typeof candidate === "string" && candidate.trim().length > 0 ? candidate.trim() : null;
+}
+
+function getNotificationActionLabel(link: string): string {
+  if (link.startsWith("/events/")) return "Open event";
+  if (link.startsWith("/connect/communities/requests")) return "Review requests";
+  if (link.startsWith("/connect/communities/")) return "Open community";
+  if (link.startsWith("/market/item/")) return "Open listing";
+  if (link.startsWith("/profile/")) return "Open profile";
+  return "Open update";
+}
+
+function toDisplayMessage(title: string, message: string): { primary: string; secondary: string | null } {
+  const safeTitle = title.trim();
+  const safeMessage = message.trim();
+
+  if (!safeTitle && !safeMessage) {
+    return { primary: "Notification update", secondary: null };
+  }
+
+  if (!safeMessage) {
+    return { primary: safeTitle || "Notification update", secondary: null };
+  }
+
+  if (!safeTitle || safeTitle.toLowerCase() === safeMessage.toLowerCase()) {
+    return { primary: safeMessage, secondary: null };
+  }
+
+  return { primary: safeMessage, secondary: safeTitle };
 }
 
 function toInternalLink(link: string | null): string | null {
@@ -67,16 +114,8 @@ export default async function NotificationsPage({ searchParams }: NotificationsP
         subtitle="Recent updates related to your profile and activity"
         backHref="/profile"
       />
-      {error ? (
-        <div className="rounded-xl border border-red-400/30 bg-red-400/10 px-3 py-2 text-[13px] text-red-200">
-          {error}
-        </div>
-      ) : null}
-      {loadError ? (
-        <div className="rounded-xl border border-red-400/30 bg-red-400/10 px-3 py-2 text-[13px] text-red-200">
-          {loadError}
-        </div>
-      ) : null}
+      {error ? <FeedbackBanner tone="error" message={error} /> : null}
+      {loadError ? <FeedbackBanner tone="error" message={loadError} /> : null}
 
       <section className="wire-panel">
         <div className="mb-4 border-b border-wire-700 pb-3">
@@ -105,42 +144,68 @@ export default async function NotificationsPage({ searchParams }: NotificationsP
           <div className="space-y-2.5">
             {notifications.map((notification) => {
               const internalLink = toInternalLink(notification.link);
+              const payloadKind = readPayloadKind(notification.payload);
+              const contextLabel = payloadKind ? formatNotificationKind(payloadKind) : null;
+              const display = toDisplayMessage(notification.title, notification.message);
+              const unread = !notification.is_read;
 
               return (
                 <article
                   key={notification.id}
-                  className="rounded-2xl border border-wire-700 bg-wire-800 px-3 py-3"
+                  className={unread
+                    ? "rounded-2xl border border-accent/35 bg-wire-800 px-3 py-3"
+                    : "rounded-2xl border border-wire-700 bg-wire-800 px-3 py-3"}
                 >
-                  <p className="text-sm font-medium text-wire-100">{notification.title}</p>
-                  <p className="mt-1 text-sm text-wire-200">{notification.message}</p>
-                  <div className="mt-2 flex items-center justify-between gap-2">
-                    <p className="wire-meta">{formatNotificationTime(notification.created_at)}</p>
-                    <div className="flex items-center gap-2">
-                      <span className="rounded-xl border border-wire-600 bg-wire-900 px-2 py-1 text-[12px] text-wire-300">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex flex-wrap items-center gap-1.5">
+                      <span className="rounded-full border border-wire-600 bg-wire-900 px-2 py-0.5 text-[11px] text-wire-300">
                         {formatNotificationType(notification.type)}
                       </span>
-                      {!notification.is_read ? (
-                        <form action={markNotificationReadAction}>
+                      {contextLabel ? (
+                        <span className="rounded-full border border-wire-700 bg-wire-900 px-2 py-0.5 text-[11px] text-wire-400">
+                          {contextLabel}
+                        </span>
+                      ) : null}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {unread ? (
+                        <span className="rounded-full border border-accent/35 bg-accent/10 px-2 py-0.5 text-[11px] font-medium text-accent">
+                          Unread
+                        </span>
+                      ) : (
+                        <span className="text-[11px] text-wire-500">Read</span>
+                      )}
+                      <span className="wire-meta whitespace-nowrap">
+                        {formatNotificationTime(notification.created_at)}
+                      </span>
+                    </div>
+                  </div>
+
+                  {display.secondary ? (
+                    <p className="mt-2 line-clamp-1 text-[12px] text-wire-400">{display.secondary}</p>
+                  ) : null}
+                  <p className="mt-1 text-[13px] leading-relaxed text-wire-100 [overflow-wrap:anywhere]">
+                    {display.primary}
+                  </p>
+
+                  <div className="mt-3 flex items-center justify-between gap-3">
+                    {internalLink ? (
+                      <Link href={internalLink} className="wire-link">
+                        {getNotificationActionLabel(internalLink)}
+                      </Link>
+                    ) : (
+                      <span className="text-[12px] text-wire-500">No linked page</span>
+                    )}
+                    {unread ? (
+                      <form action={markNotificationReadAction}>
                           <input type="hidden" name="notificationId" value={notification.id} />
                           <input type="hidden" name="redirectTo" value={currentPageHref} />
                           <button type="submit" className="wire-action-compact">
                             Mark read
                           </button>
-                        </form>
-                      ) : (
-                        <span className="rounded-xl border border-accent/30 bg-accent/10 px-2 py-1 text-[12px] text-wire-200">
-                          Read
-                        </span>
-                      )}
-                    </div>
+                      </form>
+                    ) : null}
                   </div>
-                  {internalLink ? (
-                    <div className="mt-2">
-                      <Link href={internalLink} className="wire-link">
-                        Open related page
-                      </Link>
-                    </div>
-                  ) : null}
                 </article>
               );
             })}
@@ -148,7 +213,7 @@ export default async function NotificationsPage({ searchParams }: NotificationsP
         ) : !loadError ? (
           <EmptyState
             title="No notifications yet"
-            description="New activity updates will appear here."
+            description="Activity updates from events and communities will appear here."
             actionLabel="Back to profile"
             actionHref="/profile"
           />

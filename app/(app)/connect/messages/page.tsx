@@ -61,6 +61,10 @@ export default async function ConnectMessagesPage({ searchParams }: ConnectMessa
               const hasLastMessage = Boolean(conversation.lastMessageSenderId);
               const needsReply = conversation.lastMessageSenderId === conversation.counterpartId;
               const replyLabel = !hasLastMessage ? "No messages" : needsReply ? "Needs reply" : "You replied";
+              const counterpartMeta = [conversation.counterpartMajor, conversation.counterpartYearLabel]
+                .map((value) => value?.trim())
+                .filter(Boolean)
+                .join(" • ");
               const replyBadgeClass = !hasLastMessage
                 ? "rounded-full border border-wire-600 bg-wire-900 px-2 py-0.5 text-[11px] font-medium text-wire-300"
                 : needsReply
@@ -71,7 +75,7 @@ export default async function ConnectMessagesPage({ searchParams }: ConnectMessa
                 <Link
                   key={conversation.conversationId}
                   href={`/connect/messages/${conversation.conversationId}`}
-                  className="block rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-4 py-3 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/40"
+                  className="block rounded-[var(--radius-card)] border border-wire-700 bg-wire-800 px-3.5 py-3.5 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/40 sm:px-4"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex items-start gap-2.5">
@@ -93,6 +97,9 @@ export default async function ConnectMessagesPage({ searchParams }: ConnectMessa
                             {replyLabel}
                           </span>
                         </div>
+                        {counterpartMeta ? (
+                          <p className="mt-0.5 text-[11px] text-wire-400">{counterpartMeta}</p>
+                        ) : null}
                         <p className="mt-1 line-clamp-1 text-[13px] text-wire-200">
                           {conversation.lastMessagePreview}
                         </p>
@@ -107,7 +114,7 @@ export default async function ConnectMessagesPage({ searchParams }: ConnectMessa
         ) : !loadError ? (
           <EmptyState
             title="No messages yet"
-            description="Open an accepted friend profile and tap Message to start chatting."
+            description="Start by messaging an accepted friend from their profile."
             actionLabel="Find friends"
             actionHref="/connect/friends"
             className="py-6"
