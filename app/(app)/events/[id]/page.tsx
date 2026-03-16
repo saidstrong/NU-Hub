@@ -37,8 +37,8 @@ export default async function EventDetailPage({ params, searchParams }: EventDet
 
   try {
     detail = await getEventDetail(id);
-  } catch (error) {
-    loadError = error instanceof Error ? error.message : "Failed to load event.";
+  } catch (loadIssue) {
+    loadError = loadIssue instanceof Error ? loadIssue.message : "Failed to load event.";
   }
 
   if (!detail || !detail.event) {
@@ -69,13 +69,27 @@ export default async function EventDetailPage({ params, searchParams }: EventDet
   const { event, organizer, isOwner, isSaved, participationStatus, rsvpCounts } = detail;
   const isDraft = !event.is_published;
   const dateLabel = formatEventDate(event.starts_at, event.ends_at);
-  const organizerLabel = organizer?.full_name || "NU Atrium editorial team";
+  const organizerLabel = organizer?.full_name || "NU event organizer";
   const interestedActive = participationStatus === "interested";
   const goingActive = participationStatus === "going";
   const organizerMeta = [organizer?.school, organizer?.major, organizer?.year_label]
     .map((value) => value?.trim())
     .filter(Boolean)
-    .join(" • ");
+    .join(" - ");
+  const locationLabel =
+    typeof event.location === "string" && event.location.trim().length > 0
+      ? event.location.trim()
+      : "Location to be confirmed";
+  const descriptionLabel =
+    typeof event.description === "string" && event.description.trim().length > 0
+      ? event.description.trim()
+      : "No additional event description provided.";
+  const rsvpStateLabel =
+    participationStatus === "going"
+      ? "Going"
+      : participationStatus === "interested"
+        ? "Interested"
+        : "Not set";
   const coverUrl = toPublicStorageUrl("event-images", event.cover_path);
 
   return (
@@ -83,21 +97,46 @@ export default async function EventDetailPage({ params, searchParams }: EventDet
       <section className="wire-panel">
         <SectionHeader
           title="Event"
-          subtitle="Schedule, location, and participation details."
           actionNode={
             <Link href="/events" className="wire-link">
               Back to events
             </Link>
           }
         />
-        <h2 className="text-[28px] font-semibold leading-[34px] tracking-tight text-wire-100">{event.title}</h2>
-        <p className="mt-2 wire-meta">{dateLabel}</p>
-        <div className="mt-3 flex flex-wrap gap-2">
-          <TagChip label={event.category} active />
-          <TagChip label="Campus" tone="status" />
-          <TagChip label={isDraft ? "Draft" : "Published"} tone="status" />
+        <div className="space-y-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0">
+              <h2 className="text-[28px] font-semibold leading-[34px] tracking-tight break-words text-wire-100">
+                {event.title}
+              </h2>
+            </div>
+            <TagChip label={isDraft ? "Draft" : "Published"} tone="status" />
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <TagChip label={event.category} active />
+            <TagChip label="Campus" tone="status" />
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-3 py-2">
+              <p className="wire-label">Date / Time</p>
+              <p className="mt-1 text-sm text-wire-100">{dateLabel}</p>
+            </div>
+            <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-3 py-2">
+              <p className="wire-label">Location</p>
+              <p className="mt-1 text-sm text-wire-100">{locationLabel}</p>
+            </div>
+            <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-3 py-2">
+              <p className="wire-label">Host</p>
+              <p className="mt-1 text-sm text-wire-100">{organizerLabel}</p>
+            </div>
+            <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-3 py-2">
+              <p className="wire-label">Host context</p>
+              <p className="mt-1 text-sm text-wire-100">{organizerMeta || "Campus organizer profile"}</p>
+            </div>
+          </div>
         </div>
       </section>
+
       {message ? <FeedbackBanner tone="success" message={message} /> : null}
       {error ? <FeedbackBanner tone="error" message={error} /> : null}
       {isDraft && isOwner ? (
@@ -127,21 +166,24 @@ export default async function EventDetailPage({ params, searchParams }: EventDet
             subtitle="Additional context from the organizer."
           >
             <p className="text-[14px] leading-relaxed text-wire-200">
-              {event.description || "No additional event description provided."}
+              {descriptionLabel}
             </p>
           </SectionCard>
         </div>
 
         <div className="space-y-6">
           <SectionCard
-            title="Event summary"
-            subtitle="Core details for attendance planning."
+            title="Host"
+            subtitle="Organizer context for attendance confidence."
           >
-            <div className="space-y-2">
-              <p className="wire-meta">Date / Time: {dateLabel}</p>
-              <p className="wire-meta">Location: {event.location}</p>
-              <p className="wire-meta">Organizer: {organizerLabel}</p>
-              {organizerMeta ? <p className="wire-meta">Context: {organizerMeta}</p> : null}
+            <div className="space-y-1.5">
+              <p className="text-sm text-wire-100">{organizerLabel}</p>
+              <p className="wire-meta">{organizerMeta || "Campus organizer profile"}</p>
+              {organizer?.user_id ? (
+                <Link href={`/connect/people/${organizer.user_id}`} className="wire-link inline-flex">
+                  View organizer profile
+                </Link>
+              ) : null}
             </div>
           </SectionCard>
 
@@ -159,14 +201,7 @@ export default async function EventDetailPage({ params, searchParams }: EventDet
                   <p className="wire-label">Interested</p>
                   <p className="mt-1 text-[14px] font-medium text-wire-100">{rsvpCounts.interested}</p>
                 </div>
-                <p className="col-span-2 wire-meta">
-                  Your RSVP:{" "}
-                  {participationStatus === "going"
-                    ? "Going"
-                    : participationStatus === "interested"
-                      ? "Interested"
-                      : "Not set"}
-                </p>
+                <p className="col-span-2 wire-meta">Your RSVP: {rsvpStateLabel}</p>
               </div>
 
               <div className="wire-action-row">
@@ -174,7 +209,7 @@ export default async function EventDetailPage({ params, searchParams }: EventDet
                   <input type="hidden" name="eventId" value={event.id} />
                   <input type="hidden" name="status" value="going" />
                   <input type="hidden" name="redirectTo" value={`/events/${event.id}`} />
-                  <button type="submit" className={goingActive ? "wire-action-primary w-full" : "wire-action w-full"}>
+                  <button type="submit" className="wire-action-primary w-full">
                     {goingActive ? "Going" : "Mark going"}
                   </button>
                 </form>
@@ -182,7 +217,7 @@ export default async function EventDetailPage({ params, searchParams }: EventDet
                   <input type="hidden" name="eventId" value={event.id} />
                   <input type="hidden" name="status" value="interested" />
                   <input type="hidden" name="redirectTo" value={`/events/${event.id}`} />
-                  <button type="submit" className={interestedActive ? "wire-action-primary w-full" : "wire-action w-full"}>
+                  <button type="submit" className="wire-action w-full">
                     {interestedActive ? "Interested" : "Mark interested"}
                   </button>
                 </form>
@@ -190,7 +225,7 @@ export default async function EventDetailPage({ params, searchParams }: EventDet
 
               {isOwner ? (
                 <div className="mt-3">
-                  <ShellButton label="Edit event" href={`/events/${event.id}/edit`} variant="primary" />
+                  <ShellButton label="Edit event" href={`/events/${event.id}/edit`} variant="default" />
                 </div>
               ) : null}
 
