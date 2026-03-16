@@ -8,8 +8,11 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "NU Atrium Skeleton",
-  description: "Low-fidelity campus app prototype",
+  title: {
+    default: "NU Atrium",
+    template: "%s | NU Atrium",
+  },
+  description: "NU-Hub campus platform for students.",
 };
 
 export default function RootLayout({
