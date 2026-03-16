@@ -58,41 +58,43 @@ export default async function EventsHomePage({ searchParams }: EventsHomePagePro
             action="/search"
           />
         </div>
-      </section>
-
-      <section className="wire-panel py-4">
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="mt-4 flex flex-wrap items-center gap-2">
           <ShellButton label="Create event" href="/events/create" variant="primary" block={false} />
-          <Link href="/events/list" className="wire-action">
-            Event list
+          <Link href="/events/list" className="wire-action-compact">
+            Browse all
           </Link>
           <Link href="/events/saved" className="wire-action-compact">
-            Saved events
+            Saved
           </Link>
         </div>
       </section>
 
       <SectionCard
-        title="This week on campus"
-        subtitle="Featured first, then upcoming."
+        title="Upcoming events"
+        subtitle="Published events ordered by start time."
         actionLabel="View all events"
         actionHref="/events/list"
       >
         {loadError ? <FeedbackBanner tone="error" message={loadError} className="mb-3" /> : null}
+        {!loadError && events.length > 0 ? (
+          <p className="mb-3 text-[12px] text-wire-300">
+            {events.length} event{events.length === 1 ? "" : "s"} in this view
+          </p>
+        ) : null}
         {featuredEvent ? (
           <EventCard event={toEventCardData(featuredEvent)} href={`/events/${featuredEvent.id}`} />
         ) : !loadError ? (
           <EmptyState
-            title="No published events yet"
-            description="Published campus events will appear here."
+            title="No upcoming events right now"
+            description="Check back soon or publish a new campus event."
             actionLabel="Create event"
             actionHref="/events/create"
           />
         ) : null}
         {upcomingEvents.length > 0 ? (
-          <div className="mt-4 border-t border-wire-700 pt-4">
-            <p className="mb-3 wire-label">Upcoming</p>
-            <div className="grid gap-3 xl:grid-cols-2">
+          <div className="mt-5 border-t border-wire-700 pt-4">
+            <p className="mb-3 wire-label">Next Up</p>
+            <div className="grid gap-3 sm:grid-cols-2">
               {upcomingEvents.map((event) => (
                 <EventCard key={event.id} event={toEventCardData(event)} href={`/events/${event.id}`} />
               ))}
