@@ -15,7 +15,6 @@ import { PersonCard } from "@/components/ui/PersonCard";
 import { SearchBar } from "@/components/ui/SearchBar";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { SectionCard } from "@/components/ui/SectionCard";
-import { ShellButton } from "@/components/ui/ShellButton";
 import {
   getCommunities,
   getPeopleDiscovery,
@@ -61,12 +60,6 @@ export default async function HomePage() {
             defaultValue=""
             action="/search"
           />
-        </div>
-        <div className="mt-4 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-          <ShellButton label="Browse market" href="/market" variant="primary" />
-          <Link href="/events" className="wire-action w-full">
-            Browse events
-          </Link>
         </div>
       </section>
 

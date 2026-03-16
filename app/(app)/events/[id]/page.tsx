@@ -4,6 +4,7 @@ import { FeedbackBanner } from "@/components/ui/FeedbackBanner";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { ShellButton } from "@/components/ui/ShellButton";
+import { SubmitButton } from "@/components/ui/SubmitButton";
 import { TagChip } from "@/components/ui/TagChip";
 import { notFound } from "next/navigation";
 import {
@@ -25,8 +26,7 @@ type EventDetailPageProps = {
 };
 
 export default async function EventDetailPage({ params, searchParams }: EventDetailPageProps) {
-  const { message, error } = await searchParams;
-  const { id } = await params;
+  const [{ message, error }, { id }] = await Promise.all([searchParams, params]);
 
   if (!isUuid(id)) {
     notFound();
@@ -154,7 +154,7 @@ export default async function EventDetailPage({ params, searchParams }: EventDet
               <img
                 src={coverUrl}
                 alt={event.title}
-                className="h-56 w-full rounded-[var(--radius-input)] border border-wire-700 bg-wire-900 object-cover"
+                className="h-64 w-full rounded-[var(--radius-input)] border border-wire-700 bg-wire-950/70 object-contain sm:h-72 lg:h-[30rem]"
               />
             </SectionCard>
           ) : (
@@ -165,7 +165,7 @@ export default async function EventDetailPage({ params, searchParams }: EventDet
             title="Description"
             subtitle="Additional context from the organizer."
           >
-            <p className="text-[14px] leading-relaxed text-wire-200">
+            <p className="whitespace-pre-wrap break-words text-[14px] leading-relaxed text-wire-200 [overflow-wrap:anywhere]">
               {descriptionLabel}
             </p>
           </SectionCard>
@@ -209,17 +209,22 @@ export default async function EventDetailPage({ params, searchParams }: EventDet
                   <input type="hidden" name="eventId" value={event.id} />
                   <input type="hidden" name="status" value="going" />
                   <input type="hidden" name="redirectTo" value={`/events/${event.id}`} />
-                  <button type="submit" className="wire-action-primary w-full">
-                    {goingActive ? "Going" : "Mark going"}
-                  </button>
+                  <SubmitButton
+                    label={goingActive ? "Going" : "Mark going"}
+                    pendingLabel="Updating RSVP..."
+                    variant="primary"
+                    className="w-full"
+                  />
                 </form>
                 <form action={setEventParticipationAction} className="w-full">
                   <input type="hidden" name="eventId" value={event.id} />
                   <input type="hidden" name="status" value="interested" />
                   <input type="hidden" name="redirectTo" value={`/events/${event.id}`} />
-                  <button type="submit" className="wire-action w-full">
-                    {interestedActive ? "Interested" : "Mark interested"}
-                  </button>
+                  <SubmitButton
+                    label={interestedActive ? "Interested" : "Mark interested"}
+                    pendingLabel="Updating RSVP..."
+                    className="w-full"
+                  />
                 </form>
               </div>
 
@@ -233,16 +238,16 @@ export default async function EventDetailPage({ params, searchParams }: EventDet
                 <form action={toggleSavedEventAction} className="w-full">
                   <input type="hidden" name="eventId" value={event.id} />
                   <input type="hidden" name="redirectTo" value={`/events/${event.id}`} />
-                  <button type="submit" className="wire-action w-full">
-                    {isSaved ? "Unsave event" : "Save event"}
-                  </button>
+                  <SubmitButton
+                    label={isSaved ? "Unsave event" : "Save event"}
+                    pendingLabel={isSaved ? "Unsaving..." : "Saving..."}
+                    className="w-full"
+                  />
                 </form>
                 <form action={clearEventParticipationAction} className="w-full">
                   <input type="hidden" name="eventId" value={event.id} />
                   <input type="hidden" name="redirectTo" value={`/events/${event.id}`} />
-                  <button type="submit" className="wire-action w-full">
-                    Clear RSVP
-                  </button>
+                  <SubmitButton label="Clear RSVP" pendingLabel="Clearing..." className="w-full" />
                 </form>
               </div>
               {!isOwner ? (
@@ -252,9 +257,12 @@ export default async function EventDetailPage({ params, searchParams }: EventDet
                     <input type="hidden" name="targetId" value={event.id} />
                     <input type="hidden" name="reason" value="inappropriate" />
                     <input type="hidden" name="redirectTo" value={`/events/${event.id}`} />
-                    <button type="submit" className="wire-action-ghost">
-                      Report event
-                    </button>
+                    <SubmitButton
+                      label="Report event"
+                      pendingLabel="Submitting..."
+                      variant="ghost"
+                      className="w-auto"
+                    />
                   </form>
                 </div>
               ) : null}

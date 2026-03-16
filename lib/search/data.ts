@@ -5,7 +5,7 @@ import {
   toPersonCardData,
   type CommunityCardData,
   type PersonCardData,
-  type PeopleDiscoveryItem,
+  type PersonCardSource,
 } from "@/lib/connect/data";
 import {
   toEventCardData,
@@ -129,7 +129,7 @@ export async function searchGlobalEntities(
     supabase
       .from("profiles")
       .select(
-        "user_id, full_name, school, major, year_label, bio, interests, goals, looking_for, skills",
+        "user_id, full_name, major, year_label, interests, looking_for, avatar_path",
       )
       .neq("user_id", user.id)
       .eq("onboarding_completed", true)
@@ -164,7 +164,7 @@ export async function searchGlobalEntities(
 
   const listingRows = listingsResult.data as ListingCardSource[];
   const eventRows = eventsResult.data as EventCardSource[];
-  const profileRows = profilesResult.data as PeopleDiscoveryItem[];
+  const profileRows = profilesResult.data as PersonCardSource[];
   const communityRows = communitiesResult.data as CommunitySearchRow[];
 
   const listingCoverMap = await getListingCoverMap(

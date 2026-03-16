@@ -7,6 +7,7 @@ import { ListingImageGallery } from "@/components/ui/ListingImageGallery";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { ShellButton } from "@/components/ui/ShellButton";
+import { SubmitButton } from "@/components/ui/SubmitButton";
 import { TagChip } from "@/components/ui/TagChip";
 import { notFound } from "next/navigation";
 import { startListingConversationAction, toggleSavedListingAction } from "@/lib/market/actions";
@@ -28,8 +29,7 @@ export default async function MarketItemDetailPage({
   params,
   searchParams,
 }: MarketItemDetailPageProps) {
-  const { message, error } = await searchParams;
-  const { id } = await params;
+  const [{ message, error }, { id }] = await Promise.all([searchParams, params]);
 
   if (!isUuid(id)) {
     notFound();
@@ -193,18 +193,23 @@ export default async function MarketItemDetailPage({
                 <form action={startListingConversationAction} className="w-full">
                   <input type="hidden" name="listingId" value={listing.id} />
                   <input type="hidden" name="redirectTo" value={`/market/item/${listing.id}`} />
-                  <button type="submit" className="wire-action-primary w-full">
-                    Message seller
-                  </button>
+                  <SubmitButton
+                    label="Message seller"
+                    pendingLabel="Opening chat..."
+                    variant="primary"
+                    className="w-full"
+                  />
                 </form>
               )}
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 <form action={toggleSavedListingAction} className="w-full">
                   <input type="hidden" name="listingId" value={listing.id} />
                   <input type="hidden" name="redirectTo" value={`/market/item/${listing.id}`} />
-                  <button type="submit" className="wire-action w-full">
-                    {isSaved ? "Unsave" : "Save"}
-                  </button>
+                  <SubmitButton
+                    label={isSaved ? "Unsave" : "Save"}
+                    pendingLabel={isSaved ? "Unsaving..." : "Saving..."}
+                    className="w-full"
+                  />
                 </form>
                 <CopyListingLinkButton href={`/market/item/${listing.id}`} />
               </div>
@@ -216,9 +221,12 @@ export default async function MarketItemDetailPage({
                   <input type="hidden" name="targetId" value={listing.id} />
                   <input type="hidden" name="reason" value="inappropriate" />
                   <input type="hidden" name="redirectTo" value={`/market/item/${listing.id}`} />
-                  <button type="submit" className="wire-action-ghost">
-                    Report listing
-                  </button>
+                  <SubmitButton
+                    label="Report listing"
+                    pendingLabel="Submitting..."
+                    variant="ghost"
+                    className="w-auto"
+                  />
                 </form>
               </div>
             ) : null}

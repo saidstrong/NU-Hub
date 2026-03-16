@@ -8,6 +8,7 @@ export type PersonCardItem = {
   year: string;
   lookingFor: string;
   interests: string[];
+  avatarUrl?: string;
 };
 
 type PersonCardProps = {
@@ -19,7 +20,16 @@ export function PersonCard({ person, href }: PersonCardProps) {
   const content = (
     <div className="wire-card wire-hover">
       <div className="mb-3 flex items-center gap-3">
-        <div className="h-10 w-10 rounded-full border border-dashed border-wire-600 bg-wire-900" />
+        {person.avatarUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={person.avatarUrl}
+            alt={`${person.name} avatar`}
+            className="h-10 w-10 rounded-full border border-wire-700 bg-wire-900 object-cover"
+          />
+        ) : (
+          <div className="h-10 w-10 rounded-full border border-dashed border-wire-600 bg-wire-900" />
+        )}
         <div className="min-w-0">
           <p className="text-sm font-semibold tracking-tight">{person.name}</p>
           <p className="wire-meta">{person.major} - {person.year}</p>

@@ -93,10 +93,17 @@ export type MarketplaceConversationThread = {
 
 const LISTING_IMAGES_BUCKET = "listing-images";
 const LOADER_SLOW_THRESHOLD_MS = 150;
+const INBOX_INITIAL_LAST_MESSAGE_SCAN_MULTIPLIER = 8;
+const INBOX_MESSAGE_LOOKUP_BATCH_SIZE = 8;
 const LISTING_CARD_SELECT =
   "id, title, price_kzt, category, condition, pickup_location, status";
 const LISTING_EDIT_SELECT =
   "id, seller_id, title, description, price_kzt, category, condition, pickup_location, status";
+
+type MarketplaceLatestMessageLookupRow = Pick<
+  MessageRow,
+  "conversation_id" | "sender_id" | "content" | "created_at"
+>;
 
 export function formatPriceKzt(priceKzt: number): string {
   return `${new Intl.NumberFormat("en-US").format(priceKzt)} KZT`;
@@ -155,6 +162,73 @@ async function getCoverImageMap(
   }
 
   return coverMap;
+}
+
+async function getLatestMarketplaceMessagesByConversation(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  conversationIds: string[],
+): Promise<Map<string, Pick<MessageRow, "sender_id" | "content" | "created_at">>> {
+  const latestByConversation = new Map<string, Pick<MessageRow, "sender_id" | "content" | "created_at">>();
+  if (conversationIds.length === 0) {
+    return latestByConversation;
+  }
+
+  const initialScanLimit = Math.max(
+    conversationIds.length,
+    conversationIds.length * INBOX_INITIAL_LAST_MESSAGE_SCAN_MULTIPLIER,
+  );
+  const { data: initialRows, error: initialRowsError } = await supabase
+    .from("messages")
+    .select("conversation_id, sender_id, content, created_at")
+    .in("conversation_id", conversationIds)
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: false })
+    .limit(initialScanLimit);
+
+  if (initialRowsError) {
+    throw new Error("Failed to load conversation messages.");
+  }
+
+  for (const row of (initialRows ?? []) as MarketplaceLatestMessageLookupRow[]) {
+    if (!latestByConversation.has(row.conversation_id)) {
+      latestByConversation.set(row.conversation_id, {
+        sender_id: row.sender_id,
+        content: row.content,
+        created_at: row.created_at,
+      });
+    }
+  }
+
+  const missingConversationIds = conversationIds.filter((conversationId) => !latestByConversation.has(conversationId));
+
+  for (let index = 0; index < missingConversationIds.length; index += INBOX_MESSAGE_LOOKUP_BATCH_SIZE) {
+    const chunk = missingConversationIds.slice(index, index + INBOX_MESSAGE_LOOKUP_BATCH_SIZE);
+    const fallbackResults = await Promise.all(
+      chunk.map((conversationId) =>
+        supabase
+          .from("messages")
+          .select("sender_id, content, created_at")
+          .eq("conversation_id", conversationId)
+          .order("created_at", { ascending: false })
+          .order("id", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+      ),
+    );
+
+    for (let resultIndex = 0; resultIndex < fallbackResults.length; resultIndex += 1) {
+      const fallbackResult = fallbackResults[resultIndex];
+      if (fallbackResult.error) {
+        throw new Error("Failed to load conversation messages.");
+      }
+
+      if (fallbackResult.data) {
+        latestByConversation.set(chunk[resultIndex], fallbackResult.data);
+      }
+    }
+  }
+
+  return latestByConversation;
 }
 
 async function getListingImageUrls(
@@ -515,7 +589,6 @@ export async function getMarketplaceConversationsPage(
       };
     }
 
-    const conversationIds = paged.rows.map((conversation) => conversation.id);
     const listingIds = dedupeStrings(paged.rows.map((conversation) => conversation.listing_id));
     const counterpartIds = dedupeStrings(
       paged.rows.map((conversation) =>
@@ -523,7 +596,9 @@ export async function getMarketplaceConversationsPage(
       ),
     );
 
-    const [listingsResult, profilesResult, messagesResult] = await Promise.all([
+    const conversationIds = dedupeStrings(paged.rows.map((conversation) => conversation.id));
+
+    const [listingsResult, profilesResult, lastMessageMap] = await Promise.all([
       listingIds.length > 0
         ? supabase
             .from("listings")
@@ -536,32 +611,16 @@ export async function getMarketplaceConversationsPage(
             .select("user_id, full_name, avatar_path")
             .in("user_id", counterpartIds)
         : Promise.resolve({ data: [] as ProfileIdentity[], error: null }),
-      supabase
-        .from("messages")
-        .select("id, conversation_id, sender_id, content, created_at")
-        .in("conversation_id", conversationIds)
-        .order("created_at", { ascending: false })
-        .order("id", { ascending: false }),
+      getLatestMarketplaceMessagesByConversation(supabase, conversationIds),
     ]);
 
-    if (listingsResult.error || profilesResult.error || messagesResult.error) {
+    if (listingsResult.error || profilesResult.error) {
       throw new Error("Failed to load conversation metadata.");
     }
 
     const listingMap = new Map((listingsResult.data ?? []).map((listing) => [listing.id, listing]));
     const counterpartMap = new Map((profilesResult.data ?? []).map((profile) => [profile.user_id, profile]));
-    const lastMessageMap = new Map<string, Pick<MessageRow, "content" | "created_at" | "sender_id">>();
     const coverImageMap = await getCoverImageMap(supabase, listingIds);
-
-    for (const message of messagesResult.data ?? []) {
-      if (!lastMessageMap.has(message.conversation_id)) {
-        lastMessageMap.set(message.conversation_id, {
-          content: message.content,
-          created_at: message.created_at,
-          sender_id: message.sender_id,
-        });
-      }
-    }
 
     return {
       conversations: paged.rows.map((conversation) => {

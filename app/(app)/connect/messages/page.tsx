@@ -16,19 +16,19 @@ type ConnectMessagesPageProps = {
 };
 
 const FRIEND_INBOX_LIMIT = 30;
+const MESSAGE_TIME_FORMATTER = new Intl.DateTimeFormat("en-US", {
+  month: "short",
+  day: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+});
 
 function formatMessageTime(value: string): string {
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(value));
+  return MESSAGE_TIME_FORMATTER.format(new Date(value));
 }
 
 export default async function ConnectMessagesPage({ searchParams }: ConnectMessagesPageProps) {
-  const { error, message } = await searchParams;
-  const user = await requireUser();
+  const [{ error, message }, user] = await Promise.all([searchParams, requireUser()]);
 
   let conversations: Awaited<ReturnType<typeof getFriendInbox>> = [];
   let loadError: string | null = null;

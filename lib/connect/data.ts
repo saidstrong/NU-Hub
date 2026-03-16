@@ -45,18 +45,10 @@ export type CommunityMemberProfilePreview = Pick<
   "user_id" | "full_name" | "major" | "year_label" | "avatar_path"
 >;
 
-export type PeopleDiscoveryItem = {
-  user_id: string;
-  full_name: string;
-  school: string | null;
-  major: string | null;
-  year_label: string | null;
-  bio: string | null;
-  interests: string[];
-  goals: string[];
-  looking_for: string[];
-  skills: string[];
-};
+export type PersonCardSource = Pick<
+  ProfileRow,
+  "user_id" | "full_name" | "major" | "year_label" | "interests" | "looking_for" | "avatar_path"
+>;
 
 export type CommunityCardData = {
   id: string;
@@ -76,6 +68,7 @@ export type PersonCardData = {
   year: string;
   lookingFor: string;
   interests: string[];
+  avatarUrl?: string;
 };
 
 export type CommunityDetail = {
@@ -172,6 +165,14 @@ export type PaginatedCommunityResult<TItem> = {
 const COMMUNITY_MEMBER_PREVIEW_LIMIT = 10;
 const COMMUNITY_POST_DETAIL_LIMIT = 25;
 const LOADER_SLOW_THRESHOLD_MS = 150;
+const LIGHTWEIGHT_MEMBER_COUNT_BATCH_SIZE = 6;
+const INBOX_INITIAL_LAST_MESSAGE_SCAN_MULTIPLIER = 8;
+const INBOX_MESSAGE_LOOKUP_BATCH_SIZE = 8;
+
+type FriendInboxLatestMessageLookupRow = Pick<
+  FriendMessageRow,
+  "conversation_id" | "sender_id" | "content" | "created_at"
+>;
 
 function formatJoinType(joinType: CommunityRow["join_type"]): string {
   return joinType === "open" ? "Open" : "Request";
@@ -203,7 +204,9 @@ function toMessagePreview(value: string, maxLength = 120): string {
   return `${normalized.slice(0, maxLength)}...`;
 }
 
-export function toPersonCardData(profile: PeopleDiscoveryItem): PersonCardData {
+export function toPersonCardData(profile: PersonCardSource): PersonCardData {
+  const avatarUrl = toPublicStorageUrl("avatars", profile.avatar_path);
+
   return {
     id: profile.user_id,
     name: fallbackText(profile.full_name, "NU student"),
@@ -211,6 +214,7 @@ export function toPersonCardData(profile: PeopleDiscoveryItem): PersonCardData {
     year: fallbackText(profile.year_label, "Year not set"),
     lookingFor: profile.looking_for[0] ?? "Open to collaboration",
     interests: profile.interests,
+    avatarUrl: avatarUrl ?? undefined,
   };
 }
 
@@ -240,6 +244,31 @@ async function getJoinedMemberCounts(
   const counts = new Map<string, number>();
   if (communityIds.length === 0) return counts;
 
+  // For small batches (home/connect surfaces), count per community to avoid
+  // transferring every joined membership row over the network.
+  if (communityIds.length <= LIGHTWEIGHT_MEMBER_COUNT_BATCH_SIZE) {
+    const countResults = await Promise.all(
+      communityIds.map((communityId) =>
+        supabase
+          .from("community_members")
+          .select("user_id", { count: "exact", head: true })
+          .eq("community_id", communityId)
+          .eq("status", "joined"),
+      ),
+    );
+
+    for (let index = 0; index < countResults.length; index += 1) {
+      const result = countResults[index];
+      if (result.error) {
+        throw new Error("Failed to load community member counts.");
+      }
+
+      counts.set(communityIds[index], result.count ?? 0);
+    }
+
+    return counts;
+  }
+
   const { data, error } = await supabase
     .from("community_members")
     .select("community_id")
@@ -257,15 +286,80 @@ async function getJoinedMemberCounts(
   return counts;
 }
 
-export async function getPeopleDiscovery(limit = 16): Promise<PeopleDiscoveryItem[]> {
+async function getLatestFriendMessagesByConversation(
+  supabase: SupabaseServerClient,
+  conversationIds: string[],
+): Promise<Map<string, Pick<FriendMessageRow, "sender_id" | "content" | "created_at">>> {
+  const latestByConversation = new Map<string, Pick<FriendMessageRow, "sender_id" | "content" | "created_at">>();
+  if (conversationIds.length === 0) {
+    return latestByConversation;
+  }
+
+  const initialScanLimit = Math.max(
+    conversationIds.length,
+    conversationIds.length * INBOX_INITIAL_LAST_MESSAGE_SCAN_MULTIPLIER,
+  );
+  const { data: initialRows, error: initialRowsError } = await supabase
+    .from("friend_messages")
+    .select("conversation_id, sender_id, content, created_at")
+    .in("conversation_id", conversationIds)
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: false })
+    .limit(initialScanLimit);
+
+  if (initialRowsError) {
+    throw new Error("Failed to load friend inbox messages.");
+  }
+
+  for (const row of (initialRows ?? []) as FriendInboxLatestMessageLookupRow[]) {
+    if (!latestByConversation.has(row.conversation_id)) {
+      latestByConversation.set(row.conversation_id, {
+        sender_id: row.sender_id,
+        content: row.content,
+        created_at: row.created_at,
+      });
+    }
+  }
+
+  const missingConversationIds = conversationIds.filter((conversationId) => !latestByConversation.has(conversationId));
+
+  for (let index = 0; index < missingConversationIds.length; index += INBOX_MESSAGE_LOOKUP_BATCH_SIZE) {
+    const chunk = missingConversationIds.slice(index, index + INBOX_MESSAGE_LOOKUP_BATCH_SIZE);
+    const fallbackResults = await Promise.all(
+      chunk.map((conversationId) =>
+        supabase
+          .from("friend_messages")
+          .select("sender_id, content, created_at")
+          .eq("conversation_id", conversationId)
+          .order("created_at", { ascending: false })
+          .order("id", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+      ),
+    );
+
+    for (let resultIndex = 0; resultIndex < fallbackResults.length; resultIndex += 1) {
+      const fallbackResult = fallbackResults[resultIndex];
+      if (fallbackResult.error) {
+        throw new Error("Failed to load friend inbox messages.");
+      }
+
+      if (fallbackResult.data) {
+        latestByConversation.set(chunk[resultIndex], fallbackResult.data);
+      }
+    }
+  }
+
+  return latestByConversation;
+}
+
+export async function getPeopleDiscovery(limit = 16): Promise<PersonCardSource[]> {
   const user = await requireUser();
   const supabase = await createClient();
 
   const { data, error } = await supabase
     .from("profiles")
-    .select(
-      "user_id, full_name, school, major, year_label, bio, interests, goals, looking_for, skills",
-    )
+    .select("user_id, full_name, major, year_label, interests, looking_for, avatar_path")
     .neq("user_id", user.id)
     .eq("onboarding_completed", true)
     .order("created_at", { ascending: false })
@@ -451,14 +545,14 @@ export async function getFriendInbox(userId: string, limit = 25): Promise<Friend
       return [];
     }
 
-    const conversationIds = dedupeStrings(conversations.map((conversation) => conversation.id));
+    const typedConversations = conversations ?? [];
+    const conversationIds = dedupeStrings(typedConversations.map((conversation) => conversation.id));
     const counterpartIds = dedupeStrings(
-      conversations.map((conversation) =>
+      typedConversations.map((conversation) =>
         conversation.user_a_id === viewerId ? conversation.user_b_id : conversation.user_a_id,
       ),
     );
-
-    const [profilesResult, messagesResult] = await Promise.all([
+    const [profilesResult, lastMessageMap] = await Promise.all([
       counterpartIds.length > 0
         ? supabase
             .from("profiles")
@@ -468,36 +562,20 @@ export async function getFriendInbox(userId: string, limit = 25): Promise<Friend
             data: [] as Pick<ProfileRow, "user_id" | "full_name" | "avatar_path" | "major" | "year_label">[],
             error: null,
           }),
-      supabase
-        .from("friend_messages")
-        .select("id, conversation_id, sender_id, content, created_at")
-        .in("conversation_id", conversationIds)
-        .order("created_at", { ascending: false })
-        .order("id", { ascending: false }),
+      getLatestFriendMessagesByConversation(supabase, conversationIds),
     ]);
 
-    if (profilesResult.error || messagesResult.error) {
+    if (profilesResult.error) {
       throw new Error("Failed to load friend inbox metadata.");
     }
 
     const profileMap = new Map((profilesResult.data ?? []).map((profile) => [profile.user_id, profile]));
-    const lastMessageMap = new Map<string, Pick<FriendMessageRow, "sender_id" | "content" | "created_at">>();
 
-    for (const message of messagesResult.data ?? []) {
-      if (!lastMessageMap.has(message.conversation_id)) {
-        lastMessageMap.set(message.conversation_id, {
-          sender_id: message.sender_id,
-          content: message.content,
-          created_at: message.created_at,
-        });
-      }
-    }
-
-    return conversations.map((conversation) => {
+    return typedConversations.map((conversation) => {
       const counterpartId =
         conversation.user_a_id === viewerId ? conversation.user_b_id : conversation.user_a_id;
       const counterpartProfile = profileMap.get(counterpartId);
-      const lastMessage = lastMessageMap.get(conversation.id);
+      const latestMessage = lastMessageMap.get(conversation.id);
 
       return {
         conversationId: conversation.id,
@@ -506,9 +584,9 @@ export async function getFriendInbox(userId: string, limit = 25): Promise<Friend
         counterpartAvatarPath: counterpartProfile?.avatar_path ?? null,
         counterpartMajor: counterpartProfile?.major ?? null,
         counterpartYearLabel: counterpartProfile?.year_label ?? null,
-        lastMessagePreview: toMessagePreview(lastMessage?.content ?? ""),
-        lastMessageSenderId: lastMessage?.sender_id ?? null,
-        lastMessageAt: lastMessage?.created_at ?? conversation.created_at,
+        lastMessagePreview: toMessagePreview(latestMessage?.content ?? ""),
+        lastMessageSenderId: latestMessage?.sender_id ?? null,
+        lastMessageAt: latestMessage?.created_at ?? conversation.created_at,
         updatedAt: conversation.updated_at,
       };
     });
