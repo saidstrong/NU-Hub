@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FeedbackBanner } from "@/components/ui/FeedbackBanner";
+import { ListingImageGallery } from "@/components/ui/ListingImageGallery";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { ShellButton } from "@/components/ui/ShellButton";
@@ -68,8 +69,7 @@ export default async function MarketItemDetailPage({
   }
 
   const { listing, seller, isSaved, isOwner } = detail;
-  const coverImageUrl = detail.imageUrls[0] ?? null;
-  const extraImageUrls = detail.imageUrls.slice(1);
+  const listingImages = detail.imageUrls;
   const sellerMeta = [seller?.school, seller?.major, seller?.year_label]
     .map((value) => value?.trim())
     .filter(Boolean)
@@ -103,25 +103,9 @@ export default async function MarketItemDetailPage({
 
       <div className="grid gap-6 xl:grid-cols-[1.45fr_1fr]">
         <div className="space-y-6">
-          {coverImageUrl ? (
+          {listingImages.length > 0 ? (
             <SectionCard title="Images" subtitle="Preview and item condition context.">
-              <img
-                src={coverImageUrl}
-                alt={listing.title}
-                className="aspect-[4/3] w-full rounded-[var(--radius-input)] border border-wire-700 bg-wire-900 object-cover object-center sm:aspect-[16/10]"
-              />
-              {extraImageUrls.length > 0 ? (
-                <div className="-mx-1 mt-3 flex snap-x snap-mandatory gap-2.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:grid sm:grid-cols-4 sm:overflow-visible sm:px-0">
-                  {extraImageUrls.map((imageUrl, index) => (
-                    <img
-                      key={`${imageUrl}-${index}`}
-                      src={imageUrl}
-                      alt={`${listing.title} ${index + 2}`}
-                      className="aspect-[4/3] w-28 shrink-0 snap-start rounded-[var(--radius-input)] border border-wire-700 bg-wire-900 object-cover object-center sm:w-full"
-                    />
-                  ))}
-                </div>
-              ) : null}
+              <ListingImageGallery images={listingImages} title={listing.title} />
             </SectionCard>
           ) : (
             <div className="wire-inline-empty">No listing images uploaded.</div>

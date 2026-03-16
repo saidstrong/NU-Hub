@@ -79,6 +79,14 @@ export default async function PersonProfilePage({ params, searchParams }: Person
     person.links && typeof person.links === "object" && !Array.isArray(person.links)
       ? (person.links as Record<string, unknown>)
       : {};
+  const telegramNickname =
+    typeof links.telegram === "string" && links.telegram.trim().length > 0
+      ? links.telegram.trim()
+      : null;
+  const instagramNickname =
+    typeof links.instagram === "string" && links.instagram.trim().length > 0
+      ? links.instagram.trim()
+      : null;
 
   return (
     <main>
@@ -183,10 +191,14 @@ export default async function PersonProfilePage({ params, searchParams }: Person
                 {typeof links.github === "string" ? <p>GitHub: {links.github}</p> : null}
                 {typeof links.linkedin === "string" ? <p>LinkedIn: {links.linkedin}</p> : null}
                 {typeof links.portfolio === "string" ? <p>Portfolio: {links.portfolio}</p> : null}
+                {telegramNickname ? <p>Telegram: {telegramNickname}</p> : null}
+                {instagramNickname ? <p>Instagram: {instagramNickname}</p> : null}
                 {!person.resume_url &&
                 typeof links.github !== "string" &&
                 typeof links.linkedin !== "string" &&
-                typeof links.portfolio !== "string" ? (
+                typeof links.portfolio !== "string" &&
+                !telegramNickname &&
+                !instagramNickname ? (
                   <p className="wire-inline-empty">No professional links shared.</p>
                 ) : null}
               </div>
