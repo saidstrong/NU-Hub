@@ -9,7 +9,7 @@ type CampusServiceDetailPageProps = {
   params: Promise<{ slug: string }>;
 };
 
-function valueOrFallback(value: string | undefined, fallback = "Not listed"): string {
+function valueOrFallback(value: string | undefined, fallback = "Not provided"): string {
   if (!value) return fallback;
   const trimmed = value.trim();
   return trimmed || fallback;

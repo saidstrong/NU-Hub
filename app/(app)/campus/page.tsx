@@ -10,7 +10,7 @@ import {
   importantContacts,
 } from "@/lib/campus/data";
 
-function valueOrFallback(value: string | undefined, fallback = "Not listed"): string {
+function valueOrFallback(value: string | undefined, fallback = "Not provided"): string {
   if (!value) return fallback;
   const trimmed = value.trim();
   return trimmed || fallback;
@@ -47,8 +47,8 @@ export default function CampusInfoPage() {
                 <p className="text-sm font-semibold text-wire-100">{service.name}</p>
                 <p className="mt-1.5 text-[13px] leading-5 text-wire-200">{service.description}</p>
                 <div className="mt-2 space-y-1">
-                  <p className="wire-meta">Location: {valueOrFallback(service.location, "Not listed")}</p>
-                  <p className="wire-meta">Hours: {valueOrFallback(service.hours, "Not listed")}</p>
+                  <p className="wire-meta">Location: {valueOrFallback(service.location)}</p>
+                  <p className="wire-meta">Hours: {valueOrFallback(service.hours)}</p>
                 </div>
                 <div className="mt-3">
                   <ShellButton

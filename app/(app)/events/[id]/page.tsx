@@ -89,7 +89,7 @@ export default async function EventDetailPage({ params, searchParams }: EventDet
       ? "Going"
       : participationStatus === "interested"
         ? "Interested"
-        : "Not set";
+        : "No RSVP yet";
   const coverUrl = toPublicStorageUrl("event-images", event.cover_path);
 
   return (

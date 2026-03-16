@@ -94,7 +94,9 @@ export default async function MarketMessagesPage({ searchParams }: MarketMessage
                           <div className="h-8 w-8 rounded-full border border-dashed border-wire-600 bg-wire-900" />
                         )}
                         <div className="min-w-0">
-                          <p className="truncate text-sm font-medium text-wire-100">{conversation.counterpartName}</p>
+                          <p className="line-clamp-1 text-sm font-medium text-wire-100 [overflow-wrap:anywhere]">
+                            {conversation.counterpartName}
+                          </p>
                           <span className={needsReply
                             ? "mt-0.5 inline-flex rounded-full border border-accent/35 bg-accent/10 px-2 py-0.5 text-[11px] font-medium text-wire-100"
                             : "mt-0.5 inline-flex rounded-full border border-wire-600 bg-wire-900 px-2 py-0.5 text-[11px] font-medium text-wire-300"}
@@ -118,7 +120,9 @@ export default async function MarketMessagesPage({ searchParams }: MarketMessage
                       <div className="h-11 w-11 shrink-0 rounded-[10px] border border-dashed border-wire-600 bg-wire-900" />
                     )}
                     <div className="min-w-0">
-                      <p className="truncate text-[13px] font-medium text-wire-100">{conversation.listingTitle}</p>
+                      <p className="line-clamp-1 text-[13px] font-medium text-wire-100 [overflow-wrap:anywhere]">
+                        {conversation.listingTitle}
+                      </p>
                       <p className="mt-0.5 text-[11px] text-wire-300">
                         {conversation.listingPriceKzt !== null ? formatPriceKzt(conversation.listingPriceKzt) : "Price unavailable"}
                         {listingStatusLabel ? ` • ${listingStatusLabel}` : ""}
@@ -127,7 +131,9 @@ export default async function MarketMessagesPage({ searchParams }: MarketMessage
                   </div>
 
                   <div className="mt-2.5">
-                    <p className="line-clamp-1 text-[13px] text-wire-200">{conversation.lastMessagePreview}</p>
+                    <p className="line-clamp-1 text-[13px] text-wire-200 [overflow-wrap:anywhere]">
+                      {conversation.lastMessagePreview}
+                    </p>
                   </div>
                 </Link>
               );

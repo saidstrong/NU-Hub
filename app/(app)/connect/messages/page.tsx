@@ -90,7 +90,7 @@ export default async function ConnectMessagesPage({ searchParams }: ConnectMessa
                       )}
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
-                          <p className="truncate text-sm font-semibold text-wire-100">
+                          <p className="line-clamp-1 text-sm font-semibold text-wire-100 [overflow-wrap:anywhere]">
                             {conversation.counterpartName}
                           </p>
                           <span className={replyBadgeClass}>
@@ -100,7 +100,7 @@ export default async function ConnectMessagesPage({ searchParams }: ConnectMessa
                         {counterpartMeta ? (
                           <p className="mt-0.5 text-[11px] text-wire-400">{counterpartMeta}</p>
                         ) : null}
-                        <p className="mt-1 line-clamp-1 text-[13px] text-wire-200">
+                        <p className="mt-1 line-clamp-1 text-[13px] text-wire-200 [overflow-wrap:anywhere]">
                           {conversation.lastMessagePreview}
                         </p>
                       </div>

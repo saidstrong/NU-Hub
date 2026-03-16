@@ -92,7 +92,9 @@ export default async function MarketConversationPage({
               <div className="h-9 w-9 rounded-full border border-dashed border-wire-600 bg-wire-900" />
             )}
             <div className="min-w-0">
-              <p className="truncate text-sm font-medium text-wire-100">{thread.counterpartName}</p>
+              <p className="line-clamp-1 text-sm font-medium text-wire-100 [overflow-wrap:anywhere]">
+                {thread.counterpartName}
+              </p>
               <p className="wire-meta">Marketplace conversation</p>
             </div>
           </div>
@@ -112,7 +114,9 @@ export default async function MarketConversationPage({
                 <div className="h-11 w-11 shrink-0 rounded-[10px] border border-dashed border-wire-600 bg-wire-900" />
               )}
               <div className="min-w-0">
-                <p className="truncate text-[13px] font-medium text-wire-100">{thread.listingTitle}</p>
+                <p className="line-clamp-1 text-[13px] font-medium text-wire-100 [overflow-wrap:anywhere]">
+                  {thread.listingTitle}
+                </p>
                 <p className="mt-0.5 text-[11px] text-wire-300">
                   {thread.listingPriceKzt !== null ? formatPriceKzt(thread.listingPriceKzt) : "Price unavailable"}
                   {listingStatusLabel ? ` • ${listingStatusLabel}` : ""}

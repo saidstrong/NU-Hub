@@ -92,7 +92,9 @@ export default async function FriendConversationPage({
               <div className="h-9 w-9 rounded-full border border-dashed border-wire-600 bg-wire-900" />
             )}
             <div className="min-w-0">
-              <p className="truncate text-sm font-medium text-wire-100">{thread.counterpartName}</p>
+              <p className="line-clamp-1 text-sm font-medium text-wire-100 [overflow-wrap:anywhere]">
+                {thread.counterpartName}
+              </p>
               {counterpartMeta ? <p className="mt-0.5 text-[11px] text-wire-400">{counterpartMeta}</p> : null}
             </div>
           </div>

@@ -189,19 +189,19 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
             <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-4 py-3">
               <p className="wire-label">School</p>
               <p className="mt-2 text-[14px] text-wire-100">
-                {profile.school || <span className="text-wire-300">Not added</span>}
+                {profile.school || <span className="text-wire-300">Not provided</span>}
               </p>
             </div>
             <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-4 py-3">
               <p className="wire-label">Major</p>
               <p className="mt-2 text-[14px] text-wire-100">
-                {profile.major || <span className="text-wire-300">Not added</span>}
+                {profile.major || <span className="text-wire-300">Not provided</span>}
               </p>
             </div>
             <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-4 py-3">
               <p className="wire-label">Year</p>
               <p className="mt-2 text-[14px] text-wire-100">
-                {profile.year_label || <span className="text-wire-300">Not added</span>}
+                {profile.year_label || <span className="text-wire-300">Not provided</span>}
               </p>
             </div>
           </div>
