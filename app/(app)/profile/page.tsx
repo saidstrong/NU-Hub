@@ -25,7 +25,7 @@ type ProfilePageProps = {
 
 function joinLine(parts: Array<string | null>): string {
   const safeParts = parts.map((part) => (part ?? "").trim()).filter(Boolean);
-  return safeParts.length > 0 ? safeParts.join(" | ") : "Campus student profile";
+  return safeParts.length > 0 ? safeParts.join(" | ") : "";
 }
 
 function parseProjects(projects: unknown): Array<{ title: string; summary?: string }> {
@@ -85,6 +85,11 @@ function parseProfileExtras(links: unknown): {
   };
 }
 
+function formatHandle(value: string | null): string | null {
+  if (!value) return null;
+  return value.startsWith("@") ? value : `@${value}`;
+}
+
 function EmptyText({ text }: { text: string }) {
   return (
     <div className="wire-inline-empty">
@@ -99,10 +104,14 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
   const projects = parseProjects(profile.projects);
   const links = parseLinks(profile.links);
   const extras = parseProfileExtras(profile.links);
-  const hasExtras = Boolean(extras.telegram || extras.instagram || extras.relationshipStatus);
   const avatarUrl = toPublicStorageUrl("avatars", profile.avatar_path);
   const name = profile.full_name || "NU student";
   const profileContext = subtitle || "Campus student profile";
+  const telegramHandle = formatHandle(extras.telegram);
+  const instagramHandle = formatHandle(extras.instagram);
+  const hasPublicLinks = Boolean(profile.resume_url || links.length > 0);
+  const hasSocialHandles = Boolean(telegramHandle || instagramHandle);
+  const bioText = typeof profile.bio === "string" ? profile.bio.trim() : "";
 
   return (
     <main>
@@ -115,35 +124,42 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
             </Link>
           }
         />
-      </section>
-
-      {message ? <FeedbackBanner tone="success" message={message} /> : null}
-
-      <section className="wire-panel">
-        <div className="flex items-start gap-4">
-          {avatarUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={avatarUrl}
-              alt={`${name} avatar`}
-              className="h-16 w-16 shrink-0 rounded-full border border-wire-700 bg-wire-900 object-cover"
-            />
-          ) : (
-            <div className="h-16 w-16 shrink-0 rounded-full border border-dashed border-wire-600 bg-wire-900" />
-          )}
-          <div className="min-w-0">
-            <p className="wire-label">Campus identity</p>
-            <h2 className="mt-1 truncate text-[30px] font-semibold leading-[36px] tracking-tight text-wire-100">
-              {name}
-            </h2>
-            <p className="mt-2 text-[14px] text-wire-300">{profileContext}</p>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex min-w-0 items-start gap-4">
+            {avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={avatarUrl}
+                alt={`${name} avatar`}
+                className="h-16 w-16 shrink-0 rounded-full border border-wire-700 bg-wire-900 object-cover"
+              />
+            ) : (
+              <div className="h-16 w-16 shrink-0 rounded-full border border-dashed border-wire-600 bg-wire-900" />
+            )}
+            <div className="min-w-0">
+              <p className="wire-label">Campus identity</p>
+              <h2 className="mt-1 break-words text-[30px] font-semibold leading-[36px] tracking-tight text-wire-100">
+                {name}
+              </h2>
+              <p className="mt-2 text-[14px] text-wire-300">{profileContext}</p>
+            </div>
+          </div>
+          <div className="hidden sm:flex sm:items-center">
+            <Link href="/profile/notifications" className="wire-action-compact">
+              Notifications
+            </Link>
           </div>
         </div>
 
-        <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {message ? <FeedbackBanner tone="success" message={message} className="mt-4" /> : null}
+
+        <div className="mt-5 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
           <ShellButton label="Edit profile" href="/profile/edit" variant="primary" />
+          <Link href="/profile/notifications" className="wire-action w-full sm:hidden">
+            Notifications
+          </Link>
           <Link href="/profile/settings" className="wire-action w-full">
-            Profile settings
+            Settings
           </Link>
         </div>
 
@@ -151,7 +167,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
           <div className="mt-5 border-t border-wire-700 pt-4">
             <p className="mb-2 wire-label">Top interests</p>
             <div className="flex flex-wrap gap-2">
-              {profile.interests.slice(0, 3).map((item) => (
+              {profile.interests.slice(0, 4).map((item) => (
                 <TagChip key={item} label={item} />
               ))}
             </div>
@@ -161,10 +177,10 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
 
       <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
         <SectionCard title="About">
-          {profile.bio ? (
-            <p className="text-[14px] leading-relaxed text-wire-200">{profile.bio}</p>
+          {bioText ? (
+            <p className="text-[14px] leading-relaxed text-wire-200">{bioText}</p>
           ) : (
-            <EmptyText text="Add a short bio to provide context for collaboration." />
+            <EmptyText text="Add a short bio so other students understand what you focus on." />
           )}
         </SectionCard>
 
@@ -172,15 +188,21 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 xl:grid-cols-1">
             <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-4 py-3">
               <p className="wire-label">School</p>
-              <p className="mt-2 text-[14px] text-wire-100">{profile.school || "Not set"}</p>
+              <p className="mt-2 text-[14px] text-wire-100">
+                {profile.school || <span className="text-wire-300">Not added</span>}
+              </p>
             </div>
             <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-4 py-3">
               <p className="wire-label">Major</p>
-              <p className="mt-2 text-[14px] text-wire-100">{profile.major || "Not set"}</p>
+              <p className="mt-2 text-[14px] text-wire-100">
+                {profile.major || <span className="text-wire-300">Not added</span>}
+              </p>
             </div>
             <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-4 py-3">
               <p className="wire-label">Year</p>
-              <p className="mt-2 text-[14px] text-wire-100">{profile.year_label || "Not set"}</p>
+              <p className="mt-2 text-[14px] text-wire-100">
+                {profile.year_label || <span className="text-wire-300">Not added</span>}
+              </p>
             </div>
           </div>
         </SectionCard>
@@ -233,8 +255,58 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
           </div>
         </SectionCard>
 
-        <SectionCard title="Professional details (optional)">
+        <SectionCard title="Public links and socials">
           <div>
+            <p className="mb-2 wire-label">Professional details</p>
+            <div className="space-y-2">
+              {profile.resume_url ? (
+                <p className="text-[13px] text-wire-300">
+                  Resume
+                  <span className="ml-2 text-wire-200">{profile.resume_url}</span>
+                </p>
+              ) : null}
+              {links.map((item) => (
+                <p key={item.label} className="text-[13px] text-wire-300">
+                  {item.label}
+                  <span className="ml-2 text-wire-200">{item.value}</span>
+                </p>
+              ))}
+              {!hasPublicLinks ? (
+                <EmptyText text="No public links added yet." />
+              ) : null}
+            </div>
+          </div>
+
+          <div className="border-t border-wire-700 pt-4">
+            <p className="mb-2 wire-label">Social handles</p>
+            {hasSocialHandles ? (
+              <div className="space-y-2">
+                {telegramHandle ? (
+                  <p className="text-[13px] text-wire-300">
+                    Telegram
+                    <span className="ml-2 text-wire-200">{telegramHandle}</span>
+                  </p>
+                ) : null}
+                {instagramHandle ? (
+                  <p className="text-[13px] text-wire-300">
+                    Instagram
+                    <span className="ml-2 text-wire-200">{instagramHandle}</span>
+                  </p>
+                ) : null}
+              </div>
+            ) : (
+              <EmptyText text="No social handles added yet." />
+            )}
+          </div>
+
+          {extras.relationshipStatus ? (
+            <div className="border-t border-wire-700 pt-4">
+              <p className="mb-2 wire-label">Relationship status (private)</p>
+              <p className="text-[13px] text-wire-200">{extras.relationshipStatus}</p>
+            </div>
+          ) : null}
+
+          <div className="border-t border-wire-700 pt-4">
             <p className="mb-2 wire-label">Skills</p>
             {profile.skills.length > 0 ? (
               <div className="flex flex-wrap gap-2">
@@ -267,61 +339,6 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
               <EmptyText text="No projects added." />
             )}
           </div>
-
-          {profile.resume_url || links.length > 0 ? (
-            <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-4 py-3">
-              <p className="wire-label">Links</p>
-              <div className="mt-2 space-y-2">
-                {profile.resume_url ? (
-                  <p className="text-[13px] text-wire-300">
-                    Resume
-                    <span className="ml-2 text-wire-200">{profile.resume_url}</span>
-                  </p>
-                ) : null}
-                {links.map((item) => (
-                  <p key={item.label} className="text-[13px] text-wire-300">
-                    {item.label}
-                    <span className="ml-2 text-wire-200">{item.value}</span>
-                  </p>
-                ))}
-              </div>
-            </div>
-          ) : null}
-
-          {hasExtras ? (
-            <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-4 py-3">
-              <p className="wire-label">Social & personal</p>
-              <div className="mt-2 space-y-2">
-                {extras.telegram ? (
-                  <p className="text-[13px] text-wire-300">
-                    Telegram
-                    <span className="ml-2 text-wire-200">{extras.telegram}</span>
-                  </p>
-                ) : null}
-                {extras.instagram ? (
-                  <p className="text-[13px] text-wire-300">
-                    Instagram
-                    <span className="ml-2 text-wire-200">{extras.instagram}</span>
-                  </p>
-                ) : null}
-                {extras.relationshipStatus ? (
-                  <p className="text-[13px] text-wire-300">
-                    Relationship status
-                    <span className="ml-2 text-wire-200">{extras.relationshipStatus}</span>
-                  </p>
-                ) : null}
-              </div>
-            </div>
-          ) : null}
-
-          {!profile.resume_url && links.length === 0 && !hasExtras ? (
-            <div className="rounded-[var(--radius-input)] border border-dashed border-wire-600 bg-wire-900/60 px-4 py-3">
-              <p className="text-[13px] font-medium text-wire-200">No CV or profile links added</p>
-              <p className="mt-1 wire-meta">
-                Optional. Add only if it helps with campus opportunities and collaboration.
-              </p>
-            </div>
-          ) : null}
         </SectionCard>
       </div>
 
