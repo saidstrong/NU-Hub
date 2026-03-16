@@ -15,6 +15,7 @@ import { PersonCard } from "@/components/ui/PersonCard";
 import { SearchBar } from "@/components/ui/SearchBar";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { SectionCard } from "@/components/ui/SectionCard";
+import { ShellButton } from "@/components/ui/ShellButton";
 import {
   getCommunities,
   getPeopleDiscovery,
@@ -61,55 +62,15 @@ export default async function HomePage() {
             action="/search"
           />
         </div>
-      </section>
-
-      {loadError ? <FeedbackBanner tone="error" message={loadError} /> : null}
-
-      <section className="wire-panel">
-        <SectionHeader title="Quick access" />
-        <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-          <Link
-            href="/market"
-            className="wire-card wire-hover flex min-h-[108px] flex-col justify-between rounded-[var(--radius-card)] p-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
-          >
-            <ShoppingBag className="h-5 w-5 text-wire-100" aria-hidden="true" />
-            <div>
-              <p className="text-[15px] font-semibold text-wire-100">Market</p>
-              <p className="wire-meta">Buy and sell essentials</p>
-            </div>
-          </Link>
-          <Link
-            href="/events"
-            className="wire-card wire-hover flex min-h-[108px] flex-col justify-between rounded-[var(--radius-card)] p-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
-          >
-            <CalendarDays className="h-5 w-5 text-wire-100" aria-hidden="true" />
-            <div>
-              <p className="text-[15px] font-semibold text-wire-100">Events</p>
-              <p className="wire-meta">Plan your week</p>
-            </div>
-          </Link>
-          <Link
-            href="/connect"
-            className="wire-card wire-hover flex min-h-[108px] flex-col justify-between rounded-[var(--radius-card)] p-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
-          >
-            <Users className="h-5 w-5 text-wire-100" aria-hidden="true" />
-            <div>
-              <p className="text-[15px] font-semibold text-wire-100">Connect</p>
-              <p className="wire-meta">Find peers and groups</p>
-            </div>
-          </Link>
-          <Link
-            href="/campus"
-            className="wire-card wire-hover flex min-h-[108px] flex-col justify-between rounded-[var(--radius-card)] p-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
-          >
-            <Compass className="h-5 w-5 text-wire-100" aria-hidden="true" />
-            <div>
-              <p className="text-[15px] font-semibold text-wire-100">Campus</p>
-              <p className="wire-meta">Services and contacts</p>
-            </div>
+        <div className="mt-4 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+          <ShellButton label="Browse market" href="/market" variant="primary" />
+          <Link href="/events" className="wire-action w-full">
+            Browse events
           </Link>
         </div>
       </section>
+
+      {loadError ? <FeedbackBanner tone="error" message={loadError} /> : null}
 
       <div className="grid gap-6 xl:grid-cols-2">
         <SectionCard
@@ -129,8 +90,8 @@ export default async function HomePage() {
             </div>
           ) : !loadError ? (
           <EmptyState
-            title="No listings yet"
-            description="Published market listings will appear here."
+            title="No active listings yet"
+            description="New market items will appear here as soon as they are posted."
             actionLabel="Open market"
             actionHref="/market"
           />
@@ -151,13 +112,59 @@ export default async function HomePage() {
           ) : !loadError ? (
             <EmptyState
               title="No upcoming events"
-              description="Published campus events will appear here."
+              description="New published events will appear here as they are scheduled."
               actionLabel="Browse events"
               actionHref="/events"
             />
           ) : null}
         </SectionCard>
       </div>
+
+      <section className="wire-panel">
+        <SectionHeader title="Quick access" />
+        <div className="grid grid-cols-2 gap-2.5 xl:grid-cols-4">
+          <Link
+            href="/market"
+            className="wire-card wire-hover flex min-h-[90px] flex-col justify-between rounded-[var(--radius-card)] p-3.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+          >
+            <ShoppingBag className="h-4 w-4 text-wire-100" aria-hidden="true" />
+            <div>
+              <p className="text-[14px] font-semibold text-wire-100">Market</p>
+              <p className="text-[12px] text-wire-300">Buy and sell</p>
+            </div>
+          </Link>
+          <Link
+            href="/events"
+            className="wire-card wire-hover flex min-h-[90px] flex-col justify-between rounded-[var(--radius-card)] p-3.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+          >
+            <CalendarDays className="h-4 w-4 text-wire-100" aria-hidden="true" />
+            <div>
+              <p className="text-[14px] font-semibold text-wire-100">Events</p>
+              <p className="text-[12px] text-wire-300">Plan your week</p>
+            </div>
+          </Link>
+          <Link
+            href="/connect"
+            className="wire-card wire-hover flex min-h-[90px] flex-col justify-between rounded-[var(--radius-card)] p-3.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+          >
+            <Users className="h-4 w-4 text-wire-100" aria-hidden="true" />
+            <div>
+              <p className="text-[14px] font-semibold text-wire-100">Connect</p>
+              <p className="text-[12px] text-wire-300">People and groups</p>
+            </div>
+          </Link>
+          <Link
+            href="/campus"
+            className="wire-card wire-hover flex min-h-[90px] flex-col justify-between rounded-[var(--radius-card)] p-3.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+          >
+            <Compass className="h-4 w-4 text-wire-100" aria-hidden="true" />
+            <div>
+              <p className="text-[14px] font-semibold text-wire-100">Campus</p>
+              <p className="text-[12px] text-wire-300">Info and services</p>
+            </div>
+          </Link>
+        </div>
+      </section>
 
       <SectionCard
         title="Suggested people & communities"
@@ -185,8 +192,8 @@ export default async function HomePage() {
           </div>
         ) : !loadError ? (
           <EmptyState
-            title="No people or communities yet"
-            description="Connect discovery will appear here as students join."
+            title="No new suggestions right now"
+            description="Open Connect to explore people and communities directly."
             actionLabel="Open connect"
             actionHref="/connect"
           />
