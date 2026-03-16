@@ -19,41 +19,48 @@ type ListingCardProps = {
 
 export function ListingCard({ listing, href }: ListingCardProps) {
   const hasImage = typeof listing.imageUrl === "string" && listing.imageUrl.length > 0;
+  const normalizedStatus = listing.status?.trim().toLowerCase();
+  const statusClass =
+    normalizedStatus === "available" || normalizedStatus === "active"
+      ? "border-accent/35 bg-accent/10 text-wire-100"
+      : normalizedStatus === "reserved"
+        ? "border-amber-300/35 bg-amber-300/10 text-amber-100"
+        : normalizedStatus === "sold"
+          ? "border-wire-600 bg-wire-900 text-wire-300"
+          : "border-wire-600 bg-wire-900 text-wire-300";
+  const metadataLabel = [listing.category, listing.condition, listing.location]
+    .map((value) => value?.trim())
+    .filter(Boolean)
+    .join(" • ");
 
   const content = (
     <div className="wire-card wire-hover">
-      <div className="flex items-start gap-3">
-        {hasImage ? (
-          <img
-            src={listing.imageUrl}
-            alt={listing.title}
-            className="h-[86px] w-[108px] shrink-0 rounded-xl border border-wire-700 bg-wire-900 object-cover object-center sm:h-[96px] sm:w-[124px]"
-            loading="lazy"
-          />
-        ) : (
-          <div className="wire-placeholder h-[86px] w-[108px] shrink-0 sm:h-[96px] sm:w-[124px]" />
-        )}
+      <div className="flex items-start gap-3.5">
+        <div className="h-[92px] w-[116px] shrink-0 overflow-hidden rounded-[14px] border border-wire-700 bg-wire-900 sm:h-[100px] sm:w-[132px]">
+          {hasImage ? (
+            <img
+              src={listing.imageUrl}
+              alt={listing.title}
+              className="h-full w-full bg-wire-900 object-contain p-1.5"
+              loading="lazy"
+            />
+          ) : (
+            <div className="wire-placeholder h-full w-full rounded-none border-0" />
+          )}
+        </div>
         <div className="min-w-0 flex-1">
-          <div className="mb-1 flex items-start justify-between gap-2">
-            <p className="line-clamp-2 text-sm font-semibold tracking-tight text-wire-100">
-              {listing.title}
-            </p>
-            <p className="shrink-0 text-sm font-semibold text-wire-100">{listing.price}</p>
-          </div>
-          <p className="mb-2 wire-meta">{listing.category}</p>
-          <div className="flex flex-wrap gap-1.5">
+          <p className="line-clamp-2 text-sm font-semibold tracking-tight text-wire-100 [overflow-wrap:anywhere]">
+            {listing.title}
+          </p>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <p className="text-sm font-semibold text-wire-100">{listing.price}</p>
             {listing.status ? (
-              <span className="rounded-xl border border-accent/30 bg-accent/10 px-2 py-1 text-[12px] text-wire-200">
+              <span className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${statusClass}`}>
                 {listing.status}
               </span>
             ) : null}
-            <span className="rounded-xl border border-wire-600 bg-wire-900 px-2 py-1 text-[12px] text-wire-300">
-              {listing.condition}
-            </span>
-            <span className="rounded-xl border border-wire-600 bg-wire-900 px-2 py-1 text-[12px] text-wire-300">
-              {listing.location}
-            </span>
           </div>
+          <p className="mt-2 line-clamp-2 text-[12px] text-wire-300">{metadataLabel || "Campus listing"}</p>
         </div>
       </div>
     </div>

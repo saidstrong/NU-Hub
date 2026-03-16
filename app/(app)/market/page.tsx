@@ -10,7 +10,7 @@ import { ShellButton } from "@/components/ui/ShellButton";
 import { TagChip } from "@/components/ui/TagChip";
 import { buildPageHref, parsePageParam } from "@/lib/pagination";
 import { marketCategories } from "@/lib/mock-data";
-import { getActiveListingsPage, toListingCardData } from "@/lib/market/data";
+import { getActiveListingsPage, toListingCardDataWithOptions } from "@/lib/market/data";
 
 type MarketHomePageProps = {
   searchParams: Promise<{
@@ -98,19 +98,25 @@ export default async function MarketHomePage({ searchParams }: MarketHomePagePro
       >
         {loadError ? <FeedbackBanner tone="error" message={loadError} className="mb-3" /> : null}
         {listings.length > 0 ? (
-          <div className="grid gap-3 xl:grid-cols-2">
-            {listings.map((listing) => (
-              <ListingCard
-                key={listing.id}
-                listing={toListingCardData(listing)}
-                href={`/market/item/${listing.id}`}
-              />
-            ))}
+          <div className="grid gap-3 lg:grid-cols-2">
+            {listings.map((listing) => {
+              const cardData = toListingCardDataWithOptions(listing, { showStatus: true });
+              return (
+                <ListingCard
+                  key={listing.id}
+                  listing={{
+                    ...cardData,
+                    status: cardData.status === "Active" ? "Available" : cardData.status,
+                  }}
+                  href={`/market/item/${listing.id}`}
+                />
+              );
+            })}
           </div>
         ) : !loadError ? (
           <EmptyState
             title="No active listings yet"
-            description="Published listings will appear here for students to browse."
+            description="Listings will appear here as soon as students post items."
             actionLabel="Post item"
             actionHref="/market/post"
           />
