@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 
 type ThreadAutoRefreshProps = {
   pauseWhenFocusedId?: string;
+  minIntervalMs?: number;
 };
 
 function shouldPauseRefresh(pauseWhenFocusedId?: string): boolean {
@@ -22,8 +23,10 @@ function shouldPauseRefresh(pauseWhenFocusedId?: string): boolean {
 
 export function ThreadAutoRefresh({
   pauseWhenFocusedId,
+  minIntervalMs = 15000,
 }: ThreadAutoRefreshProps) {
   const router = useRouter();
+  const lastRefreshAtRef = useRef(0);
 
   useEffect(() => {
     const refreshIfAllowed = () => {
@@ -35,6 +38,12 @@ export function ThreadAutoRefresh({
         return;
       }
 
+      const now = Date.now();
+      if (now - lastRefreshAtRef.current < minIntervalMs) {
+        return;
+      }
+
+      lastRefreshAtRef.current = now;
       router.refresh();
     };
 
@@ -45,7 +54,7 @@ export function ThreadAutoRefresh({
       window.removeEventListener("focus", refreshIfAllowed);
       document.removeEventListener("visibilitychange", refreshIfAllowed);
     };
-  }, [pauseWhenFocusedId, router]);
+  }, [minIntervalMs, pauseWhenFocusedId, router]);
 
   return null;
 }

@@ -596,7 +596,6 @@ export async function toggleSavedEventAction(formData: FormData) {
     }
   }
 
-  revalidatePath("/events");
   revalidatePath("/events/saved");
   revalidatePath(`/events/${parsed.data.eventId}`);
 
@@ -729,7 +728,6 @@ export async function setEventParticipationAction(formData: FormData) {
     }
   }
 
-  revalidatePath("/events");
   revalidatePath("/events/my-events");
   revalidatePath(`/events/${parsed.data.eventId}`);
 
@@ -826,7 +824,6 @@ export async function clearEventParticipationAction(formData: FormData) {
     redirectWithError("/events", "Failed to clear RSVP.");
   }
 
-  revalidatePath("/events");
   revalidatePath("/events/my-events");
   revalidatePath(`/events/${parsed.data.eventId}`);
 

@@ -712,7 +712,7 @@ export async function getMarketplaceConversationThread(
 
     const counterpartId = isBuyer ? conversation.seller_id : conversation.buyer_id;
 
-    const [listingResult, profilesResult, messagesResult] = await Promise.all([
+    const [listingResult, profilesResult, messagesResult, listingCoverMap] = await Promise.all([
       supabase
         .from("listings")
         .select("id, title, price_kzt, status")
@@ -729,6 +729,7 @@ export async function getMarketplaceConversationThread(
         .order("created_at", { ascending: true })
         .order("id", { ascending: true })
         .limit(200),
+      getCoverImageMap(supabase, [conversation.listing_id]),
     ]);
 
     if (listingResult.error || profilesResult.error || messagesResult.error) {
@@ -739,9 +740,7 @@ export async function getMarketplaceConversationThread(
     const counterpartProfile = profileMap.get(counterpartId);
     const listingTitle = listingResult.data?.title?.trim() || "Listing unavailable";
     const listingHref = listingResult.data ? `/market/item/${listingResult.data.id}` : null;
-    const listingCoverImageUrl = listingResult.data
-      ? (await getCoverImageMap(supabase, [listingResult.data.id])).get(listingResult.data.id) ?? null
-      : null;
+    const listingCoverImageUrl = listingCoverMap.get(conversation.listing_id) ?? null;
 
     return {
       conversationId: conversation.id,

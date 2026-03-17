@@ -720,8 +720,6 @@ export async function startListingConversationAction(formData: FormData) {
     redirectWithError(redirectPath, mapStartConversationErrorMessage(createConversationError?.code));
   }
 
-  revalidatePath("/market/messages");
-  revalidatePath(`/market/messages/${createdConversation.id}`);
   logInfo("market", "conversation_started", {
     ...requestContext,
     userId: user.id,
@@ -870,8 +868,6 @@ export async function sendMarketplaceMessageAction(formData: FormData) {
     redirectWithError(redirectPath, mapSendMessageErrorMessage(insertMessageError.code));
   }
 
-  revalidatePath("/market/messages");
-  revalidatePath(conversationPath);
   const durationMs = getDurationMs(startedAt);
   const timingContext = {
     ...requestContext,
@@ -944,7 +940,6 @@ export async function toggleSavedListingAction(formData: FormData) {
     }
   }
 
-  revalidatePath("/market");
   revalidatePath("/market/saved");
   revalidatePath(`/market/item/${parsed.data.listingId}`);
 

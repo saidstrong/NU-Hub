@@ -233,12 +233,9 @@ function mapFriendMessageErrorMessage(errorCode?: string): string {
   return "Failed to send message.";
 }
 
-function revalidateFriendMessagingPaths(userId: string, otherUserId: string, conversationId: string) {
-  revalidatePath("/connect");
+function revalidateFriendMessagingPaths(conversationId: string) {
   revalidatePath("/connect/messages");
   revalidatePath(`/connect/messages/${conversationId}`);
-  revalidatePath(`/connect/people/${userId}`);
-  revalidatePath(`/connect/people/${otherUserId}`);
 }
 
 function getOptionalFile(formData: FormData, key: string): File | null {
@@ -1329,7 +1326,7 @@ export async function startFriendConversationAction(formData: FormData) {
       redirectWithError(redirectPath, "Failed to open conversation.");
     }
 
-    revalidateFriendMessagingPaths(user.id, parsed.data.friendId, racedConversation.id);
+    revalidateFriendMessagingPaths(racedConversation.id);
     redirect(`/connect/messages/${racedConversation.id}`);
   }
 
@@ -1337,7 +1334,7 @@ export async function startFriendConversationAction(formData: FormData) {
     redirectWithError(redirectPath, mapFriendConversationErrorMessage(createConversationError?.code));
   }
 
-  revalidateFriendMessagingPaths(user.id, parsed.data.friendId, createdConversation.id);
+  revalidateFriendMessagingPaths(createdConversation.id);
   redirect(`/connect/messages/${createdConversation.id}`);
 }
 
@@ -1502,7 +1499,6 @@ export async function sendFriendMessageAction(formData: FormData) {
     redirectWithError(redirectPath, mapFriendMessageErrorMessage(insertMessageError.code));
   }
 
-  const counterpartId = conversation.user_a_id === user.id ? conversation.user_b_id : conversation.user_a_id;
   const durationMs = getDurationMs(startedAt);
   const timingContext = {
     ...requestContext,
@@ -1517,7 +1513,7 @@ export async function sendFriendMessageAction(formData: FormData) {
   if (durationMs > ACTION_SLOW_THRESHOLD_MS) {
     logWarn("connect", "friend_message_send_slow", timingContext);
   }
-  revalidateFriendMessagingPaths(user.id, counterpartId, conversation.id);
+  revalidateFriendMessagingPaths(conversation.id);
   redirect(redirectPath);
 }
 
