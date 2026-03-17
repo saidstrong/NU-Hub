@@ -13,6 +13,7 @@ export type EventCardSource = Pick<
 >;
 export type EventCreatedCardSource = EventCardSource & {
   is_published: boolean;
+  is_hidden: boolean;
 };
 export type EventEditSource = Pick<
   EventRow,
@@ -40,14 +41,35 @@ export type PaginatedEventResult<TEvent> = {
   hasMore: boolean;
 };
 
+export type PendingEventReviewItem = {
+  id: string;
+  title: string;
+  category: string;
+  startsAt: string;
+  endsAt: string | null;
+  location: string;
+  createdAt: string;
+  creatorId: string | null;
+  creatorName: string;
+};
+
 type OrganizerProfile = Pick<
   Database["public"]["Tables"]["profiles"]["Row"],
   "user_id" | "full_name" | "school" | "major" | "year_label"
 >;
 const EVENT_CARD_SELECT = "id, title, starts_at, ends_at, location, category";
-const EVENT_CREATED_CARD_SELECT = `${EVENT_CARD_SELECT}, is_published`;
+const EVENT_CREATED_CARD_SELECT = `${EVENT_CARD_SELECT}, is_published, is_hidden`;
 const EVENT_EDIT_SELECT =
   "id, created_by, title, description, category, starts_at, ends_at, location, is_published";
+
+function isAdminUser(user: Awaited<ReturnType<typeof requireUser>>): boolean {
+  const metadata = user.app_metadata;
+  if (!metadata || typeof metadata !== "object") {
+    return false;
+  }
+
+  return (metadata as Record<string, unknown>).role === "admin";
+}
 
 export function formatEventDate(startsAt: string, endsAt: string | null): string {
   return formatCampusEventDateRange(startsAt, endsAt);
@@ -92,6 +114,7 @@ export async function getPublishedEventsPage(
     .from("events")
     .select(EVENT_CARD_SELECT)
     .eq("is_published", true)
+    .eq("is_hidden", false)
     .order("starts_at", { ascending: true })
     .order("id", { ascending: true })
     .range(from, to);
@@ -151,7 +174,8 @@ export async function getSavedEventsPage(
     .from("events")
     .select(EVENT_CARD_SELECT)
     .in("id", eventIds)
-    .eq("is_published", true);
+    .eq("is_published", true)
+    .eq("is_hidden", false);
 
   if (eventsError) {
     throw new Error("Failed to load saved event details.");
@@ -216,7 +240,8 @@ export async function getMyEventsPage(
     .from("events")
     .select(EVENT_CARD_SELECT)
     .in("id", eventIds)
-    .eq("is_published", true);
+    .eq("is_published", true)
+    .eq("is_hidden", false);
 
   if (eventsError) {
     throw new Error("Failed to load event details.");
@@ -302,6 +327,7 @@ export async function getEventDetail(eventId: string): Promise<{
   };
 }> {
   const user = await requireUser();
+  const isAdmin = isAdminUser(user);
   const supabase = await createClient();
 
   const { data: event, error: eventError } = await supabase
@@ -329,7 +355,8 @@ export async function getEventDetail(eventId: string): Promise<{
   }
 
   const isOwner = isEventOwner(event.created_by, user.id);
-  if (!event.is_published && !isOwner) {
+  const isPubliclyVisible = event.is_published && !event.is_hidden;
+  if (!isPubliclyVisible && !isOwner && !isAdmin) {
     return {
       event: null,
       organizer: null,
@@ -402,4 +429,59 @@ export async function getEventDetail(eventId: string): Promise<{
       interested: interestedCountResult.count ?? 0,
     },
   };
+}
+
+export async function getPendingEventsForReview(limit = 50): Promise<PendingEventReviewItem[]> {
+  const user = await requireUser();
+  if (!isAdminUser(user)) {
+    throw new Error("Not authorized to review pending events.");
+  }
+
+  const safeLimit = Math.max(1, Math.min(limit, 100));
+  const supabase = await createClient();
+  const { data: events, error: eventsError } = await supabase
+    .from("events")
+    .select("id, title, category, starts_at, ends_at, location, created_at, created_by")
+    .eq("is_published", false)
+    .eq("is_hidden", false)
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: false })
+    .limit(safeLimit);
+
+  if (eventsError) {
+    throw new Error("Failed to load pending events.");
+  }
+
+  const creatorIds = Array.from(
+    new Set((events ?? []).map((event) => event.created_by).filter(Boolean)),
+  ) as string[];
+  const creatorsResult = creatorIds.length > 0
+    ? await supabase
+        .from("profiles")
+        .select("user_id, full_name")
+        .in("user_id", creatorIds)
+    : { data: [] as Array<{ user_id: string; full_name: string }>, error: null };
+
+  if (creatorsResult.error) {
+    throw new Error("Failed to load pending event creators.");
+  }
+
+  const creatorMap = new Map((creatorsResult.data ?? []).map((profile) => [
+    profile.user_id,
+    profile.full_name?.trim() || "NU student",
+  ]));
+
+  return (events ?? []).map((event) => ({
+    id: event.id,
+    title: event.title,
+    category: event.category,
+    startsAt: event.starts_at,
+    endsAt: event.ends_at,
+    location: event.location,
+    createdAt: event.created_at,
+    creatorId: event.created_by,
+    creatorName: event.created_by
+      ? (creatorMap.get(event.created_by) ?? "NU student")
+      : "NU student",
+  }));
 }

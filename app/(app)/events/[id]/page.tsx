@@ -67,7 +67,10 @@ export default async function EventDetailPage({ params, searchParams }: EventDet
   }
 
   const { event, organizer, isOwner, isSaved, participationStatus, rsvpCounts } = detail;
-  const isDraft = !event.is_published;
+  const isPendingReview = !event.is_published && !event.is_hidden;
+  const isRejected = !event.is_published && event.is_hidden;
+  const isPublished = event.is_published && !event.is_hidden;
+  const statusLabel = isRejected ? "Rejected" : isPendingReview ? "Pending review" : "Published";
   const dateLabel = formatEventDate(event.starts_at, event.ends_at);
   const organizerLabel = organizer?.full_name || "NU event organizer";
   const interestedActive = participationStatus === "interested";
@@ -110,7 +113,7 @@ export default async function EventDetailPage({ params, searchParams }: EventDet
                 {event.title}
               </h2>
             </div>
-            <TagChip label={isDraft ? "Draft" : "Published"} tone="status" />
+            <TagChip label={statusLabel} tone="status" />
           </div>
           <div className="flex flex-wrap gap-2">
             <TagChip label={event.category} active />
@@ -139,11 +142,11 @@ export default async function EventDetailPage({ params, searchParams }: EventDet
 
       {message ? <FeedbackBanner tone="success" message={message} /> : null}
       {error ? <FeedbackBanner tone="error" message={error} /> : null}
-      {isDraft && isOwner ? (
-        <FeedbackBanner
-          tone="warning"
-          message="This event is currently a draft and visible only to you."
-        />
+      {isPendingReview && isOwner ? (
+        <FeedbackBanner tone="warning" message="This event is pending admin approval and visible only to you." />
+      ) : null}
+      {isRejected && isOwner ? (
+        <FeedbackBanner tone="error" message="This event was rejected and is hidden from public discovery." />
       ) : null}
 
       <div className="grid gap-6 xl:grid-cols-[1.45fr_1fr]">
@@ -187,7 +190,7 @@ export default async function EventDetailPage({ params, searchParams }: EventDet
             </div>
           </SectionCard>
 
-          {!isDraft ? (
+          {isPublished ? (
             <SectionCard
               title="RSVP"
               subtitle="Set intent and track participation signals."

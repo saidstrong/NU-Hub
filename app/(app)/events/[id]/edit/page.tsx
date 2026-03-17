@@ -40,7 +40,7 @@ export default async function EditEventPage({ params, searchParams }: EditEventP
       <main>
         <TopBar
           title="Edit Event"
-          subtitle="Update title, schedule, and visibility settings"
+          subtitle="Update title, schedule, and event details"
           backHref={`/events/${id}`}
         />
         <div className="rounded-xl border border-red-400/30 bg-red-400/10 px-3 py-2 text-[13px] text-red-200">
@@ -71,7 +71,7 @@ export default async function EditEventPage({ params, searchParams }: EditEventP
     <main>
       <TopBar
         title="Edit Event"
-        subtitle="Update title, schedule, and visibility settings"
+        subtitle="Update title, schedule, and event details"
         backHref={`/events/${event.id}`}
       />
       {error ? (
@@ -160,20 +160,7 @@ export default async function EditEventPage({ params, searchParams }: EditEventP
           />
         </FormSection>
 
-        <FormSection title="Visibility">
-          <label className="block space-y-2">
-            <span className="wire-label">Publish state</span>
-            <select
-              name="isPublishedInput"
-              required
-              className="wire-input-field"
-              defaultValue={publishState}
-            >
-              <option value="true">Published</option>
-              <option value="false">Draft</option>
-            </select>
-          </label>
-        </FormSection>
+        <input type="hidden" name="isPublishedInput" value={publishState} />
 
         <div className="wire-action-row">
           <Link href={`/events/${event.id}`} className="wire-action">

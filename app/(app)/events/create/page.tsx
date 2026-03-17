@@ -18,7 +18,7 @@ export default async function CreateEventPage({ searchParams }: CreateEventPageP
     <main>
       <TopBar
         title="Create Event"
-        subtitle="Publish a campus event or save it as a draft"
+        subtitle="Submit a campus event for moderation review"
         backHref="/events"
       />
       {error ? (
@@ -95,19 +95,11 @@ export default async function CreateEventPage({ searchParams }: CreateEventPageP
           />
         </FormSection>
 
-        <FormSection title="Visibility">
-          <label className="block space-y-2">
-            <span className="wire-label">Publish state</span>
-            <select name="isPublishedInput" required className="wire-input-field">
-              <option value="true">Published</option>
-              <option value="false">Draft</option>
-            </select>
-          </label>
-        </FormSection>
+        <input type="hidden" name="isPublishedInput" value="false" />
 
         <div className="wire-action-row-single">
           <SubmitButton
-            label="Create event"
+            label="Submit event"
             pendingLabel="Creating..."
             variant="primary"
           />

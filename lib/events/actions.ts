@@ -71,9 +71,22 @@ const EVENT_PARTICIPATION_BURST_LIMIT = {
   maxHits: 12,
   windowMs: 30 * 1000,
 };
+const EVENT_REVIEW_LIMIT = {
+  maxHits: 120,
+  windowMs: 10 * 60 * 1000,
+};
 // Best-effort only in serverless: this in-memory limiter is instance-local.
 const ACTION_SLOW_THRESHOLD_MS = 250;
 const EVENT_IMAGES_BUCKET = "event-images";
+
+function isAdminUser(user: Awaited<ReturnType<typeof requireUser>>): boolean {
+  const metadata = user.app_metadata;
+  if (!metadata || typeof metadata !== "object") {
+    return false;
+  }
+
+  return (metadata as Record<string, unknown>).role === "admin";
+}
 
 function getRequestIdFromContext(context: Record<string, unknown>): string {
   return typeof context.requestId === "string" && context.requestId.length > 0
@@ -118,6 +131,7 @@ function revalidateEventPaths(eventId: string) {
   revalidatePath("/events/calendar");
   revalidatePath("/events/my-events");
   revalidatePath("/events/saved");
+  revalidatePath("/profile/moderation");
   revalidatePath(`/events/${eventId}`);
   revalidatePath(`/events/${eventId}/edit`);
 }
@@ -149,7 +163,7 @@ async function verifyEventOwnershipOrRedirect(
 ) {
   const { data: event, error } = await supabase
     .from("events")
-    .select("id, created_by, cover_path")
+    .select("id, created_by, cover_path, is_published, is_hidden")
     .eq("id", eventId)
     .maybeSingle();
 
@@ -191,6 +205,7 @@ export async function createEventAction(formData: FormData) {
   }
 
   const user = await requireUser();
+  const adminUser = isAdminUser(user);
   const coverFile = getOptionalFile(formData, "coverImage");
 
   if (coverFile) {
@@ -247,7 +262,8 @@ export async function createEventAction(formData: FormData) {
       starts_at: startsAt,
       ends_at: endsAt,
       location: parsed.data.location,
-      is_published: parsed.data.isPublishedInput,
+      is_published: adminUser && parsed.data.isPublishedInput,
+      is_hidden: false,
     })
     .select("id, is_published")
     .single();
@@ -296,7 +312,7 @@ export async function createEventAction(formData: FormData) {
 
   revalidateEventPaths(created.id);
 
-  const successMessage = created.is_published ? "Event published." : "Draft saved.";
+  const successMessage = created.is_published ? "Event published." : "Event submitted for review.";
   logInfo("events", "event_created", {
     ...requestContext,
     userId: user.id,
@@ -400,13 +416,19 @@ export async function updateEventAction(formData: FormData) {
   const { data: updated, error: updateError } = await supabase
     .from("events")
     .update({
+      // Editing a rejected event re-submits it for review.
+      // approved  (true,false)  -> stays approved
+      // pending   (false,false) -> stays pending
+      // rejected  (false,true)  -> becomes pending (false,false)
+      is_hidden: !ownedEvent.is_published && ownedEvent.is_hidden ? false : ownedEvent.is_hidden,
       title: parsed.data.title,
       description: parsed.data.description,
       category: parsed.data.category,
       starts_at: startsAt,
       ends_at: endsAt,
       location: parsed.data.location,
-      is_published: parsed.data.isPublishedInput,
+      // Creator edits must not bypass approval state.
+      is_published: ownedEvent.is_published,
       cover_path: uploadedCoverPath ?? ownedEvent.cover_path,
     })
     .eq("id", eventId)
@@ -457,6 +479,98 @@ export async function updateEventAction(formData: FormData) {
     eventId,
   });
   redirectWithMessage(`/events/${eventId}`, "Event updated");
+}
+
+export async function approveEventAction(formData: FormData) {
+  const parsed = eventMutationIdSchema.safeParse({
+    eventId: getStringValue(formData, "eventId"),
+  });
+
+  if (!parsed.success) {
+    redirectWithError("/profile/moderation", parsed.error.issues[0]?.message ?? "Invalid event id.");
+  }
+
+  const redirectPath = sanitizeInternalPath(
+    getStringValue(formData, "redirectTo"),
+    "/profile/moderation",
+  );
+  const user = await requireUser();
+  if (!isAdminUser(user)) {
+    redirectWithError(redirectPath, "Not authorized.");
+  }
+
+  const rateResult = consumeRateLimit(`events:review:approve:${user.id}`, EVENT_REVIEW_LIMIT);
+  if (!rateResult.allowed) {
+    redirectWithError(redirectPath, "Too many moderation actions. Please wait and try again.");
+  }
+
+  const supabase = await createClient();
+  const { data: approved, error } = await supabase
+    .from("events")
+    .update({
+      is_published: true,
+      is_hidden: false,
+    })
+    .eq("id", parsed.data.eventId)
+    .select("id")
+    .maybeSingle();
+
+  if (error) {
+    redirectWithError(redirectPath, "Failed to approve event.");
+  }
+
+  if (!approved) {
+    redirectWithError(redirectPath, "Event not found.");
+  }
+
+  revalidateEventPaths(parsed.data.eventId);
+  redirectWithMessage(redirectPath, "Event approved.");
+}
+
+export async function rejectEventAction(formData: FormData) {
+  const parsed = eventMutationIdSchema.safeParse({
+    eventId: getStringValue(formData, "eventId"),
+  });
+
+  if (!parsed.success) {
+    redirectWithError("/profile/moderation", parsed.error.issues[0]?.message ?? "Invalid event id.");
+  }
+
+  const redirectPath = sanitizeInternalPath(
+    getStringValue(formData, "redirectTo"),
+    "/profile/moderation",
+  );
+  const user = await requireUser();
+  if (!isAdminUser(user)) {
+    redirectWithError(redirectPath, "Not authorized.");
+  }
+
+  const rateResult = consumeRateLimit(`events:review:reject:${user.id}`, EVENT_REVIEW_LIMIT);
+  if (!rateResult.allowed) {
+    redirectWithError(redirectPath, "Too many moderation actions. Please wait and try again.");
+  }
+
+  const supabase = await createClient();
+  const { data: rejected, error } = await supabase
+    .from("events")
+    .update({
+      is_published: false,
+      is_hidden: true,
+    })
+    .eq("id", parsed.data.eventId)
+    .select("id")
+    .maybeSingle();
+
+  if (error) {
+    redirectWithError(redirectPath, "Failed to reject event.");
+  }
+
+  if (!rejected) {
+    redirectWithError(redirectPath, "Event not found.");
+  }
+
+  revalidateEventPaths(parsed.data.eventId);
+  redirectWithMessage(redirectPath, "Event rejected.");
 }
 
 export async function deleteEventAction(formData: FormData) {

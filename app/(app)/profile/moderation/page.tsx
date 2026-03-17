@@ -2,6 +2,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { TopBar } from "@/components/ui/TopBar";
+import { formatCampusMessageTimestamp } from "@/lib/datetime";
+import { approveEventAction, rejectEventAction } from "@/lib/events/actions";
+import { formatEventDate, getPendingEventsForReview } from "@/lib/events/data";
 import {
   resolveContentReportAction,
   setContentHiddenAction,
@@ -42,6 +45,10 @@ function formatReportTime(createdAt: string): string {
   }).format(new Date(createdAt));
 }
 
+function formatPendingCreatedTime(createdAt: string): string {
+  return formatCampusMessageTimestamp(createdAt);
+}
+
 export default async function ModerationPage({ searchParams }: ModerationPageProps) {
   const { error, message } = await searchParams;
   const adminUser = await requireAdminUser();
@@ -51,7 +58,9 @@ export default async function ModerationPage({ searchParams }: ModerationPagePro
   }
 
   let reports: Awaited<ReturnType<typeof getRecentContentReports>> = [];
+  let pendingEvents: Awaited<ReturnType<typeof getPendingEventsForReview>> = [];
   let loadError: string | null = null;
+  let pendingLoadError: string | null = null;
 
   try {
     reports = await getRecentContentReports(80);
@@ -60,6 +69,15 @@ export default async function ModerationPage({ searchParams }: ModerationPagePro
       reportLoadError instanceof Error
         ? reportLoadError.message
         : "Failed to load moderation reports.";
+  }
+
+  try {
+    pendingEvents = await getPendingEventsForReview(80);
+  } catch (eventLoadError) {
+    pendingLoadError =
+      eventLoadError instanceof Error
+        ? eventLoadError.message
+        : "Failed to load pending event submissions.";
   }
 
   return (
@@ -84,6 +102,67 @@ export default async function ModerationPage({ searchParams }: ModerationPagePro
           {loadError}
         </div>
       ) : null}
+      {pendingLoadError ? (
+        <div className="rounded-xl border border-red-400/30 bg-red-400/10 px-3 py-2 text-[13px] text-red-200">
+          {pendingLoadError}
+        </div>
+      ) : null}
+
+      <section className="wire-panel">
+        <div className="mb-3 border-b border-wire-700 pb-3">
+          <h2 className="wire-section-title">Pending event approvals</h2>
+          <p className="mt-1 wire-meta">Review submitted events before public visibility.</p>
+          <p className="mt-2 wire-meta">
+            {pendingEvents.length > 0 ? `${pendingEvents.length} pending` : "No pending events"}
+          </p>
+        </div>
+
+        {pendingEvents.length > 0 ? (
+          <div className="space-y-2.5">
+            {pendingEvents.map((event) => (
+              <article
+                key={event.id}
+                className="rounded-2xl border border-wire-700 bg-wire-800 px-3 py-3"
+              >
+                <p className="text-sm font-medium text-wire-100">{event.title}</p>
+                <div className="mt-2 space-y-1">
+                  <p className="wire-meta">Category: {event.category}</p>
+                  <p className="wire-meta">Schedule: {formatEventDate(event.startsAt, event.endsAt)}</p>
+                  <p className="wire-meta">Location: {event.location}</p>
+                  <p className="wire-meta">Submitted by: {event.creatorName}</p>
+                  <p className="wire-meta">Submitted at: {formatPendingCreatedTime(event.createdAt)}</p>
+                </div>
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <Link href={`/events/${event.id}`} className="wire-action-compact">
+                    Open event
+                  </Link>
+                  <form action={approveEventAction}>
+                    <input type="hidden" name="eventId" value={event.id} />
+                    <input type="hidden" name="redirectTo" value="/profile/moderation" />
+                    <button type="submit" className="wire-action-compact">
+                      Approve
+                    </button>
+                  </form>
+                  <form action={rejectEventAction}>
+                    <input type="hidden" name="eventId" value={event.id} />
+                    <input type="hidden" name="redirectTo" value="/profile/moderation" />
+                    <button type="submit" className="wire-action-compact">
+                      Reject
+                    </button>
+                  </form>
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : !pendingLoadError ? (
+          <EmptyState
+            title="No pending event submissions"
+            description="New event submissions will appear here for approval."
+            actionLabel="Back to profile"
+            actionHref="/profile"
+          />
+        ) : null}
+      </section>
 
       <section className="wire-panel">
         <div className="mb-3 border-b border-wire-700 pb-3">

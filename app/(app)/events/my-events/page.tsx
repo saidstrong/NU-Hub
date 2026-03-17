@@ -101,9 +101,13 @@ export default async function MyEventsPage({ searchParams }: MyEventsPageProps) 
               event={toEventCardData(event, {
                 status:
                   selectedStatus === "created"
-                    ? "is_published" in event && event.is_published
-                      ? "Published"
-                      : "Draft"
+                    ? "is_published" in event
+                      ? event.is_hidden
+                        ? "Rejected"
+                        : event.is_published
+                          ? "Approved"
+                          : "Pending review"
+                      : undefined
                     : participationLabel,
               })}
               href={`/events/${event.id}`}
