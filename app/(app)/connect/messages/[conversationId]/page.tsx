@@ -8,6 +8,7 @@ import { ThreadAutoRefresh } from "@/components/ui/ThreadAutoRefresh";
 import { TopBar } from "@/components/ui/TopBar";
 import { sendFriendMessageAction } from "@/lib/connect/actions";
 import { getFriendConversationThread } from "@/lib/connect/data";
+import { formatCampusMessageTimestamp } from "@/lib/datetime";
 import { toPublicStorageUrl } from "@/lib/validation/media";
 import { isUuid } from "@/lib/validation/uuid";
 
@@ -15,15 +16,6 @@ type FriendConversationPageProps = {
   params: Promise<{ conversationId: string }>;
   searchParams: Promise<{ error?: string; message?: string }>;
 };
-
-function formatMessageTime(value: string): string {
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(value));
-}
 
 export default async function FriendConversationPage({
   params,
@@ -126,7 +118,9 @@ export default async function FriendConversationPage({
                     <p className="whitespace-pre-wrap break-words text-[13px] leading-relaxed text-wire-100 [overflow-wrap:anywhere]">
                       {messageItem.content}
                     </p>
-                    <p className="mt-1.5 text-right text-[10px] text-wire-400">{formatMessageTime(messageItem.createdAt)}</p>
+                    <p className="mt-1.5 text-right text-[10px] text-wire-400">
+                      {formatCampusMessageTimestamp(messageItem.createdAt)}
+                    </p>
                   </article>
                 </div>
               );

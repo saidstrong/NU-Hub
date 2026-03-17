@@ -5,6 +5,7 @@ import { FeedbackBanner } from "@/components/ui/FeedbackBanner";
 import { PageNavigation } from "@/components/ui/PageNavigation";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { TopBar } from "@/components/ui/TopBar";
+import { formatCampusMessageTimestamp } from "@/lib/datetime";
 import { formatPriceKzt, formatStatusLabel, getMarketplaceConversationsPage } from "@/lib/market/data";
 import { buildPageHref, parsePageParam } from "@/lib/pagination";
 import { toPublicStorageUrl } from "@/lib/validation/media";
@@ -18,15 +19,6 @@ type MarketMessagesPageProps = {
 };
 
 const MARKET_MESSAGES_PAGE_SIZE = 15;
-
-function formatMessageTime(value: string): string {
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(value));
-}
 
 export default async function MarketMessagesPage({ searchParams }: MarketMessagesPageProps) {
   const { page: pageParam, error, message } = await searchParams;
@@ -106,7 +98,7 @@ export default async function MarketMessagesPage({ searchParams }: MarketMessage
                         </div>
                       </div>
                     </div>
-                    <p className="text-[11px] text-wire-300">{formatMessageTime(timestampValue)}</p>
+                    <p className="text-[11px] text-wire-300">{formatCampusMessageTimestamp(timestampValue)}</p>
                   </div>
 
                   <div className="mt-3 flex items-center gap-2.5 rounded-[var(--radius-input)] border border-wire-700 bg-wire-900/60 p-2.5">

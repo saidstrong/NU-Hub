@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { requireUser } from "@/lib/auth/session";
 import { isEventOwner } from "@/lib/events/ownership";
+import { formatCampusEventDateRange } from "@/lib/datetime";
 import { createPaginationWindow, splitPaginatedRows } from "@/lib/pagination";
 import type { Database } from "@/types/database";
 
@@ -48,30 +49,8 @@ const EVENT_CREATED_CARD_SELECT = `${EVENT_CARD_SELECT}, is_published`;
 const EVENT_EDIT_SELECT =
   "id, created_by, title, description, category, starts_at, ends_at, location, is_published";
 
-function formatDayMonth(date: Date): string {
-  return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(date);
-}
-
-function formatTime(date: Date): string {
-  return new Intl.DateTimeFormat("en-US", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).format(date);
-}
-
 export function formatEventDate(startsAt: string, endsAt: string | null): string {
-  const start = new Date(startsAt);
-  const startLabel = `${formatDayMonth(start)} - ${formatTime(start)}`;
-
-  if (!endsAt) return startLabel;
-
-  const end = new Date(endsAt);
-  if (start.toDateString() === end.toDateString()) {
-    return `${startLabel}-${formatTime(end)}`;
-  }
-
-  return `${startLabel} -> ${formatDayMonth(end)} - ${formatTime(end)}`;
+  return formatCampusEventDateRange(startsAt, endsAt);
 }
 
 export function toEventCardData(

@@ -6,6 +6,7 @@ import { SectionHeader } from "@/components/ui/SectionHeader";
 import { TopBar } from "@/components/ui/TopBar";
 import { requireUser } from "@/lib/auth/session";
 import { getFriendInbox } from "@/lib/connect/data";
+import { formatCampusMessageTimestamp } from "@/lib/datetime";
 import { toPublicStorageUrl } from "@/lib/validation/media";
 
 type ConnectMessagesPageProps = {
@@ -16,17 +17,6 @@ type ConnectMessagesPageProps = {
 };
 
 const FRIEND_INBOX_LIMIT = 30;
-const MESSAGE_TIME_FORMATTER = new Intl.DateTimeFormat("en-US", {
-  month: "short",
-  day: "numeric",
-  hour: "2-digit",
-  minute: "2-digit",
-});
-
-function formatMessageTime(value: string): string {
-  return MESSAGE_TIME_FORMATTER.format(new Date(value));
-}
-
 export default async function ConnectMessagesPage({ searchParams }: ConnectMessagesPageProps) {
   const [{ error, message }, user] = await Promise.all([searchParams, requireUser()]);
 
@@ -105,7 +95,9 @@ export default async function ConnectMessagesPage({ searchParams }: ConnectMessa
                         </p>
                       </div>
                     </div>
-                    <p className="shrink-0 text-[11px] text-wire-300">{formatMessageTime(conversation.lastMessageAt)}</p>
+                    <p className="shrink-0 text-[11px] text-wire-300">
+                      {formatCampusMessageTimestamp(conversation.lastMessageAt)}
+                    </p>
                   </div>
                 </Link>
               );
