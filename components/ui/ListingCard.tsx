@@ -10,6 +10,7 @@ export type ListingCardItem = {
   location: string;
   status?: string;
   imageUrl?: string;
+  highlightLabel?: string;
 };
 
 type ListingCardProps = {
@@ -49,7 +50,14 @@ export function ListingCard({ listing, href }: ListingCardProps) {
           )}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="line-clamp-2 text-sm font-semibold tracking-tight text-wire-100 [overflow-wrap:anywhere]">
+          {listing.highlightLabel ? (
+            <span className="inline-flex rounded-full border border-accent/35 bg-accent/10 px-2 py-0.5 text-[11px] font-medium text-wire-100">
+              {listing.highlightLabel}
+            </span>
+          ) : null}
+          <p
+            className={`${listing.highlightLabel ? "mt-1 " : ""}line-clamp-2 text-sm font-semibold tracking-tight text-wire-100 [overflow-wrap:anywhere]`}
+          >
             {listing.title}
           </p>
           <div className="mt-2 flex flex-wrap items-center gap-2">

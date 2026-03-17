@@ -10,7 +10,11 @@ import { ShellButton } from "@/components/ui/ShellButton";
 import { TagChip } from "@/components/ui/TagChip";
 import { buildPageHref, parsePageParam } from "@/lib/pagination";
 import { marketCategories } from "@/lib/mock-data";
-import { getActiveListingsPage, toListingCardDataWithOptions } from "@/lib/market/data";
+import {
+  getActiveListingsPage,
+  getFeaturedListings,
+  toListingCardDataWithOptions,
+} from "@/lib/market/data";
 
 type MarketHomePageProps = {
   searchParams: Promise<{
@@ -25,11 +29,16 @@ export default async function MarketHomePage({ searchParams }: MarketHomePagePro
   const page = parsePageParam(pageParam);
 
   let listings: Awaited<ReturnType<typeof getActiveListingsPage>>["listings"] = [];
+  let featuredListings: Awaited<ReturnType<typeof getFeaturedListings>> = [];
   let hasMore = false;
   let loadError: string | null = null;
 
   try {
-    const pagedListings = await getActiveListingsPage(page, MARKET_PAGE_SIZE);
+    const [featured, pagedListings] = await Promise.all([
+      getFeaturedListings(4),
+      getActiveListingsPage(page, MARKET_PAGE_SIZE, { excludeFeatured: true }),
+    ]);
+    featuredListings = featured;
     listings = pagedListings.listings;
     hasMore = pagedListings.hasMore;
   } catch (error) {
@@ -90,6 +99,27 @@ export default async function MarketHomePage({ searchParams }: MarketHomePagePro
           </Link>
         </div>
       </section>
+
+      {featuredListings.length > 0 ? (
+        <SectionCard title="Featured listings">
+          <div className="grid gap-3 lg:grid-cols-2">
+            {featuredListings.map((listing) => {
+              const cardData = toListingCardDataWithOptions(listing, { showStatus: true });
+              return (
+                <ListingCard
+                  key={`featured-${listing.id}`}
+                  listing={{
+                    ...cardData,
+                    status: cardData.status === "Active" ? "Available" : cardData.status,
+                    highlightLabel: "Featured",
+                  }}
+                  href={`/market/item/${listing.id}`}
+                />
+              );
+            })}
+          </div>
+        </SectionCard>
+      ) : null}
 
       <SectionCard
         title="Recent listings"

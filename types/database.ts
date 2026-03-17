@@ -101,6 +101,7 @@ type DatabaseSchema = {
           pickup_location: string;
           status: "draft" | "active" | "reserved" | "sold" | "archived";
           is_hidden: boolean;
+          is_featured: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -115,6 +116,7 @@ type DatabaseSchema = {
           pickup_location: string;
           status?: "draft" | "active" | "reserved" | "sold" | "archived";
           is_hidden?: boolean;
+          is_featured?: boolean;
           created_at?: string;
           updated_at?: string;
         };
@@ -129,6 +131,7 @@ type DatabaseSchema = {
           pickup_location?: string;
           status?: "draft" | "active" | "reserved" | "sold" | "archived";
           is_hidden?: boolean;
+          is_featured?: boolean;
           created_at?: string;
           updated_at?: string;
         };

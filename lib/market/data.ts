@@ -13,7 +13,9 @@ export type ListingStatus = ListingRow["status"];
 export type ListingCardSource = Pick<
   ListingRow,
   "id" | "title" | "price_kzt" | "category" | "condition" | "pickup_location" | "status"
->;
+> & {
+  is_featured?: boolean;
+};
 export type ListingWithCoverRow = ListingCardSource & { cover_image_url: string | null };
 export type ListingEditSource = Pick<
   ListingRow,
@@ -46,6 +48,15 @@ export type ListingCardData = {
 export type PaginatedListingResult = {
   listings: ListingWithCoverRow[];
   hasMore: boolean;
+};
+export type FeaturedListingReviewItem = {
+  id: string;
+  title: string;
+  priceKzt: number;
+  status: ListingStatus;
+  isFeatured: boolean;
+  createdAt: string;
+  sellerName: string;
 };
 export type MarketplaceConversationListItem = {
   id: string;
@@ -96,7 +107,7 @@ const LOADER_SLOW_THRESHOLD_MS = 150;
 const INBOX_INITIAL_LAST_MESSAGE_SCAN_MULTIPLIER = 8;
 const INBOX_MESSAGE_LOOKUP_BATCH_SIZE = 8;
 const LISTING_CARD_SELECT =
-  "id, title, price_kzt, category, condition, pickup_location, status";
+  "id, title, price_kzt, category, condition, pickup_location, status, is_featured";
 const LISTING_EDIT_SELECT =
   "id, seller_id, title, description, price_kzt, category, condition, pickup_location, status";
 
@@ -120,6 +131,15 @@ function dedupeStrings(values: string[]): string[] {
 function normalizeName(value: string | null | undefined): string {
   const trimmed = value?.trim();
   return trimmed && trimmed.length > 0 ? trimmed : "NU student";
+}
+
+function isAdminUser(user: Awaited<ReturnType<typeof requireUser>>): boolean {
+  const metadata = user.app_metadata;
+  if (!metadata || typeof metadata !== "object") {
+    return false;
+  }
+
+  return (metadata as Record<string, unknown>).role === "admin";
 }
 
 function toMessagePreview(value: string, maxLength = 120): string {
@@ -288,9 +308,37 @@ export async function getActiveListings(limit = 24): Promise<ListingWithCoverRow
   return listings;
 }
 
+export async function getFeaturedListings(limit = 4): Promise<ListingWithCoverRow[]> {
+  const safeLimit = Math.max(1, Math.min(limit, 12));
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("listings")
+    .select(LISTING_CARD_SELECT)
+    .eq("status", "active")
+    .eq("is_hidden", false)
+    .eq("is_featured", true)
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: false })
+    .limit(safeLimit);
+
+  if (error) {
+    throw new Error("Failed to load featured listings.");
+  }
+
+  const coverMap = await getCoverImageMap(
+    supabase,
+    data.map((listing) => listing.id),
+  );
+
+  return data.map((listing) => withCoverImage(listing, coverMap));
+}
+
 export async function getActiveListingsPage(
   page = 1,
   pageSize = 24,
+  options: {
+    excludeFeatured?: boolean;
+  } = {},
 ): Promise<PaginatedListingResult> {
   const { from, to, pageSize: safePageSize } = createPaginationWindow({
     page,
@@ -300,13 +348,19 @@ export async function getActiveListingsPage(
   });
   const supabase = await createClient();
 
-  const { data, error } = await supabase
+  let query = supabase
     .from("listings")
     .select(LISTING_CARD_SELECT)
     .eq("status", "active")
     .order("created_at", { ascending: false })
     .order("id", { ascending: false })
     .range(from, to);
+
+  if (options.excludeFeatured) {
+    query = query.eq("is_featured", false);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     throw new Error("Failed to load active listings.");
@@ -348,6 +402,58 @@ export async function getActiveListingsByCategory(
   );
 
   return data.map((listing) => withCoverImage(listing, coverMap));
+}
+
+export async function getFeaturedListingsForReview(limit = 60): Promise<FeaturedListingReviewItem[]> {
+  const user = await requireUser();
+  if (!isAdminUser(user)) {
+    throw new Error("Not authorized to manage featured listings.");
+  }
+
+  const safeLimit = Math.max(1, Math.min(limit, 120));
+  const supabase = await createClient();
+  const { data: listings, error: listingsError } = await supabase
+    .from("listings")
+    .select("id, title, price_kzt, status, is_featured, seller_id, created_at")
+    .eq("status", "active")
+    .eq("is_hidden", false)
+    .order("is_featured", { ascending: false })
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: false })
+    .limit(safeLimit);
+
+  if (listingsError) {
+    throw new Error("Failed to load listings for featuring.");
+  }
+
+  const sellerIds = dedupeStrings((listings ?? []).map((listing) => listing.seller_id));
+  const profilesResult = sellerIds.length > 0
+    ? await supabase
+        .from("profiles")
+        .select("user_id, full_name")
+        .in("user_id", sellerIds)
+    : {
+        data: [] as Array<{ user_id: string; full_name: string | null }>,
+        error: null,
+      };
+
+  if (profilesResult.error) {
+    throw new Error("Failed to load listing sellers.");
+  }
+
+  const sellerNameById = new Map(
+    (profilesResult.data ?? []).map((profile) => [profile.user_id, normalizeName(profile.full_name)]),
+  );
+
+  return (listings ?? []).map((listing) => ({
+    id: listing.id,
+    title: listing.title,
+    priceKzt: listing.price_kzt,
+    status: listing.status,
+    isFeatured: listing.is_featured,
+    createdAt: listing.created_at,
+    sellerName: sellerNameById.get(listing.seller_id) ?? "NU student",
+  }));
 }
 
 export async function getMyListings(

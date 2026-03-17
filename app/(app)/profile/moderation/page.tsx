@@ -5,6 +5,12 @@ import { TopBar } from "@/components/ui/TopBar";
 import { formatCampusMessageTimestamp } from "@/lib/datetime";
 import { approveEventAction, rejectEventAction } from "@/lib/events/actions";
 import { formatEventDate, getPendingEventsForReview } from "@/lib/events/data";
+import { setListingFeaturedAction } from "@/lib/market/actions";
+import {
+  formatPriceKzt,
+  formatStatusLabel,
+  getFeaturedListingsForReview,
+} from "@/lib/market/data";
 import {
   resolveContentReportAction,
   setContentHiddenAction,
@@ -59,8 +65,10 @@ export default async function ModerationPage({ searchParams }: ModerationPagePro
 
   let reports: Awaited<ReturnType<typeof getRecentContentReports>> = [];
   let pendingEvents: Awaited<ReturnType<typeof getPendingEventsForReview>> = [];
+  let listingsForFeature: Awaited<ReturnType<typeof getFeaturedListingsForReview>> = [];
   let loadError: string | null = null;
   let pendingLoadError: string | null = null;
+  let listingsLoadError: string | null = null;
 
   try {
     reports = await getRecentContentReports(80);
@@ -78,6 +86,15 @@ export default async function ModerationPage({ searchParams }: ModerationPagePro
       eventLoadError instanceof Error
         ? eventLoadError.message
         : "Failed to load pending event submissions.";
+  }
+
+  try {
+    listingsForFeature = await getFeaturedListingsForReview(80);
+  } catch (listingLoadError) {
+    listingsLoadError =
+      listingLoadError instanceof Error
+        ? listingLoadError.message
+        : "Failed to load listings for featuring.";
   }
 
   return (
@@ -105,6 +122,11 @@ export default async function ModerationPage({ searchParams }: ModerationPagePro
       {pendingLoadError ? (
         <div className="rounded-xl border border-red-400/30 bg-red-400/10 px-3 py-2 text-[13px] text-red-200">
           {pendingLoadError}
+        </div>
+      ) : null}
+      {listingsLoadError ? (
+        <div className="rounded-xl border border-red-400/30 bg-red-400/10 px-3 py-2 text-[13px] text-red-200">
+          {listingsLoadError}
         </div>
       ) : null}
 
@@ -160,6 +182,64 @@ export default async function ModerationPage({ searchParams }: ModerationPagePro
             description="New event submissions will appear here for approval."
             actionLabel="Back to profile"
             actionHref="/profile"
+          />
+        ) : null}
+      </section>
+
+      <section className="wire-panel">
+        <div className="mb-3 border-b border-wire-700 pb-3">
+          <h2 className="wire-section-title">Featured listings</h2>
+          <p className="mt-1 wire-meta">Choose which active listings appear at the top of Market.</p>
+          <p className="mt-2 wire-meta">
+            {listingsForFeature.length > 0
+              ? `${listingsForFeature.filter((listing) => listing.isFeatured).length} featured`
+              : "No active listings"}
+          </p>
+        </div>
+
+        {listingsForFeature.length > 0 ? (
+          <div className="space-y-2.5">
+            {listingsForFeature.map((listing) => (
+              <article
+                key={listing.id}
+                className="rounded-2xl border border-wire-700 bg-wire-800 px-3 py-3"
+              >
+                <p className="text-sm font-medium text-wire-100">{listing.title}</p>
+                <div className="mt-2 space-y-1">
+                  <p className="wire-meta">Seller: {listing.sellerName}</p>
+                  <p className="wire-meta">
+                    {formatPriceKzt(listing.priceKzt)} | {formatStatusLabel(listing.status)}
+                  </p>
+                  <p className="wire-meta">
+                    Featured: {listing.isFeatured ? "Yes" : "No"}
+                  </p>
+                </div>
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <Link href={`/market/item/${listing.id}`} className="wire-action-compact">
+                    Open listing
+                  </Link>
+                  <form action={setListingFeaturedAction}>
+                    <input type="hidden" name="listingId" value={listing.id} />
+                    <input
+                      type="hidden"
+                      name="isFeaturedInput"
+                      value={listing.isFeatured ? "false" : "true"}
+                    />
+                    <input type="hidden" name="redirectTo" value="/profile/moderation" />
+                    <button type="submit" className="wire-action-compact">
+                      {listing.isFeatured ? "Remove featured" : "Mark featured"}
+                    </button>
+                  </form>
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : !listingsLoadError ? (
+          <EmptyState
+            title="No active listings yet"
+            description="Featured slots will appear here when active listings are available."
+            actionLabel="Open market"
+            actionHref="/market"
           />
         ) : null}
       </section>

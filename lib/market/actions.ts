@@ -70,6 +70,10 @@ const SEND_MESSAGE_BURST_LIMIT = {
   maxHits: 12,
   windowMs: 15 * 1000,
 };
+const FEATURE_LISTING_LIMIT = {
+  maxHits: 120,
+  windowMs: 10 * 60 * 1000,
+};
 // Best-effort only in serverless: this in-memory limiter is instance-local.
 const ACTION_SLOW_THRESHOLD_MS = 250;
 
@@ -77,6 +81,15 @@ function getRequestIdFromContext(context: Record<string, unknown>): string {
   return typeof context.requestId === "string" && context.requestId.length > 0
     ? context.requestId
     : "unknown";
+}
+
+function isAdminUser(user: Awaited<ReturnType<typeof requireUser>>): boolean {
+  const metadata = user.app_metadata;
+  if (!metadata || typeof metadata !== "object") {
+    return false;
+  }
+
+  return (metadata as Record<string, unknown>).role === "admin";
 }
 
 function mapCreateListingErrorMessage(errorCode?: string): string {
@@ -953,4 +966,83 @@ export async function toggleSavedListingAction(formData: FormData) {
   );
 
   redirect(redirectTo);
+}
+
+export async function setListingFeaturedAction(formData: FormData) {
+  const requestContext = await getRequestContext({ action: "setListingFeaturedAction" });
+  const parsedListingId = listingMutationIdSchema.safeParse({
+    listingId: getStringValue(formData, "listingId"),
+  });
+
+  if (!parsedListingId.success) {
+    redirectWithError("/profile/moderation", parsedListingId.error.issues[0]?.message ?? "Invalid listing id.");
+  }
+
+  const listingId = parsedListingId.data.listingId;
+  const redirectPath = sanitizeInternalPath(
+    getStringValue(formData, "redirectTo"),
+    "/profile/moderation",
+  );
+  const isFeaturedInput = getStringValue(formData, "isFeaturedInput");
+  if (isFeaturedInput !== "true" && isFeaturedInput !== "false") {
+    redirectWithError(redirectPath, "Invalid featured state.");
+  }
+
+  const user = await requireUser();
+  if (!isAdminUser(user)) {
+    logSecurityEvent("market_feature_listing_admin_violation", {
+      ...requestContext,
+      userId: user.id,
+      listingId,
+    });
+    redirectWithError(redirectPath, "Not authorized.");
+  }
+
+  const rateResult = consumeRateLimit(`market:feature-listing:${user.id}`, FEATURE_LISTING_LIMIT);
+  if (!rateResult.allowed) {
+    redirectWithError(redirectPath, "Too many moderation actions. Please wait and try again.");
+  }
+
+  const supabase = await createClient();
+  const { data: listing, error: listingError } = await supabase
+    .from("listings")
+    .select("id, status, is_hidden")
+    .eq("id", listingId)
+    .maybeSingle();
+
+  if (listingError) {
+    redirectWithError(redirectPath, "Failed to load listing.");
+  }
+
+  if (!listing) {
+    redirectWithError(redirectPath, "Listing not found.");
+  }
+
+  const nextIsFeatured = isFeaturedInput === "true";
+  if (nextIsFeatured && (listing.status !== "active" || listing.is_hidden)) {
+    redirectWithError(redirectPath, "Only visible active listings can be featured.");
+  }
+
+  const { data: updated, error: updateError } = await supabase
+    .from("listings")
+    .update({
+      is_featured: nextIsFeatured,
+    })
+    .eq("id", listingId)
+    .select("id")
+    .maybeSingle();
+
+  if (updateError) {
+    redirectWithError(redirectPath, "Failed to update featured state.");
+  }
+
+  if (!updated) {
+    redirectWithError(redirectPath, "Listing not found.");
+  }
+
+  revalidatePath("/home");
+  revalidatePath("/market");
+  revalidatePath("/profile/moderation");
+  revalidatePath(`/market/item/${listingId}`);
+  redirectWithMessage(redirectPath, nextIsFeatured ? "Listing featured." : "Featured removed.");
 }
