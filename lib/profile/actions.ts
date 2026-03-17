@@ -30,6 +30,19 @@ import {
 
 const AVATARS_BUCKET = "avatars";
 
+function toRecordObject(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return {};
+  }
+
+  return value as Record<string, unknown>;
+}
+
+function getBirthdayFromLinks(links: unknown): string | null {
+  const birthday = toRecordObject(links).birthday;
+  return typeof birthday === "string" && birthday.trim().length > 0 ? birthday : null;
+}
+
 async function updateProfile(
   userId: string,
   payload: Database["public"]["Tables"]["profiles"]["Update"],
@@ -82,6 +95,7 @@ export async function updateOnboardingProfileAction(formData: FormData) {
     major: getStringValue(formData, "major"),
     yearLabel: getStringValue(formData, "yearLabel"),
     bio: getStringValue(formData, "bio"),
+    birthday: getStringValue(formData, "birthday"),
   });
 
   if (!parsed.success) {
@@ -92,6 +106,26 @@ export async function updateOnboardingProfileAction(formData: FormData) {
   }
 
   const user = await requireUser();
+  const supabase = await createClient();
+  const { data: existingProfile, error: existingProfileError } = await supabase
+    .from("profiles")
+    .select("links")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (existingProfileError) {
+    redirectWithError("/onboarding/profile", "Failed to load profile links.");
+  }
+
+  const nextLinks = {
+    ...toRecordObject(existingProfile?.links),
+  };
+
+  if (parsed.data.birthday) {
+    nextLinks.birthday = parsed.data.birthday;
+  } else {
+    delete nextLinks.birthday;
+  }
 
   await updateProfile(
     user.id,
@@ -101,6 +135,7 @@ export async function updateOnboardingProfileAction(formData: FormData) {
       major: parsed.data.major,
       year_label: parsed.data.yearLabel,
       bio: parsed.data.bio,
+      links: nextLinks,
       onboarding_step: "interests",
       onboarding_completed: false,
     },
@@ -192,6 +227,26 @@ export async function completeOnboardingAction(formData: FormData) {
   const user = await requireUser();
   const skills = parseCommaList(parsed.data.skillsInput, 12);
   const projects = parseProjects(parsed.data.projectsInput);
+  const birthdayInputProvided = formData.has("birthday");
+  let birthdayForLinks = parsed.data.birthday;
+
+  if (!birthdayInputProvided) {
+    const supabase = await createClient();
+    const { data: existingProfile, error: existingProfileError } = await supabase
+      .from("profiles")
+      .select("links")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (existingProfileError) {
+      redirectWithError(
+        "/onboarding/professional",
+        "Failed to load profile links.",
+      );
+    }
+
+    birthdayForLinks = getBirthdayFromLinks(existingProfile?.links);
+  }
 
   await updateProfile(
     user.id,
@@ -199,7 +254,10 @@ export async function completeOnboardingAction(formData: FormData) {
       skills,
       projects,
       resume_url: parsed.data.resumeUrl,
-      links: toLinksObject(parsed.data),
+      links: toLinksObject({
+        ...parsed.data,
+        birthday: birthdayForLinks,
+      }),
       onboarding_step: "completed",
       onboarding_completed: true,
     },

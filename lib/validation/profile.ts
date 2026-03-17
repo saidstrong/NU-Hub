@@ -73,6 +73,7 @@ export const onboardingProfileSchema = z.object({
   major: optionalText(80),
   yearLabel: optionalText(40),
   bio: optionalText(320),
+  birthday: optionalBirthday,
 });
 
 export const onboardingInterestsSchema = z.object({

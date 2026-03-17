@@ -18,6 +18,15 @@ type OnboardingProfilePageProps = {
   }>;
 };
 
+function getBirthdayDefault(links: unknown): string {
+  if (!links || typeof links !== "object" || Array.isArray(links)) {
+    return "";
+  }
+
+  const value = (links as Record<string, unknown>).birthday;
+  return typeof value === "string" ? value : "";
+}
+
 export default async function OnboardingProfilePage({
   searchParams,
 }: OnboardingProfilePageProps) {
@@ -26,6 +35,7 @@ export default async function OnboardingProfilePage({
   const majorOptions = withLegacyValue(toSelectOptions(MAJOR_OPTIONS), profile.major);
   const yearLabelOptions = withLegacyValue(toSelectOptions(YEAR_LABEL_OPTIONS), profile.year_label);
   const fullNameDefault = getSuggestedProfileName(profile.full_name, profile.nu_email);
+  const birthdayDefault = getBirthdayDefault(profile.links);
 
   return (
     <main>
@@ -64,6 +74,12 @@ export default async function OnboardingProfilePage({
           options={yearLabelOptions}
           defaultValue={profile.year_label}
           placeholder="Select year"
+        />
+        <WireField
+          label="Birthday (private)"
+          name="birthday"
+          type="date"
+          defaultValue={birthdayDefault}
         />
         <WireTextarea label="Short bio" name="bio" defaultValue={profile.bio} rows={4} />
         <SubmitButton label="Continue" pendingLabel="Saving..." variant="primary" />
