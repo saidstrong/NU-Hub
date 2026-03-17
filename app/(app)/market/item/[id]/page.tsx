@@ -136,14 +136,16 @@ export default async function MarketItemDetailPage({
               <p className="wire-label">Posted</p>
               <p className="mt-1 text-sm text-wire-100">{postedAtLabel}</p>
             </div>
-            <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-3 py-2">
-              <p className="wire-label">Views</p>
-              <ListingViewCount
-                listingId={listing.id}
-                initialCount={initialViewCount}
-                shouldTrack={shouldTrackView}
-              />
-            </div>
+            {!isOwner ? (
+              <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-3 py-2">
+                <p className="wire-label">Views</p>
+                <ListingViewCount
+                  listingId={listing.id}
+                  initialCount={initialViewCount}
+                  shouldTrack={shouldTrackView}
+                />
+              </div>
+            ) : null}
           </div>
           <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-3 py-2.5">
             <p className="wire-label">Description</p>
@@ -169,6 +171,33 @@ export default async function MarketItemDetailPage({
         </div>
 
         <div className="space-y-6">
+          {isOwner ? (
+            <SectionCard title="Listing stats" subtitle="Visible only to you.">
+              <div className="grid gap-2 sm:grid-cols-2">
+                <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-3 py-2">
+                  <p className="wire-label">Views</p>
+                  <ListingViewCount
+                    listingId={listing.id}
+                    initialCount={initialViewCount}
+                    shouldTrack={false}
+                  />
+                </div>
+                <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-3 py-2">
+                  <p className="wire-label">Listing status</p>
+                  <p className="mt-1 text-sm text-wire-100">{formatStatusLabel(listing.status)}</p>
+                </div>
+                <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-3 py-2">
+                  <p className="wire-label">Featured</p>
+                  <p className="mt-1 text-sm text-wire-100">{listing.is_featured ? "Yes" : "No"}</p>
+                </div>
+                <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-3 py-2">
+                  <p className="wire-label">Posted</p>
+                  <p className="mt-1 text-sm text-wire-100">{postedAtLabel}</p>
+                </div>
+              </div>
+            </SectionCard>
+          ) : null}
+
           <SectionCard
             title="Seller"
             subtitle="Seller identity and campus context."
