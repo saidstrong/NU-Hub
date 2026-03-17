@@ -1514,7 +1514,9 @@ export async function sendFriendMessageAction(formData: FormData) {
     logWarn("connect", "friend_message_send_slow", timingContext);
   }
   revalidateFriendMessagingPaths(conversation.id);
-  redirect(redirectPath);
+  if (redirectPath !== conversationPath) {
+    redirect(redirectPath);
+  }
 }
 
 export async function createCommunityPostAction(formData: FormData) {

@@ -882,7 +882,11 @@ export async function sendMarketplaceMessageAction(formData: FormData) {
   if (durationMs > ACTION_SLOW_THRESHOLD_MS) {
     logWarn("market", "market_message_send_slow", timingContext);
   }
-  redirect(redirectPath);
+  revalidatePath("/market/messages");
+  revalidatePath(`/market/messages/${conversation.id}`);
+  if (redirectPath !== conversationPath) {
+    redirect(redirectPath);
+  }
 }
 
 export async function toggleSavedListingAction(formData: FormData) {

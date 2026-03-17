@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FeedbackBanner } from "@/components/ui/FeedbackBanner";
-import { SubmitButton } from "@/components/ui/SubmitButton";
+import { MessageComposer } from "@/components/ui/MessageComposer";
 import { ThreadAutoRefresh } from "@/components/ui/ThreadAutoRefresh";
 import { TopBar } from "@/components/ui/TopBar";
 import { formatCampusMessageTimestamp } from "@/lib/datetime";
@@ -162,30 +162,13 @@ export default async function MarketConversationPage({
           />
         )}
         <div className="mt-4 border-t border-wire-700 pt-4">
-          <form
+          <MessageComposer
             action={sendMarketplaceMessageAction}
-            className="space-y-2 rounded-[var(--radius-card)] border border-wire-700 bg-wire-950/45 p-3 sm:p-4"
-          >
-            <input type="hidden" name="conversationId" value={thread.conversationId} />
-            <input type="hidden" name="redirectTo" value={conversationPath} />
-            <textarea
-              id={composerFieldId}
-              name="content"
-              required
-              rows={3}
-              maxLength={1200}
-              placeholder="Ask about price, pickup time, or item details."
-              className="wire-textarea-field"
-            />
-            <div className="wire-action-row-single sm:flex sm:justify-end">
-              <SubmitButton
-                label="Send message"
-                pendingLabel="Sending..."
-                variant="primary"
-                className="sm:w-auto sm:min-w-[132px]"
-              />
-            </div>
-          </form>
+            conversationId={thread.conversationId}
+            redirectTo={conversationPath}
+            fieldId={composerFieldId}
+            placeholder="Ask about price, pickup time, or item details."
+          />
         </div>
       </section>
     </main>
