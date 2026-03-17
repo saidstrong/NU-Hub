@@ -10,6 +10,7 @@ import {
   toSelectOptions,
   withLegacyValue,
 } from "@/lib/profile/academic-options";
+import { getSuggestedProfileName } from "@/lib/profile/name-suggestion";
 import { getCurrentProfile } from "@/lib/profile/data";
 import { updateProfileAction } from "@/lib/profile/actions";
 
@@ -64,6 +65,7 @@ export default async function EditProfilePage({ searchParams }: EditProfilePageP
   const schoolOptions = withLegacyValue(toSelectOptions(SCHOOL_OPTIONS), profile.school);
   const majorOptions = withLegacyValue(toSelectOptions(MAJOR_OPTIONS), profile.major);
   const yearLabelOptions = withLegacyValue(toSelectOptions(YEAR_LABEL_OPTIONS), profile.year_label);
+  const fullNameDefault = getSuggestedProfileName(profile.full_name, profile.nu_email);
 
   return (
     <main>
@@ -98,7 +100,7 @@ export default async function EditProfilePage({ searchParams }: EditProfilePageP
             name="fullName"
             required
             autoComplete="name"
-            defaultValue={profile.full_name}
+            defaultValue={fullNameDefault}
           />
           <WireSelect
             label="School"
