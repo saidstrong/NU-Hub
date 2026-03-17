@@ -97,13 +97,43 @@ export default async function ModerationPage({ searchParams }: ModerationPagePro
         : "Failed to load listings for featuring.";
   }
 
+  const pendingEventsCount = pendingEvents.length;
+  const featuredListingsCount = listingsForFeature.filter((listing) => listing.isFeatured).length;
+  const reportsCount = reports.length;
+
+  const compactPrimaryActionClass =
+    "wire-action-compact border-accent/40 bg-accent/10 text-wire-100 hover:border-accent/55 hover:bg-accent/15";
+  const compactSecondaryActionClass = "wire-action-compact";
+  const compactDangerActionClass =
+    "wire-action-compact border-red-400/35 bg-red-400/10 text-red-200 hover:border-red-300/45 hover:bg-red-400/15";
+  const compactGhostActionClass =
+    "wire-action-compact border-wire-700 bg-transparent text-wire-300 hover:border-wire-600 hover:bg-wire-800";
+
   return (
     <main>
       <TopBar
         title="Moderation"
-        subtitle="Recent reports and basic visibility controls"
+        subtitle="Event approvals, featured listings, and content reports"
         backHref="/profile"
       />
+
+      <section className="wire-panel py-4">
+        <div className="grid gap-2 sm:grid-cols-3">
+          <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-3 py-3">
+            <p className="wire-label">Pending events</p>
+            <p className="mt-1 text-lg font-semibold text-wire-100">{pendingEventsCount}</p>
+          </div>
+          <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-3 py-3">
+            <p className="wire-label">Featured listings</p>
+            <p className="mt-1 text-lg font-semibold text-wire-100">{featuredListingsCount}</p>
+          </div>
+          <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-3 py-3">
+            <p className="wire-label">Open reports</p>
+            <p className="mt-1 text-lg font-semibold text-wire-100">{reportsCount}</p>
+          </div>
+        </div>
+      </section>
+
       {message ? (
         <div className="rounded-xl border border-accent/35 bg-accent/10 px-3 py-2 text-[13px] text-wire-100">
           {message}
@@ -132,11 +162,8 @@ export default async function ModerationPage({ searchParams }: ModerationPagePro
 
       <section className="wire-panel">
         <div className="mb-3 border-b border-wire-700 pb-3">
-          <h2 className="wire-section-title">Pending event approvals</h2>
+          <h2 className="wire-section-title">Pending event approvals ({pendingEventsCount})</h2>
           <p className="mt-1 wire-meta">Review submitted events before public visibility.</p>
-          <p className="mt-2 wire-meta">
-            {pendingEvents.length > 0 ? `${pendingEvents.length} pending` : "No pending events"}
-          </p>
         </div>
 
         {pendingEvents.length > 0 ? (
@@ -155,20 +182,20 @@ export default async function ModerationPage({ searchParams }: ModerationPagePro
                   <p className="wire-meta">Submitted at: {formatPendingCreatedTime(event.createdAt)}</p>
                 </div>
                 <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <Link href={`/events/${event.id}`} className="wire-action-compact">
+                  <Link href={`/events/${event.id}`} className={compactSecondaryActionClass}>
                     Open event
                   </Link>
                   <form action={approveEventAction}>
                     <input type="hidden" name="eventId" value={event.id} />
                     <input type="hidden" name="redirectTo" value="/profile/moderation" />
-                    <button type="submit" className="wire-action-compact">
+                    <button type="submit" className={compactPrimaryActionClass}>
                       Approve
                     </button>
                   </form>
                   <form action={rejectEventAction}>
                     <input type="hidden" name="eventId" value={event.id} />
                     <input type="hidden" name="redirectTo" value="/profile/moderation" />
-                    <button type="submit" className="wire-action-compact">
+                    <button type="submit" className={compactDangerActionClass}>
                       Reject
                     </button>
                   </form>
@@ -188,13 +215,8 @@ export default async function ModerationPage({ searchParams }: ModerationPagePro
 
       <section className="wire-panel">
         <div className="mb-3 border-b border-wire-700 pb-3">
-          <h2 className="wire-section-title">Featured listings</h2>
+          <h2 className="wire-section-title">Featured listings ({featuredListingsCount})</h2>
           <p className="mt-1 wire-meta">Choose which active listings appear at the top of Market.</p>
-          <p className="mt-2 wire-meta">
-            {listingsForFeature.length > 0
-              ? `${listingsForFeature.filter((listing) => listing.isFeatured).length} featured`
-              : "No active listings"}
-          </p>
         </div>
 
         {listingsForFeature.length > 0 ? (
@@ -215,7 +237,7 @@ export default async function ModerationPage({ searchParams }: ModerationPagePro
                   </p>
                 </div>
                 <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <Link href={`/market/item/${listing.id}`} className="wire-action-compact">
+                  <Link href={`/market/item/${listing.id}`} className={compactSecondaryActionClass}>
                     Open listing
                   </Link>
                   <form action={setListingFeaturedAction}>
@@ -226,7 +248,10 @@ export default async function ModerationPage({ searchParams }: ModerationPagePro
                       value={listing.isFeatured ? "false" : "true"}
                     />
                     <input type="hidden" name="redirectTo" value="/profile/moderation" />
-                    <button type="submit" className="wire-action-compact">
+                    <button
+                      type="submit"
+                      className={listing.isFeatured ? compactGhostActionClass : compactPrimaryActionClass}
+                    >
                       {listing.isFeatured ? "Remove featured" : "Mark featured"}
                     </button>
                   </form>
@@ -246,11 +271,8 @@ export default async function ModerationPage({ searchParams }: ModerationPagePro
 
       <section className="wire-panel">
         <div className="mb-3 border-b border-wire-700 pb-3">
-          <h2 className="wire-section-title">Recent reports</h2>
+          <h2 className="wire-section-title">Content reports ({reportsCount})</h2>
           <p className="mt-1 wire-meta">Review reports and toggle target visibility when needed.</p>
-          <p className="mt-2 wire-meta">
-            {reports.length > 0 ? `${reports.length} report(s)` : "No reports"}
-          </p>
         </div>
 
         {reports.length > 0 ? (
@@ -286,7 +308,7 @@ export default async function ModerationPage({ searchParams }: ModerationPagePro
 
                   <div className="mt-3 flex flex-wrap items-center gap-2">
                     {report.targetLink ? (
-                      <Link href={report.targetLink} className="wire-action-compact">
+                      <Link href={report.targetLink} className={compactSecondaryActionClass}>
                         Open target
                       </Link>
                     ) : null}
@@ -296,7 +318,10 @@ export default async function ModerationPage({ searchParams }: ModerationPagePro
                         <input type="hidden" name="targetId" value={report.targetId} />
                         <input type="hidden" name="isHiddenInput" value={nextHiddenValue} />
                         <input type="hidden" name="redirectTo" value="/profile/moderation" />
-                        <button type="submit" className="wire-action-compact">
+                        <button
+                          type="submit"
+                          className={report.targetHidden ? compactGhostActionClass : compactPrimaryActionClass}
+                        >
                           {hideLabel}
                         </button>
                       </form>
@@ -304,7 +329,7 @@ export default async function ModerationPage({ searchParams }: ModerationPagePro
                     <form action={resolveContentReportAction}>
                       <input type="hidden" name="reportId" value={report.id} />
                       <input type="hidden" name="redirectTo" value="/profile/moderation" />
-                      <button type="submit" className="wire-action-compact">
+                      <button type="submit" className={compactSecondaryActionClass}>
                         Resolve
                       </button>
                     </form>
