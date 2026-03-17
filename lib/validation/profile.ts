@@ -26,6 +26,35 @@ const optionalNickname = z
   })
   .transform((value) => (value.length > 0 ? value : null));
 
+function isValidIsoDateString(value: string): boolean {
+  const matched = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!matched) {
+    return false;
+  }
+
+  const year = Number(matched[1]);
+  const month = Number(matched[2]);
+  const day = Number(matched[3]);
+  const parsed = new Date(Date.UTC(year, month - 1, day));
+
+  return (
+    parsed.getUTCFullYear() === year
+    && parsed.getUTCMonth() === month - 1
+    && parsed.getUTCDate() === day
+  );
+}
+
+const optionalBirthday = z
+  .string()
+  .trim()
+  .refine((value) => value.length === 0 || /^\d{4}-\d{2}-\d{2}$/.test(value), {
+    message: "Use YYYY-MM-DD format.",
+  })
+  .refine((value) => value.length === 0 || isValidIsoDateString(value), {
+    message: "Enter a valid date.",
+  })
+  .transform((value) => (value.length > 0 ? value : null));
+
 const chipsArray = z.array(
   z
     .string()
@@ -70,6 +99,7 @@ export const onboardingProfessionalSchema = z.object({
   telegramNickname: optionalNickname,
   instagramNickname: optionalNickname,
   relationshipStatus: optionalText(40),
+  birthday: optionalBirthday,
 });
 
 export const editProfileSchema = z.object({
@@ -91,6 +121,10 @@ export const editProfileSchema = z.object({
   githubUrl: optionalUrl,
   linkedinUrl: optionalUrl,
   portfolioUrl: optionalUrl,
+  telegramNickname: optionalNickname,
+  instagramNickname: optionalNickname,
+  relationshipStatus: optionalText(40),
+  birthday: optionalBirthday,
 });
 
 export function parseCommaList(raw: string, maxItems = 12): string[] {

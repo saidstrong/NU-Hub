@@ -5,6 +5,7 @@ import { SectionHeader } from "@/components/ui/SectionHeader";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { ShellButton } from "@/components/ui/ShellButton";
 import { TagChip } from "@/components/ui/TagChip";
+import { formatPrivateBirthday, isBirthdayTodayInCampusTimeZone } from "@/lib/datetime";
 import { getCurrentProfile } from "@/lib/profile/data";
 import { toPublicStorageUrl } from "@/lib/validation/media";
 
@@ -65,9 +66,10 @@ function parseProfileExtras(links: unknown): {
   telegram: string | null;
   instagram: string | null;
   relationshipStatus: string | null;
+  birthday: string | null;
 } {
   if (!links || typeof links !== "object" || Array.isArray(links)) {
-    return { telegram: null, instagram: null, relationshipStatus: null };
+    return { telegram: null, instagram: null, relationshipStatus: null, birthday: null };
   }
 
   const source = links as Record<string, unknown>;
@@ -82,6 +84,7 @@ function parseProfileExtras(links: unknown): {
     telegram: readValue("telegram"),
     instagram: readValue("instagram"),
     relationshipStatus: readValue("relationship_status"),
+    birthday: readValue("birthday"),
   };
 }
 
@@ -112,6 +115,8 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
   const hasPublicLinks = Boolean(profile.resume_url || links.length > 0);
   const hasSocialHandles = Boolean(telegramHandle || instagramHandle);
   const bioText = typeof profile.bio === "string" ? profile.bio.trim() : "";
+  const privateBirthday = formatPrivateBirthday(extras.birthday);
+  const isBirthdayToday = isBirthdayTodayInCampusTimeZone(extras.birthday);
 
   return (
     <main>
@@ -142,6 +147,11 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
                 {name}
               </h2>
               <p className="mt-2 text-[14px] text-wire-300">{profileContext}</p>
+              {isBirthdayToday ? (
+                <div className="mt-2 inline-flex items-center rounded-full border border-accent/35 bg-accent/10 px-2.5 py-1 text-[11px] font-medium text-wire-100">
+                  Birthday today
+                </div>
+              ) : null}
             </div>
           </div>
           <div className="hidden sm:flex sm:items-center">
@@ -303,6 +313,13 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
             <div className="border-t border-wire-700 pt-4">
               <p className="mb-2 wire-label">Relationship status (private)</p>
               <p className="text-[13px] text-wire-200">{extras.relationshipStatus}</p>
+            </div>
+          ) : null}
+
+          {privateBirthday ? (
+            <div className="border-t border-wire-700 pt-4">
+              <p className="mb-2 wire-label">Birthday (private)</p>
+              <p className="text-[13px] text-wire-200">{privateBirthday}</p>
             </div>
           ) : null}
 

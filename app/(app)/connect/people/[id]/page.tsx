@@ -7,6 +7,7 @@ import { ShellButton } from "@/components/ui/ShellButton";
 import { TagChip } from "@/components/ui/TagChip";
 import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/auth/session";
+import { isBirthdayTodayInCampusTimeZone } from "@/lib/datetime";
 import {
   acceptFriendRequestAction,
   cancelFriendRequestAction,
@@ -99,6 +100,11 @@ export default async function PersonProfilePage({ params, searchParams }: Person
   const instagramLabel = instagramNickname
     ? (instagramNickname.startsWith("@") ? instagramNickname : `@${instagramNickname}`)
     : null;
+  const birthdayValue =
+    typeof links.birthday === "string" && links.birthday.trim().length > 0
+      ? links.birthday.trim()
+      : null;
+  const isBirthdayToday = isBirthdayTodayInCampusTimeZone(birthdayValue);
   const hasProfessionalLinks =
     Boolean(person.resume_url) ||
     typeof links.github === "string" ||
@@ -144,6 +150,11 @@ export default async function PersonProfilePage({ params, searchParams }: Person
               {name}
             </h2>
             <p className="mt-2 text-[14px] text-wire-300">{academicLabel || "Academic details not shared"}</p>
+            {isBirthdayToday ? (
+              <div className="mt-2 inline-flex items-center rounded-full border border-accent/35 bg-accent/10 px-2.5 py-1 text-[11px] font-medium text-wire-100">
+                Birthday today
+              </div>
+            ) : null}
             <p className="mt-1 text-[12px] text-wire-400">NU Atrium student profile</p>
           </div>
         </div>

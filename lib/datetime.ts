@@ -28,12 +28,49 @@ const CAMPUS_DAY_KEY_FORMATTER = new Intl.DateTimeFormat("en-CA", {
   day: "2-digit",
 });
 
+const CAMPUS_MONTH_DAY_FORMATTER = new Intl.DateTimeFormat("en-CA", {
+  timeZone: CAMPUS_TIME_ZONE,
+  month: "2-digit",
+  day: "2-digit",
+});
+
+const PRIVATE_BIRTHDAY_FORMATTER = new Intl.DateTimeFormat("en-US", {
+  timeZone: "UTC",
+  month: "long",
+  day: "numeric",
+  year: "numeric",
+});
+
 function toDate(value: string | Date): Date {
   return value instanceof Date ? value : new Date(value);
 }
 
 function toCampusDayKey(value: Date): string {
   return CAMPUS_DAY_KEY_FORMATTER.format(value);
+}
+
+function parseBirthdayValue(value: string | null | undefined): {
+  year: number;
+  month: number;
+  day: number;
+} | null {
+  if (!value) return null;
+  const matched = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim());
+  if (!matched) return null;
+
+  const year = Number(matched[1]);
+  const month = Number(matched[2]);
+  const day = Number(matched[3]);
+  const parsed = new Date(Date.UTC(year, month - 1, day));
+  if (
+    parsed.getUTCFullYear() !== year
+    || parsed.getUTCMonth() !== month - 1
+    || parsed.getUTCDate() !== day
+  ) {
+    return null;
+  }
+
+  return { year, month, day };
 }
 
 export function formatCampusMessageTimestamp(value: string | Date): string {
@@ -57,3 +94,21 @@ export function formatCampusEventDateRange(
   return `${startLabel} -> ${CAMPUS_EVENT_DAY_FORMATTER.format(end)} - ${CAMPUS_EVENT_TIME_FORMATTER.format(end)}`;
 }
 
+export function isBirthdayTodayInCampusTimeZone(value: string | null | undefined): boolean {
+  const parsedBirthday = parseBirthdayValue(value);
+  if (!parsedBirthday) return false;
+
+  const todayMonthDay = CAMPUS_MONTH_DAY_FORMATTER.format(new Date());
+  const birthdayMonthDay = `${String(parsedBirthday.month).padStart(2, "0")}-${String(parsedBirthday.day).padStart(2, "0")}`;
+  return todayMonthDay === birthdayMonthDay;
+}
+
+export function formatPrivateBirthday(value: string | null | undefined): string | null {
+  const parsedBirthday = parseBirthdayValue(value);
+  if (!parsedBirthday) return null;
+
+  const normalized = new Date(
+    Date.UTC(parsedBirthday.year, parsedBirthday.month - 1, parsedBirthday.day),
+  );
+  return PRIVATE_BIRTHDAY_FORMATTER.format(normalized);
+}

@@ -29,6 +29,7 @@ function linksToDefaults(links: unknown) {
       telegram: "",
       instagram: "",
       relationship_status: "",
+      birthday: "",
     };
   }
 
@@ -41,6 +42,7 @@ function linksToDefaults(links: unknown) {
     instagram: typeof source.instagram === "string" ? source.instagram : "",
     relationship_status:
       typeof source.relationship_status === "string" ? source.relationship_status : "",
+    birthday: typeof source.birthday === "string" ? source.birthday : "",
   };
 }
 
@@ -182,6 +184,12 @@ export default async function EditProfilePage({ searchParams }: EditProfilePageP
             label="Relationship status"
             name="relationshipStatus"
             defaultValue={linkDefaults.relationship_status}
+          />
+          <WireField
+            label="Birthday (private)"
+            name="birthday"
+            defaultValue={linkDefaults.birthday}
+            type="date"
           />
         </FormSection>
 

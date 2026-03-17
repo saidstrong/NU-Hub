@@ -53,6 +53,7 @@ function toLinksObject(values: {
   telegramNickname?: string | null;
   instagramNickname?: string | null;
   relationshipStatus?: string | null;
+  birthday?: string | null;
 }) {
   return {
     ...(values.githubUrl ? { github: values.githubUrl } : {}),
@@ -61,6 +62,7 @@ function toLinksObject(values: {
     ...(values.telegramNickname ? { telegram: values.telegramNickname } : {}),
     ...(values.instagramNickname ? { instagram: values.instagramNickname } : {}),
     ...(values.relationshipStatus ? { relationship_status: values.relationshipStatus } : {}),
+    ...(values.birthday ? { birthday: values.birthday } : {}),
   };
 }
 
@@ -177,6 +179,7 @@ export async function completeOnboardingAction(formData: FormData) {
     telegramNickname: getStringValue(formData, "telegramNickname"),
     instagramNickname: getStringValue(formData, "instagramNickname"),
     relationshipStatus: getStringValue(formData, "relationshipStatus"),
+    birthday: getStringValue(formData, "birthday"),
   });
 
   if (!parsed.success) {
@@ -240,6 +243,10 @@ export async function updateProfileAction(formData: FormData) {
     githubUrl: getStringValue(formData, "githubUrl"),
     linkedinUrl: getStringValue(formData, "linkedinUrl"),
     portfolioUrl: getStringValue(formData, "portfolioUrl"),
+    telegramNickname: getStringValue(formData, "telegramNickname"),
+    instagramNickname: getStringValue(formData, "instagramNickname"),
+    relationshipStatus: getStringValue(formData, "relationshipStatus"),
+    birthday: getStringValue(formData, "birthday"),
   });
 
   if (!parsed.success) {
