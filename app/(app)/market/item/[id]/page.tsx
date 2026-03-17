@@ -1,6 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 import Link from "next/link";
 import { CopyListingLinkButton } from "./CopyListingLinkButton";
+import { ListingViewCount } from "./ListingViewCount";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FeedbackBanner } from "@/components/ui/FeedbackBanner";
 import { ListingImageGallery } from "@/components/ui/ListingImageGallery";
@@ -76,6 +77,13 @@ export default async function MarketItemDetailPage({
     .filter(Boolean)
     .join(" - ");
   const sellerMetaLabel = sellerMeta || "Academic details not shared";
+  const initialViewCount = Number.isFinite(listing.view_count)
+    ? Math.max(0, listing.view_count)
+    : 0;
+  const shouldTrackView =
+    !isOwner
+    && listing.status === "active"
+    && !listing.is_hidden;
   const pickupLabel =
     typeof listing.pickup_location === "string" && listing.pickup_location.trim().length > 0
       ? listing.pickup_location.trim()
@@ -111,7 +119,7 @@ export default async function MarketItemDetailPage({
             </div>
             <TagChip label={formatStatusLabel(listing.status)} tone="status" />
           </div>
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
             <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-3 py-2">
               <p className="wire-label">Category</p>
               <p className="mt-1 text-sm text-wire-100">{listing.category}</p>
@@ -127,6 +135,14 @@ export default async function MarketItemDetailPage({
             <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-3 py-2">
               <p className="wire-label">Posted</p>
               <p className="mt-1 text-sm text-wire-100">{postedAtLabel}</p>
+            </div>
+            <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-3 py-2">
+              <p className="wire-label">Views</p>
+              <ListingViewCount
+                listingId={listing.id}
+                initialCount={initialViewCount}
+                shouldTrack={shouldTrackView}
+              />
             </div>
           </div>
           <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-3 py-2.5">

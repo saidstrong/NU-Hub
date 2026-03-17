@@ -102,6 +102,7 @@ type DatabaseSchema = {
           status: "draft" | "active" | "reserved" | "sold" | "archived";
           is_hidden: boolean;
           is_featured: boolean;
+          view_count: number;
           created_at: string;
           updated_at: string;
         };
@@ -117,6 +118,7 @@ type DatabaseSchema = {
           status?: "draft" | "active" | "reserved" | "sold" | "archived";
           is_hidden?: boolean;
           is_featured?: boolean;
+          view_count?: number;
           created_at?: string;
           updated_at?: string;
         };
@@ -132,6 +134,7 @@ type DatabaseSchema = {
           status?: "draft" | "active" | "reserved" | "sold" | "archived";
           is_hidden?: boolean;
           is_featured?: boolean;
+          view_count?: number;
           created_at?: string;
           updated_at?: string;
         };
@@ -616,7 +619,14 @@ type DatabaseSchema = {
       };
     };
     Views: { [_ in never]: never };
-    Functions: { [_ in never]: never };
+    Functions: {
+      increment_listing_view_count: {
+        Args: {
+          p_listing_id: string;
+        };
+        Returns: number | null;
+      };
+    };
     Enums: { [_ in never]: never };
     CompositeTypes: { [_ in never]: never };
   };
