@@ -168,6 +168,8 @@ const LOADER_SLOW_THRESHOLD_MS = 150;
 const LIGHTWEIGHT_MEMBER_COUNT_BATCH_SIZE = 6;
 const INBOX_INITIAL_LAST_MESSAGE_SCAN_MULTIPLIER = 8;
 const INBOX_MESSAGE_LOOKUP_BATCH_SIZE = 8;
+const PEOPLE_DISCOVERY_DEFAULT_LIMIT = 16;
+const PEOPLE_DISCOVERY_MAX_LIMIT = 500;
 
 type FriendInboxLatestMessageLookupRow = Pick<
   FriendMessageRow,
@@ -181,6 +183,24 @@ function formatJoinType(joinType: CommunityRow["join_type"]): string {
 function fallbackText(value: string | null | undefined, fallback: string): string {
   const safe = value?.trim();
   return safe && safe.length > 0 ? safe : fallback;
+}
+
+function toProfileAvatarUrl(avatarPath: string | null | undefined): string | undefined {
+  const normalized = avatarPath?.trim();
+  if (!normalized) {
+    return undefined;
+  }
+
+  if (/^https?:\/\//i.test(normalized)) {
+    return normalized;
+  }
+
+  const withoutBucketPrefix = normalized.startsWith("avatars/")
+    ? normalized.slice("avatars/".length)
+    : normalized;
+
+  const resolved = toPublicStorageUrl("avatars", withoutBucketPrefix);
+  return resolved ?? undefined;
 }
 
 async function requireMatchingUserId(userId: string): Promise<string> {
@@ -205,8 +225,6 @@ function toMessagePreview(value: string, maxLength = 120): string {
 }
 
 export function toPersonCardData(profile: PersonCardSource): PersonCardData {
-  const avatarUrl = toPublicStorageUrl("avatars", profile.avatar_path);
-
   return {
     id: profile.user_id,
     name: fallbackText(profile.full_name, "NU student"),
@@ -214,7 +232,7 @@ export function toPersonCardData(profile: PersonCardSource): PersonCardData {
     year: fallbackText(profile.year_label, "Year not set"),
     lookingFor: profile.looking_for[0] ?? "Open to collaboration",
     interests: profile.interests,
-    avatarUrl: avatarUrl ?? undefined,
+    avatarUrl: toProfileAvatarUrl(profile.avatar_path),
   };
 }
 
@@ -353,9 +371,10 @@ async function getLatestFriendMessagesByConversation(
   return latestByConversation;
 }
 
-export async function getPeopleDiscovery(limit = 16): Promise<PersonCardSource[]> {
+export async function getPeopleDiscovery(limit = PEOPLE_DISCOVERY_DEFAULT_LIMIT): Promise<PersonCardSource[]> {
   const user = await requireUser();
   const supabase = await createClient();
+  const safeLimit = Math.max(1, Math.min(limit, PEOPLE_DISCOVERY_MAX_LIMIT));
 
   const { data, error } = await supabase
     .from("profiles")
@@ -363,7 +382,8 @@ export async function getPeopleDiscovery(limit = 16): Promise<PersonCardSource[]
     .neq("user_id", user.id)
     .eq("onboarding_completed", true)
     .order("created_at", { ascending: false })
-    .limit(limit);
+    .order("user_id", { ascending: false })
+    .limit(safeLimit);
 
   if (error) {
     throw new Error("Failed to load people discovery.");

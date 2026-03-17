@@ -10,7 +10,7 @@ export default async function PeopleDiscoveryPage() {
   let loadError: string | null = null;
 
   try {
-    people = await getPeopleDiscovery(50);
+    people = await getPeopleDiscovery(500);
   } catch (error) {
     loadError = error instanceof Error ? error.message : "Failed to load people.";
   }
