@@ -1,8 +1,15 @@
 import { updateOnboardingProfileAction } from "@/lib/profile/actions";
+import {
+  MAJOR_OPTIONS,
+  SCHOOL_OPTIONS,
+  YEAR_LABEL_OPTIONS,
+  toSelectOptions,
+  withLegacyValue,
+} from "@/lib/profile/academic-options";
 import { getCurrentProfile } from "@/lib/profile/data";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import { TopBar } from "@/components/ui/TopBar";
-import { WireField, WireTextarea } from "@/components/ui/WireField";
+import { WireField, WireSelect, WireTextarea } from "@/components/ui/WireField";
 
 type OnboardingProfilePageProps = {
   searchParams: Promise<{
@@ -14,6 +21,9 @@ export default async function OnboardingProfilePage({
   searchParams,
 }: OnboardingProfilePageProps) {
   const [{ error }, profile] = await Promise.all([searchParams, getCurrentProfile()]);
+  const schoolOptions = withLegacyValue(toSelectOptions(SCHOOL_OPTIONS), profile.school);
+  const majorOptions = withLegacyValue(toSelectOptions(MAJOR_OPTIONS), profile.major);
+  const yearLabelOptions = withLegacyValue(toSelectOptions(YEAR_LABEL_OPTIONS), profile.year_label);
 
   return (
     <main>
@@ -32,9 +42,27 @@ export default async function OnboardingProfilePage({
           autoComplete="name"
           defaultValue={profile.full_name}
         />
-        <WireField label="School" name="school" defaultValue={profile.school} />
-        <WireField label="Major" name="major" defaultValue={profile.major} />
-        <WireField label="Year" name="yearLabel" defaultValue={profile.year_label} />
+        <WireSelect
+          label="School"
+          name="school"
+          options={schoolOptions}
+          defaultValue={profile.school}
+          placeholder="Select school"
+        />
+        <WireSelect
+          label="Major"
+          name="major"
+          options={majorOptions}
+          defaultValue={profile.major}
+          placeholder="Select major"
+        />
+        <WireSelect
+          label="Year"
+          name="yearLabel"
+          options={yearLabelOptions}
+          defaultValue={profile.year_label}
+          placeholder="Select year"
+        />
         <WireTextarea label="Short bio" name="bio" defaultValue={profile.bio} rows={4} />
         <SubmitButton label="Continue" pendingLabel="Saving..." variant="primary" />
       </form>
