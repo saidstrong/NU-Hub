@@ -8,7 +8,13 @@ import { ThreadAutoRefresh } from "@/components/ui/ThreadAutoRefresh";
 import { TopBar } from "@/components/ui/TopBar";
 import { formatCampusMessageTimestamp } from "@/lib/datetime";
 import { sendMarketplaceMessageAction } from "@/lib/market/actions";
-import { formatPriceKzt, formatStatusLabel, getMarketplaceConversationThread } from "@/lib/market/data";
+import {
+  formatCompactListingPrice,
+  formatListingTypeLabel,
+  formatPriceKzt,
+  formatStatusLabel,
+  getMarketplaceConversationThread,
+} from "@/lib/market/data";
 import { toPublicStorageUrl } from "@/lib/validation/media";
 import { isUuid } from "@/lib/validation/uuid";
 
@@ -61,6 +67,12 @@ export default async function MarketConversationPage({
   const conversationPath = `/market/messages/${thread.conversationId}`;
   const composerFieldId = `market-message-input-${thread.conversationId}`;
   const listingStatusLabel = thread.listingStatus ? formatStatusLabel(thread.listingStatus) : null;
+  const listingTypeLabel = thread.listingType ? formatListingTypeLabel(thread.listingType) : null;
+  const listingPriceLabel = thread.listingPriceKzt !== null
+    ? thread.pricingModel
+      ? formatCompactListingPrice(thread.listingPriceKzt, thread.pricingModel)
+      : formatPriceKzt(thread.listingPriceKzt)
+    : "Price unavailable";
 
   return (
     <main className="mx-auto w-full max-w-4xl">
@@ -113,7 +125,8 @@ export default async function MarketConversationPage({
                   {thread.listingTitle}
                 </p>
                 <p className="mt-0.5 text-[11px] text-wire-300">
-                  {thread.listingPriceKzt !== null ? formatPriceKzt(thread.listingPriceKzt) : "Price unavailable"}
+                  {listingPriceLabel}
+                  {listingTypeLabel ? ` • ${listingTypeLabel}` : ""}
                   {listingStatusLabel ? ` • ${listingStatusLabel}` : ""}
                 </p>
               </div>

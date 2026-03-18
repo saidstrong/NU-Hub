@@ -112,6 +112,7 @@ export async function searchGlobalEntities(
       .from("listings")
       .select("id, title, price_kzt, listing_type, pricing_model, category, condition, pickup_location, status")
       .eq("status", "active")
+      .eq("is_hidden", false)
       .or(
         `title.ilike.${pattern},description.ilike.${pattern},category.ilike.${pattern},pickup_location.ilike.${pattern}`,
       )

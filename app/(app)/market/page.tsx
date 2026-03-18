@@ -66,7 +66,9 @@ export default async function MarketHomePage({ searchParams }: MarketHomePagePro
         listingType: listingTypeFilter,
       }),
     ]);
-    featuredListings = featured;
+    featuredListings = listingTypeFilter
+      ? featured.filter((listing) => listing.listing_type === listingTypeFilter)
+      : featured;
     listings = pagedListings.listings;
     hasMore = pagedListings.hasMore;
   } catch (error) {

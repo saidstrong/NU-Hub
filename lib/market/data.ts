@@ -52,7 +52,7 @@ type ProfileIdentity = Pick<
 >;
 type ListingContextRow = Pick<
   ListingRow,
-  "id" | "title" | "price_kzt" | "status"
+  "id" | "title" | "price_kzt" | "status" | "listing_type" | "pricing_model"
 >;
 
 export type ListingCardData = {
@@ -84,6 +84,8 @@ export type MarketplaceConversationListItem = {
   listingId: string;
   listingTitle: string;
   listingPriceKzt: number | null;
+  listingType: ListingType | null;
+  pricingModel: PricingModel | null;
   listingStatus: ListingStatus | null;
   listingCoverImageUrl: string | null;
   counterpartId: string;
@@ -113,6 +115,8 @@ export type MarketplaceConversationThread = {
   listingId: string;
   listingTitle: string;
   listingPriceKzt: number | null;
+  listingType: ListingType | null;
+  pricingModel: PricingModel | null;
   listingStatus: ListingStatus | null;
   listingCoverImageUrl: string | null;
   listingHref: string | null;
@@ -400,6 +404,7 @@ export async function getActiveListingsPage(
     .from("listings")
     .select(LISTING_CARD_SELECT)
     .eq("status", "active")
+    .eq("is_hidden", false)
     .order("created_at", { ascending: false })
     .order("id", { ascending: false })
     .range(from, to);
@@ -440,6 +445,7 @@ export async function getActiveListingsByCategory(
     .from("listings")
     .select(LISTING_CARD_SELECT)
     .eq("status", "active")
+    .eq("is_hidden", false)
     .ilike("category", category)
     .order("created_at", { ascending: false })
     .limit(limit);
@@ -760,7 +766,7 @@ export async function getMarketplaceConversationsPage(
       listingIds.length > 0
         ? supabase
             .from("listings")
-            .select("id, title, price_kzt, status")
+            .select("id, title, price_kzt, listing_type, pricing_model, status")
             .in("id", listingIds)
         : Promise.resolve({ data: [] as ListingContextRow[], error: null }),
       counterpartIds.length > 0
@@ -793,6 +799,8 @@ export async function getMarketplaceConversationsPage(
           listingId: conversation.listing_id,
           listingTitle: listing?.title?.trim() || "Listing unavailable",
           listingPriceKzt: listing?.price_kzt ?? null,
+          listingType: listing?.listing_type ?? null,
+          pricingModel: listing?.pricing_model ?? null,
           listingStatus: listing?.status ?? null,
           listingCoverImageUrl: coverImageMap.get(conversation.listing_id) ?? null,
           counterpartId,
@@ -873,7 +881,7 @@ export async function getMarketplaceConversationThread(
     const [listingResult, profilesResult, messagesResult, listingCoverMap] = await Promise.all([
       supabase
         .from("listings")
-        .select("id, title, price_kzt, status")
+        .select("id, title, price_kzt, listing_type, pricing_model, status")
         .eq("id", conversation.listing_id)
         .maybeSingle(),
       supabase
@@ -905,6 +913,8 @@ export async function getMarketplaceConversationThread(
       listingId: conversation.listing_id,
       listingTitle,
       listingPriceKzt: listingResult.data?.price_kzt ?? null,
+      listingType: listingResult.data?.listing_type ?? null,
+      pricingModel: listingResult.data?.pricing_model ?? null,
       listingStatus: listingResult.data?.status ?? null,
       listingCoverImageUrl,
       listingHref,

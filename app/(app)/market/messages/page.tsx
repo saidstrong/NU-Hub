@@ -6,7 +6,13 @@ import { PageNavigation } from "@/components/ui/PageNavigation";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { TopBar } from "@/components/ui/TopBar";
 import { formatCampusMessageTimestamp } from "@/lib/datetime";
-import { formatPriceKzt, formatStatusLabel, getMarketplaceConversationsPage } from "@/lib/market/data";
+import {
+  formatCompactListingPrice,
+  formatListingTypeLabel,
+  formatPriceKzt,
+  formatStatusLabel,
+  getMarketplaceConversationsPage,
+} from "@/lib/market/data";
 import { buildPageHref, parsePageParam } from "@/lib/pagination";
 import { toPublicStorageUrl } from "@/lib/validation/media";
 
@@ -66,6 +72,14 @@ export default async function MarketMessagesPage({ searchParams }: MarketMessage
               const listingStatusLabel = conversation.listingStatus
                 ? formatStatusLabel(conversation.listingStatus)
                 : null;
+              const listingTypeLabel = conversation.listingType
+                ? formatListingTypeLabel(conversation.listingType)
+                : null;
+              const listingPriceLabel = conversation.listingPriceKzt !== null
+                ? conversation.pricingModel
+                  ? formatCompactListingPrice(conversation.listingPriceKzt, conversation.pricingModel)
+                  : formatPriceKzt(conversation.listingPriceKzt)
+                : "Price unavailable";
 
               return (
                 <Link
@@ -116,7 +130,8 @@ export default async function MarketMessagesPage({ searchParams }: MarketMessage
                         {conversation.listingTitle}
                       </p>
                       <p className="mt-0.5 text-[11px] text-wire-300">
-                        {conversation.listingPriceKzt !== null ? formatPriceKzt(conversation.listingPriceKzt) : "Price unavailable"}
+                        {listingPriceLabel}
+                        {listingTypeLabel ? ` • ${listingTypeLabel}` : ""}
                         {listingStatusLabel ? ` • ${listingStatusLabel}` : ""}
                       </p>
                     </div>
