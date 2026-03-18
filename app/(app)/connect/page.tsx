@@ -83,6 +83,8 @@ export default async function ConnectHomePage() {
             <EmptyState
               title="No people discovered yet"
               description="Profiles with completed onboarding will appear here."
+              actionLabel="See all people"
+              actionHref="/connect/people"
             />
           ) : null}
         </SectionCard>
@@ -106,6 +108,8 @@ export default async function ConnectHomePage() {
             <EmptyState
               title="No communities yet"
               description="Student communities will appear here as they become available."
+              actionLabel="See all communities"
+              actionHref="/connect/communities"
             />
           ) : null}
         </SectionCard>

@@ -57,9 +57,9 @@ export function CommunityCard({ community, href }: CommunityCardProps) {
         </div>
       ) : null}
 
-      <p className="mb-2 wire-meta">{community.description}</p>
+      <p className="mb-2 line-clamp-2 wire-meta [overflow-wrap:anywhere]">{community.description}</p>
       {community.status ? (
-        <p className="mb-2 text-[12px] text-wire-200">{community.status}</p>
+        <p className="mb-2 line-clamp-1 text-[12px] text-wire-200 [overflow-wrap:anywhere]">{community.status}</p>
       ) : null}
 
       <div className="mb-2 border-t border-wire-700 pt-2.5">

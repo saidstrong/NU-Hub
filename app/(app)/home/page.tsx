@@ -1,6 +1,5 @@
 import Link from "next/link";
 import {
-  ArrowRight,
   Briefcase,
   CalendarDays,
   Compass,
@@ -113,7 +112,7 @@ export default async function HomePage() {
             <EmptyState
               title="No upcoming events"
               description="New published events will appear here as they are scheduled."
-              actionLabel="Browse events"
+              actionLabel="Open events"
               actionHref="/events"
             />
           ) : null}
@@ -197,10 +196,6 @@ export default async function HomePage() {
                 href={`/connect/communities/${communities[0].community.id}`}
               />
             ) : null}
-            <Link href="/connect" className="wire-link inline-flex w-fit gap-1.5">
-              See more suggestions
-              <ArrowRight className="h-4 w-4" aria-hidden="true" />
-            </Link>
           </div>
         ) : !loadError ? (
           <EmptyState

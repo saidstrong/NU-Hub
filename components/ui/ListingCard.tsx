@@ -33,7 +33,7 @@ export function ListingCard({ listing, href }: ListingCardProps) {
   const metadataLabel = [listing.category, listing.condition, listing.location]
     .map((value) => value?.trim())
     .filter(Boolean)
-    .join(" • ");
+    .join(" | ");
 
   const content = (
     <div className="wire-card wire-hover">

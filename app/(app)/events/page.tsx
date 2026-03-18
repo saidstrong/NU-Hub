@@ -61,7 +61,7 @@ export default async function EventsHomePage({ searchParams }: EventsHomePagePro
         <div className="mt-4 flex flex-wrap items-center gap-2">
           <ShellButton label="Create event" href="/events/create" variant="primary" block={false} />
           <Link href="/events/list" className="wire-action-compact">
-            Browse all
+            See all
           </Link>
           <Link href="/events/saved" className="wire-action-compact">
             Saved
@@ -72,7 +72,7 @@ export default async function EventsHomePage({ searchParams }: EventsHomePagePro
       <SectionCard
         title="Upcoming events"
         subtitle="Published events ordered by start time."
-        actionLabel="View all events"
+        actionLabel="See all"
         actionHref="/events/list"
       >
         {loadError ? <FeedbackBanner tone="error" message={loadError} className="mb-3" /> : null}

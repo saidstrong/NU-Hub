@@ -31,14 +31,14 @@ export function PersonCard({ person, href }: PersonCardProps) {
           <div className="h-10 w-10 rounded-full border border-dashed border-wire-600 bg-wire-900" />
         )}
         <div className="min-w-0">
-          <p className="text-sm font-semibold tracking-tight">{person.name}</p>
-          <p className="wire-meta">{person.major} - {person.year}</p>
+          <p className="line-clamp-1 text-sm font-semibold tracking-tight [overflow-wrap:anywhere]">{person.name}</p>
+          <p className="line-clamp-1 wire-meta [overflow-wrap:anywhere]">{person.major} - {person.year}</p>
         </div>
       </div>
 
       <div className="mb-2 border-t border-wire-700 pt-2.5">
         <p className="mb-1 wire-meta">Collaboration focus</p>
-        <p className="text-[13px] text-wire-200">{person.lookingFor}</p>
+        <p className="line-clamp-2 text-[13px] text-wire-200 [overflow-wrap:anywhere]">{person.lookingFor}</p>
       </div>
 
       <div>
