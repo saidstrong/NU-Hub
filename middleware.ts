@@ -11,6 +11,7 @@ const PROTECTED_PREFIXES = [
   "/connect",
   "/profile",
   "/search",
+  "/jobs",
 ];
 
 const GUEST_ONLY_ROUTES = ["/welcome", "/login", "/signup"];

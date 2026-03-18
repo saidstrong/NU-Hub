@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { TopBar } from "@/components/ui/TopBar";
+import { isFeatureEnabled } from "@/lib/config/features";
 import { formatCampusMessageTimestamp } from "@/lib/datetime";
 import {
   clearCommunityFormalStatusAction,
@@ -16,6 +17,16 @@ import {
   formatStatusLabel,
   getFeaturedListingsForReview,
 } from "@/lib/market/data";
+import {
+  approveJobAction,
+  rejectJobAction,
+  setJobHiddenAction,
+} from "@/lib/jobs/actions";
+import {
+  formatJobLocationModeLabel,
+  formatJobTypeLabel,
+  getPendingJobsForReview,
+} from "@/lib/jobs/data";
 import {
   resolveContentReportAction,
   setContentHiddenAction,
@@ -70,6 +81,7 @@ function formatPendingCreatedTime(createdAt: string): string {
 export default async function ModerationPage({ searchParams }: ModerationPageProps) {
   const { error, message } = await searchParams;
   const adminUser = await requireAdminUser();
+  const jobsFeatureEnabled = isFeatureEnabled("jobsBoard");
 
   if (!isAdminUser(adminUser)) {
     notFound();
@@ -77,10 +89,12 @@ export default async function ModerationPage({ searchParams }: ModerationPagePro
 
   let reports: Awaited<ReturnType<typeof getRecentContentReports>> = [];
   let pendingEvents: Awaited<ReturnType<typeof getPendingEventsForReview>> = [];
+  let pendingJobs: Awaited<ReturnType<typeof getPendingJobsForReview>> = [];
   let listingsForFeature: Awaited<ReturnType<typeof getFeaturedListingsForReview>> = [];
   let communitiesForCuration: Awaited<ReturnType<typeof getCommunitiesForCuration>> = [];
   let loadError: string | null = null;
   let pendingLoadError: string | null = null;
+  let jobsLoadError: string | null = null;
   let listingsLoadError: string | null = null;
   let communityCurationLoadError: string | null = null;
 
@@ -102,6 +116,17 @@ export default async function ModerationPage({ searchParams }: ModerationPagePro
         : "Failed to load pending event submissions.";
   }
 
+  if (jobsFeatureEnabled) {
+    try {
+      pendingJobs = await getPendingJobsForReview(80);
+    } catch (jobLoadIssue) {
+      jobsLoadError =
+        jobLoadIssue instanceof Error
+          ? jobLoadIssue.message
+          : "Failed to load pending job submissions.";
+    }
+  }
+
   try {
     listingsForFeature = await getFeaturedListingsForReview(80);
   } catch (listingLoadError) {
@@ -121,11 +146,15 @@ export default async function ModerationPage({ searchParams }: ModerationPagePro
   }
 
   const pendingEventsCount = pendingEvents.length;
+  const pendingJobsCount = pendingJobs.length;
   const featuredListingsCount = listingsForFeature.filter((listing) => listing.isFeatured).length;
   const formalCommunitiesCount = communitiesForCuration.filter(
     (community) => community.communityType === "formal",
   ).length;
   const reportsCount = reports.length;
+  const summaryGridClass = jobsFeatureEnabled
+    ? "grid gap-2 sm:grid-cols-5"
+    : "grid gap-2 sm:grid-cols-4";
 
   const compactPrimaryActionClass =
     "wire-action-compact border-accent/40 bg-accent/10 text-wire-100 hover:border-accent/55 hover:bg-accent/15";
@@ -139,16 +168,22 @@ export default async function ModerationPage({ searchParams }: ModerationPagePro
     <main>
       <TopBar
         title="Moderation"
-        subtitle="Event approvals, featured listings, and content reports"
+        subtitle="Approvals, curation, and content reports"
         backHref="/profile"
       />
 
       <section className="wire-panel py-4">
-        <div className="grid gap-2 sm:grid-cols-4">
+        <div className={summaryGridClass}>
           <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-3 py-3">
             <p className="wire-label">Pending events</p>
             <p className="mt-1 text-lg font-semibold text-wire-100">{pendingEventsCount}</p>
           </div>
+          {jobsFeatureEnabled ? (
+            <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-3 py-3">
+              <p className="wire-label">Pending jobs</p>
+              <p className="mt-1 text-lg font-semibold text-wire-100">{pendingJobsCount}</p>
+            </div>
+          ) : null}
           <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-3 py-3">
             <p className="wire-label">Featured listings</p>
             <p className="mt-1 text-lg font-semibold text-wire-100">{featuredListingsCount}</p>
@@ -182,6 +217,11 @@ export default async function ModerationPage({ searchParams }: ModerationPagePro
       {pendingLoadError ? (
         <div className="rounded-xl border border-red-400/30 bg-red-400/10 px-3 py-2 text-[13px] text-red-200">
           {pendingLoadError}
+        </div>
+      ) : null}
+      {jobsLoadError ? (
+        <div className="rounded-xl border border-red-400/30 bg-red-400/10 px-3 py-2 text-[13px] text-red-200">
+          {jobsLoadError}
         </div>
       ) : null}
       {listingsLoadError ? (
@@ -247,6 +287,72 @@ export default async function ModerationPage({ searchParams }: ModerationPagePro
           />
         ) : null}
       </section>
+
+      {jobsFeatureEnabled ? (
+        <section className="wire-panel">
+          <div className="mb-3 border-b border-wire-700 pb-3">
+            <h2 className="wire-section-title">Pending job approvals ({pendingJobsCount})</h2>
+            <p className="mt-1 wire-meta">Review and publish campus job opportunities.</p>
+          </div>
+
+          {pendingJobs.length > 0 ? (
+            <div className="space-y-2.5">
+              {pendingJobs.map((job) => (
+                <article
+                  key={job.id}
+                  className="rounded-2xl border border-wire-700 bg-wire-800 px-3 py-3"
+                >
+                  <p className="text-sm font-medium text-wire-100">{job.title}</p>
+                  <div className="mt-2 space-y-1">
+                    <p className="wire-meta">Organization: {job.organization_name}</p>
+                    <p className="wire-meta">Type: {formatJobTypeLabel(job.job_type)}</p>
+                    <p className="wire-meta">Location mode: {formatJobLocationModeLabel(job.location_mode)}</p>
+                    <p className="wire-meta">Expires: {formatCampusMessageTimestamp(job.expires_at)}</p>
+                    <p className="wire-meta">Visibility: {job.is_hidden ? "Hidden" : "Visible"}</p>
+                  </div>
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <Link href={`/jobs/${job.id}`} className={compactSecondaryActionClass}>
+                      Open job
+                    </Link>
+                    <Link href={`/jobs/${job.id}/edit`} className={compactSecondaryActionClass}>
+                      Edit
+                    </Link>
+                    <form action={approveJobAction}>
+                      <input type="hidden" name="jobId" value={job.id} />
+                      <input type="hidden" name="redirectTo" value="/profile/moderation" />
+                      <button type="submit" className={compactPrimaryActionClass}>
+                        Approve
+                      </button>
+                    </form>
+                    <form action={rejectJobAction}>
+                      <input type="hidden" name="jobId" value={job.id} />
+                      <input type="hidden" name="redirectTo" value="/profile/moderation" />
+                      <button type="submit" className={compactDangerActionClass}>
+                        Reject
+                      </button>
+                    </form>
+                    <form action={setJobHiddenAction}>
+                      <input type="hidden" name="jobId" value={job.id} />
+                      <input type="hidden" name="isHiddenInput" value={job.is_hidden ? "false" : "true"} />
+                      <input type="hidden" name="redirectTo" value="/profile/moderation" />
+                      <button type="submit" className={compactGhostActionClass}>
+                        {job.is_hidden ? "Unhide" : "Hide"}
+                      </button>
+                    </form>
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : !jobsLoadError ? (
+            <EmptyState
+              title="No pending job submissions"
+              description="New job postings will appear here for review."
+              actionLabel="Open jobs"
+              actionHref="/jobs"
+            />
+          ) : null}
+        </section>
+      ) : null}
 
       <section className="wire-panel">
         <div className="mb-3 border-b border-wire-700 pb-3">

@@ -275,6 +275,71 @@ type DatabaseSchema = {
           updated_at?: string;
         };
       };
+      jobs: {
+        Row: {
+          id: string;
+          created_by: string;
+          title: string;
+          organization_name: string;
+          job_type: "internship" | "part_time" | "volunteer" | "research";
+          location_mode: "on_campus" | "remote" | "hybrid" | "off_campus";
+          location_text: string | null;
+          description: string;
+          requirements: string | null;
+          compensation_text: string | null;
+          apply_method: "link" | "email" | "telegram";
+          apply_url: string | null;
+          apply_email: string | null;
+          apply_telegram: string | null;
+          status: "pending_review" | "published" | "rejected";
+          is_hidden: boolean;
+          expires_at: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          created_by: string;
+          title: string;
+          organization_name: string;
+          job_type: "internship" | "part_time" | "volunteer" | "research";
+          location_mode: "on_campus" | "remote" | "hybrid" | "off_campus";
+          location_text?: string | null;
+          description: string;
+          requirements?: string | null;
+          compensation_text?: string | null;
+          apply_method: "link" | "email" | "telegram";
+          apply_url?: string | null;
+          apply_email?: string | null;
+          apply_telegram?: string | null;
+          status?: "pending_review" | "published" | "rejected";
+          is_hidden?: boolean;
+          expires_at: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          created_by?: string;
+          title?: string;
+          organization_name?: string;
+          job_type?: "internship" | "part_time" | "volunteer" | "research";
+          location_mode?: "on_campus" | "remote" | "hybrid" | "off_campus";
+          location_text?: string | null;
+          description?: string;
+          requirements?: string | null;
+          compensation_text?: string | null;
+          apply_method?: "link" | "email" | "telegram";
+          apply_url?: string | null;
+          apply_email?: string | null;
+          apply_telegram?: string | null;
+          status?: "pending_review" | "published" | "rejected";
+          is_hidden?: boolean;
+          expires_at?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
       event_participants: {
         Row: {
           event_id: string;
