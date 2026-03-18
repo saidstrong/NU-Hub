@@ -48,18 +48,39 @@ async function getListingCoverMap(
   const coverMap = new Map<string, string>();
   if (listingIds.length === 0) return coverMap;
 
-  const { data, error } = await supabase
-    .from("listing_images")
-    .select("listing_id, storage_path, sort_order")
-    .in("listing_id", listingIds)
-    .order("listing_id", { ascending: true })
-    .order("sort_order", { ascending: true });
+  const uniqueListingIds = Array.from(new Set(listingIds));
 
-  if (error) {
+  const { data: primaryRows, error: primaryError } = await supabase
+    .from("listing_images")
+    .select("listing_id, storage_path")
+    .in("listing_id", uniqueListingIds)
+    .eq("sort_order", 0);
+
+  if (primaryError) {
     throw new Error("Failed to load listing search images.");
   }
 
-  for (const image of data) {
+  for (const image of primaryRows ?? []) {
+    coverMap.set(image.listing_id, toListingImagePublicUrl(supabase, image.storage_path));
+  }
+
+  const missingListingIds = uniqueListingIds.filter((listingId) => !coverMap.has(listingId));
+  if (missingListingIds.length === 0) {
+    return coverMap;
+  }
+
+  const { data: fallbackRows, error: fallbackError } = await supabase
+    .from("listing_images")
+    .select("listing_id, storage_path")
+    .in("listing_id", missingListingIds)
+    .order("listing_id", { ascending: true })
+    .order("sort_order", { ascending: true });
+
+  if (fallbackError) {
+    throw new Error("Failed to load listing search images.");
+  }
+
+  for (const image of fallbackRows ?? []) {
     if (!coverMap.has(image.listing_id)) {
       coverMap.set(image.listing_id, toListingImagePublicUrl(supabase, image.storage_path));
     }
@@ -75,18 +96,24 @@ async function getJoinedCommunityMemberCounts(
   const counts = new Map<string, number>();
   if (communityIds.length === 0) return counts;
 
-  const { data, error } = await supabase
-    .from("community_members")
-    .select("community_id")
-    .in("community_id", communityIds)
-    .eq("status", "joined");
+  const uniqueCommunityIds = Array.from(new Set(communityIds));
+  const countResults = await Promise.all(
+    uniqueCommunityIds.map((communityId) =>
+      supabase
+        .from("community_members")
+        .select("user_id", { count: "exact", head: true })
+        .eq("community_id", communityId)
+        .eq("status", "joined"),
+    ),
+  );
 
-  if (error) {
-    throw new Error("Failed to load community search counts.");
-  }
+  for (let index = 0; index < countResults.length; index += 1) {
+    const result = countResults[index];
+    if (result.error) {
+      throw new Error("Failed to load community search counts.");
+    }
 
-  for (const row of data) {
-    counts.set(row.community_id, (counts.get(row.community_id) ?? 0) + 1);
+    counts.set(uniqueCommunityIds[index], result.count ?? 0);
   }
 
   return counts;
@@ -168,10 +195,16 @@ export async function searchGlobalEntities(
   const profileRows = profilesResult.data as PersonCardSource[];
   const communityRows = communitiesResult.data as CommunitySearchRow[];
 
-  const listingCoverMap = await getListingCoverMap(
-    supabase,
-    listingRows.map((listing) => listing.id),
-  );
+  const [listingCoverMap, joinedMemberCounts] = await Promise.all([
+    getListingCoverMap(
+      supabase,
+      listingRows.map((listing) => listing.id),
+    ),
+    getJoinedCommunityMemberCounts(
+      supabase,
+      communityRows.map((community) => community.id),
+    ),
+  ]);
 
   const listings = listingRows.map((listing) =>
     toListingCardDataWithOptions(listing, {
@@ -182,11 +215,6 @@ export async function searchGlobalEntities(
   const events = eventRows.map((event) => toEventCardData(event));
 
   const people = profileRows.map((profile) => toPersonCardData(profile));
-
-  const joinedMemberCounts = await getJoinedCommunityMemberCounts(
-    supabase,
-    communityRows.map((community) => community.id),
-  );
 
   const communities = communityRows.map((community) =>
     toCommunityCardData(community, joinedMemberCounts.get(community.id) ?? 0),

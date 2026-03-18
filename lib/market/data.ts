@@ -216,18 +216,39 @@ async function getCoverImageMap(
   const coverMap = new Map<string, string>();
   if (listingIds.length === 0) return coverMap;
 
-  const { data, error } = await supabase
+  const uniqueListingIds = Array.from(new Set(listingIds));
+
+  const { data: primaryRows, error: primaryError } = await supabase
     .from("listing_images")
     .select("listing_id, storage_path")
-    .in("listing_id", listingIds)
-    .order("listing_id", { ascending: true })
-    .order("sort_order", { ascending: true });
+    .in("listing_id", uniqueListingIds)
+    .eq("sort_order", 0);
 
-  if (error) {
+  if (primaryError) {
     throw new Error("Failed to load listing images.");
   }
 
-  for (const image of data) {
+  for (const image of primaryRows ?? []) {
+    coverMap.set(image.listing_id, getPublicListingImageUrlFromClient(supabase, image.storage_path));
+  }
+
+  const missingListingIds = uniqueListingIds.filter((listingId) => !coverMap.has(listingId));
+  if (missingListingIds.length === 0) {
+    return coverMap;
+  }
+
+  const { data: fallbackRows, error: fallbackError } = await supabase
+    .from("listing_images")
+    .select("listing_id, storage_path")
+    .in("listing_id", missingListingIds)
+    .order("listing_id", { ascending: true })
+    .order("sort_order", { ascending: true });
+
+  if (fallbackError) {
+    throw new Error("Failed to load listing images.");
+  }
+
+  for (const image of fallbackRows ?? []) {
     if (!coverMap.has(image.listing_id)) {
       coverMap.set(image.listing_id, getPublicListingImageUrlFromClient(supabase, image.storage_path));
     }
