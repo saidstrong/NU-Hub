@@ -43,13 +43,26 @@ function readPayloadKind(payload: unknown): string | null {
   }
 
   const candidate = (payload as Record<string, unknown>).kind;
-  return typeof candidate === "string" && candidate.trim().length > 0 ? candidate.trim() : null;
+  if (typeof candidate !== "string" || candidate.trim().length === 0) {
+    return null;
+  }
+
+  const kind = candidate.trim();
+  if (kind !== "community_request_reviewed") {
+    return kind;
+  }
+
+  const decision = (payload as Record<string, unknown>).decision;
+  if (decision === "approve") return "community_request_approved";
+  if (decision === "reject") return "community_request_rejected";
+  return kind;
 }
 
 function getNotificationActionLabel(link: string): string {
   if (link.startsWith("/events/")) return "Open event";
   if (link.startsWith("/connect/communities/requests")) return "Review requests";
   if (link.startsWith("/connect/communities/")) return "Open community";
+  if (link.startsWith("/connect/my-communities")) return "Open communities";
   if (link.startsWith("/market/item/")) return "Open listing";
   if (link.startsWith("/profile/")) return "Open profile";
   return "Open update";

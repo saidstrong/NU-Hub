@@ -194,6 +194,28 @@ function formatFormalKindLabel(formalKind: "club" | "organization" | "official")
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
 
+function normalizeProfileName(value: string | null | undefined): string | null {
+  const trimmed = value?.trim();
+  return trimmed && trimmed.length > 0 ? trimmed : null;
+}
+
+async function getProfileDisplayName(
+  supabase: SupabaseServerClient,
+  userId: string,
+): Promise<string | null> {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("full_name")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (error) {
+    return null;
+  }
+
+  return normalizeProfileName(data?.full_name);
+}
+
 function revalidateCommunityPaths(communityId: string) {
   revalidatePath("/connect");
   revalidatePath("/connect/communities");
@@ -836,11 +858,12 @@ export async function joinOrRequestCommunityAction(formData: FormData) {
   }
 
   if (targetStatus === "pending") {
+    const actorName = await getProfileDisplayName(supabase, user.id);
     await writeInAppNotification(supabase, {
       userId: community.created_by,
       type: "community",
       title: "New community join request",
-      message: `A student requested to join ${community.name}.`,
+      message: `${actorName ?? "A student"} requested to join ${community.name}.`,
       link: "/connect/communities/requests",
       payload: {
         kind: "community_join_request_submitted",
@@ -937,9 +960,12 @@ export async function reviewCommunityRequestAction(formData: FormData) {
     link:
       parsed.data.decision === "approve"
         ? "/connect/my-communities?view=joined"
-        : "/connect/my-communities?view=pending",
+        : "/connect/communities",
     payload: {
-      kind: "community_request_reviewed",
+      kind:
+        parsed.data.decision === "approve"
+          ? "community_request_approved"
+          : "community_request_rejected",
       community_id: community.id,
       decision: parsed.data.decision,
       reviewer_user_id: user.id,
@@ -1778,11 +1804,12 @@ export async function createCommunityPostAction(formData: FormData) {
   }
 
   if (community.created_by !== user.id) {
+    const actorName = await getProfileDisplayName(supabase, user.id);
     await writeInAppNotification(supabase, {
       userId: community.created_by,
       type: "community",
       title: "New post in your community",
-      message: `Someone posted in ${community.name}.`,
+      message: `${actorName ?? "Someone"} posted in ${community.name}.`,
       link: communityPath,
       payload: {
         kind: "community_post_created",

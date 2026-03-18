@@ -124,6 +124,28 @@ function mapDeleteEventErrorMessage(errorCode?: string): string {
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
 
+function normalizeProfileName(value: string | null | undefined): string | null {
+  const trimmed = value?.trim();
+  return trimmed && trimmed.length > 0 ? trimmed : null;
+}
+
+async function getProfileDisplayName(
+  supabase: SupabaseServerClient,
+  userId: string,
+): Promise<string | null> {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("full_name")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (error) {
+    return null;
+  }
+
+  return normalizeProfileName(data?.full_name);
+}
+
 function revalidateEventPaths(eventId: string) {
   revalidatePath("/home");
   revalidatePath("/events");
@@ -823,14 +845,15 @@ export async function setEventParticipationAction(formData: FormData) {
       .maybeSingle();
 
     if (!eventOwnerError && eventOwner?.created_by && eventOwner.created_by !== user.id) {
+      const actorName = await getProfileDisplayName(supabase, user.id);
       await writeInAppNotification(supabase, {
         userId: eventOwner.created_by,
         type: "events",
         title: "New RSVP on your event",
         message:
           parsed.data.status === "going"
-            ? `Someone is going to ${eventOwner.title ?? "your event"}.`
-            : `Someone is interested in ${eventOwner.title ?? "your event"}.`,
+            ? `${actorName ?? "Someone"} is going to ${eventOwner.title ?? "your event"}.`
+            : `${actorName ?? "Someone"} is interested in ${eventOwner.title ?? "your event"}.`,
         link: `/events/${parsed.data.eventId}`,
         payload: {
           kind: "event_rsvp_created",
