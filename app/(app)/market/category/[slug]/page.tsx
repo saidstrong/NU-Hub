@@ -1,5 +1,4 @@
 import { EmptyState } from "@/components/ui/EmptyState";
-import { FilterRow } from "@/components/ui/FilterRow";
 import { ListingCard } from "@/components/ui/ListingCard";
 import { SearchBar } from "@/components/ui/SearchBar";
 import { TopBar } from "@/components/ui/TopBar";
@@ -39,10 +38,6 @@ export default async function MarketCategoryPage({ params }: MarketCategoryPageP
         </div>
       ) : null}
       <SearchBar placeholder="Search in category" />
-      <section className="wire-panel">
-        <p className="wire-section-title mb-3">Refine listings</p>
-        <FilterRow filters={["All", "Newest", "Low price", "High price", "Near me"]} />
-      </section>
 
       {listings.length > 0 ? (
         <div className="grid grid-cols-2 gap-2.5">

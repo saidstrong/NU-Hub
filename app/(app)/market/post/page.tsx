@@ -1,15 +1,11 @@
 import { FormSection } from "@/components/ui/FormSection";
 import { DirectListingImageUpload } from "@/components/ui/DirectListingImageUpload";
+import { ListingTypePricingFields } from "@/components/ui/ListingTypePricingFields";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import { TopBar } from "@/components/ui/TopBar";
 import { WireField, WireTextarea } from "@/components/ui/WireField";
 import { saveDraftListingAction, publishListingAction } from "@/lib/market/actions";
-import { formatListingTypeLabel, formatPricingModelLabel } from "@/lib/market/data";
 import { marketCategories } from "@/lib/mock-data";
-import {
-  LISTING_TYPE_VALUES,
-  PRICING_MODEL_VALUES,
-} from "@/lib/validation/market";
 
 type MarketPostPageProps = {
   searchParams: Promise<{
@@ -46,26 +42,7 @@ export default async function MarketPostPage({ searchParams }: MarketPostPagePro
         </FormSection>
 
         <FormSection title="Listing format">
-          <label className="block space-y-2">
-            <span className="wire-label">Listing type</span>
-            <select name="listingType" required className="wire-input-field" defaultValue="sale">
-              {LISTING_TYPE_VALUES.map((listingType) => (
-                <option key={listingType} value={listingType}>
-                  {formatListingTypeLabel(listingType)}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="block space-y-2">
-            <span className="wire-label">Pricing model</span>
-            <select name="pricingModel" required className="wire-input-field" defaultValue="fixed">
-              {PRICING_MODEL_VALUES.map((pricingModel) => (
-                <option key={pricingModel} value={pricingModel}>
-                  {formatPricingModelLabel(pricingModel)}
-                </option>
-              ))}
-            </select>
-          </label>
+          <ListingTypePricingFields initialListingType="sale" initialPricingModel="fixed" />
           <p className="wire-meta">
             Sale uses Fixed. Rentals use Per day/Per week/Per month. Services use Fixed/Per hour/Starting from.
           </p>

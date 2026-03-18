@@ -3,22 +3,17 @@ import { notFound } from "next/navigation";
 import { ConfirmSubmitButton } from "@/components/ui/ConfirmSubmitButton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FormSection } from "@/components/ui/FormSection";
+import { ListingTypePricingFields } from "@/components/ui/ListingTypePricingFields";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import { TopBar } from "@/components/ui/TopBar";
 import { WireField, WireTextarea } from "@/components/ui/WireField";
 import { deleteListingAction, updateListingAction } from "@/lib/market/actions";
 import {
-  formatListingTypeLabel,
-  formatPricingModelLabel,
   formatStatusLabel,
   getOwnedListingForEdit,
   type ListingStatus,
 } from "@/lib/market/data";
 import { marketCategories } from "@/lib/mock-data";
-import {
-  LISTING_TYPE_VALUES,
-  PRICING_MODEL_VALUES,
-} from "@/lib/validation/market";
 import { isUuid } from "@/lib/validation/uuid";
 
 type EditListingPageProps = {
@@ -78,12 +73,6 @@ export default async function EditListingPage({ params, searchParams }: EditList
   const listingConditionOptions = conditionOptions.includes(listing.condition)
     ? conditionOptions
     : [listing.condition, ...conditionOptions];
-  const listingTypeOptions = LISTING_TYPE_VALUES.includes(listing.listing_type)
-    ? [...LISTING_TYPE_VALUES]
-    : [listing.listing_type, ...LISTING_TYPE_VALUES];
-  const pricingModelOptions = PRICING_MODEL_VALUES.includes(listing.pricing_model)
-    ? [...PRICING_MODEL_VALUES]
-    : [listing.pricing_model, ...PRICING_MODEL_VALUES];
   const statusOptions: ListingStatus[] = (
     editableStatusOptions as readonly ListingStatus[]
   ).includes(listing.status)
@@ -111,26 +100,10 @@ export default async function EditListingPage({ params, searchParams }: EditList
         </FormSection>
 
         <FormSection title="Listing format">
-          <label className="block space-y-2">
-            <span className="wire-label">Listing type</span>
-            <select name="listingType" required className="wire-input-field" defaultValue={listing.listing_type}>
-              {listingTypeOptions.map((listingType) => (
-                <option key={listingType} value={listingType}>
-                  {formatListingTypeLabel(listingType)}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="block space-y-2">
-            <span className="wire-label">Pricing model</span>
-            <select name="pricingModel" required className="wire-input-field" defaultValue={listing.pricing_model}>
-              {pricingModelOptions.map((pricingModel) => (
-                <option key={pricingModel} value={pricingModel}>
-                  {formatPricingModelLabel(pricingModel)}
-                </option>
-              ))}
-            </select>
-          </label>
+          <ListingTypePricingFields
+            initialListingType={listing.listing_type}
+            initialPricingModel={listing.pricing_model}
+          />
           <p className="wire-meta">
             Sale uses Fixed. Rentals use Per day/Per week/Per month. Services use Fixed/Per hour/Starting from.
           </p>
