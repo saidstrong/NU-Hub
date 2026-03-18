@@ -27,15 +27,18 @@ import {
   removeStorageObjectBestEffort,
   validateImageFileMeta,
 } from "@/lib/validation/media";
+import type { Json } from "@/types/database";
 
 const AVATARS_BUCKET = "avatars";
 
-function toRecordObject(value: unknown): Record<string, unknown> {
+type JsonObject = { [key: string]: Json | undefined };
+
+function toRecordObject(value: unknown): JsonObject {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     return {};
   }
 
-  return value as Record<string, unknown>;
+  return value as JsonObject;
 }
 
 function getBirthdayFromLinks(links: unknown): string | null {

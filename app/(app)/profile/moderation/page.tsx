@@ -3,6 +3,11 @@ import { notFound } from "next/navigation";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { TopBar } from "@/components/ui/TopBar";
 import { formatCampusMessageTimestamp } from "@/lib/datetime";
+import {
+  clearCommunityFormalStatusAction,
+  setCommunityFormalKindAction,
+} from "@/lib/connect/actions";
+import { getCommunitiesForCuration } from "@/lib/connect/data";
 import { approveEventAction, rejectEventAction } from "@/lib/events/actions";
 import { formatEventDate, getPendingEventsForReview } from "@/lib/events/data";
 import { setListingFeaturedAction } from "@/lib/market/actions";
@@ -42,6 +47,13 @@ function formatTargetTypeLabel(targetType: string): string {
   return "Listing";
 }
 
+function formatFormalKindLabel(formalKind: "club" | "organization" | "official" | null): string {
+  if (formalKind === "club") return "Club";
+  if (formalKind === "organization") return "Organization";
+  if (formalKind === "official") return "Official";
+  return "Informal";
+}
+
 function formatReportTime(createdAt: string): string {
   return new Intl.DateTimeFormat("en-US", {
     month: "short",
@@ -66,9 +78,11 @@ export default async function ModerationPage({ searchParams }: ModerationPagePro
   let reports: Awaited<ReturnType<typeof getRecentContentReports>> = [];
   let pendingEvents: Awaited<ReturnType<typeof getPendingEventsForReview>> = [];
   let listingsForFeature: Awaited<ReturnType<typeof getFeaturedListingsForReview>> = [];
+  let communitiesForCuration: Awaited<ReturnType<typeof getCommunitiesForCuration>> = [];
   let loadError: string | null = null;
   let pendingLoadError: string | null = null;
   let listingsLoadError: string | null = null;
+  let communityCurationLoadError: string | null = null;
 
   try {
     reports = await getRecentContentReports(80);
@@ -97,8 +111,20 @@ export default async function ModerationPage({ searchParams }: ModerationPagePro
         : "Failed to load listings for featuring.";
   }
 
+  try {
+    communitiesForCuration = await getCommunitiesForCuration(80);
+  } catch (curationLoadError) {
+    communityCurationLoadError =
+      curationLoadError instanceof Error
+        ? curationLoadError.message
+        : "Failed to load communities for curation.";
+  }
+
   const pendingEventsCount = pendingEvents.length;
   const featuredListingsCount = listingsForFeature.filter((listing) => listing.isFeatured).length;
+  const formalCommunitiesCount = communitiesForCuration.filter(
+    (community) => community.communityType === "formal",
+  ).length;
   const reportsCount = reports.length;
 
   const compactPrimaryActionClass =
@@ -118,7 +144,7 @@ export default async function ModerationPage({ searchParams }: ModerationPagePro
       />
 
       <section className="wire-panel py-4">
-        <div className="grid gap-2 sm:grid-cols-3">
+        <div className="grid gap-2 sm:grid-cols-4">
           <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-3 py-3">
             <p className="wire-label">Pending events</p>
             <p className="mt-1 text-lg font-semibold text-wire-100">{pendingEventsCount}</p>
@@ -126,6 +152,10 @@ export default async function ModerationPage({ searchParams }: ModerationPagePro
           <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-3 py-3">
             <p className="wire-label">Featured listings</p>
             <p className="mt-1 text-lg font-semibold text-wire-100">{featuredListingsCount}</p>
+          </div>
+          <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-3 py-3">
+            <p className="wire-label">Formal communities</p>
+            <p className="mt-1 text-lg font-semibold text-wire-100">{formalCommunitiesCount}</p>
           </div>
           <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-3 py-3">
             <p className="wire-label">Open reports</p>
@@ -157,6 +187,11 @@ export default async function ModerationPage({ searchParams }: ModerationPagePro
       {listingsLoadError ? (
         <div className="rounded-xl border border-red-400/30 bg-red-400/10 px-3 py-2 text-[13px] text-red-200">
           {listingsLoadError}
+        </div>
+      ) : null}
+      {communityCurationLoadError ? (
+        <div className="rounded-xl border border-red-400/30 bg-red-400/10 px-3 py-2 text-[13px] text-red-200">
+          {communityCurationLoadError}
         </div>
       ) : null}
 
@@ -265,6 +300,91 @@ export default async function ModerationPage({ searchParams }: ModerationPagePro
             description="Featured slots will appear here when active listings are available."
             actionLabel="Open market"
             actionHref="/market"
+          />
+        ) : null}
+      </section>
+
+      <section className="wire-panel">
+        <div className="mb-3 border-b border-wire-700 pb-3">
+          <h2 className="wire-section-title">Community curation ({formalCommunitiesCount} formal)</h2>
+          <p className="mt-1 wire-meta">Set trust labels for clubs, organizations, and official campus groups.</p>
+        </div>
+
+        {communitiesForCuration.length > 0 ? (
+          <div className="space-y-2.5">
+            {communitiesForCuration.map((community) => {
+              const isFormal = community.communityType === "formal";
+              const isClub = community.formalKind === "club";
+              const isOrganization = community.formalKind === "organization";
+              const isOfficial = community.formalKind === "official";
+
+              return (
+                <article
+                  key={community.id}
+                  className="rounded-2xl border border-wire-700 bg-wire-800 px-3 py-3"
+                >
+                  <p className="text-sm font-medium text-wire-100">{community.name}</p>
+                  <div className="mt-2 space-y-1">
+                    <p className="wire-meta">Owner: {community.ownerName}</p>
+                    <p className="wire-meta">Trust: {formatFormalKindLabel(community.formalKind)}</p>
+                    <p className="wire-meta">Visibility: {community.isHidden ? "Hidden" : "Visible"}</p>
+                  </div>
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <Link href={`/connect/communities/${community.id}`} className={compactSecondaryActionClass}>
+                      Open community
+                    </Link>
+                    <form action={setCommunityFormalKindAction}>
+                      <input type="hidden" name="communityId" value={community.id} />
+                      <input type="hidden" name="formalKind" value="club" />
+                      <input type="hidden" name="redirectTo" value="/profile/moderation" />
+                      <button type="submit" disabled={isClub} className={isClub ? compactPrimaryActionClass : compactSecondaryActionClass}>
+                        Mark club
+                      </button>
+                    </form>
+                    <form action={setCommunityFormalKindAction}>
+                      <input type="hidden" name="communityId" value={community.id} />
+                      <input type="hidden" name="formalKind" value="organization" />
+                      <input type="hidden" name="redirectTo" value="/profile/moderation" />
+                      <button
+                        type="submit"
+                        disabled={isOrganization}
+                        className={isOrganization ? compactPrimaryActionClass : compactSecondaryActionClass}
+                      >
+                        Mark organization
+                      </button>
+                    </form>
+                    <form action={setCommunityFormalKindAction}>
+                      <input type="hidden" name="communityId" value={community.id} />
+                      <input type="hidden" name="formalKind" value="official" />
+                      <input type="hidden" name="redirectTo" value="/profile/moderation" />
+                      <button
+                        type="submit"
+                        disabled={isOfficial}
+                        className={isOfficial ? compactPrimaryActionClass : compactSecondaryActionClass}
+                      >
+                        Mark official
+                      </button>
+                    </form>
+                    {isFormal ? (
+                      <form action={clearCommunityFormalStatusAction}>
+                        <input type="hidden" name="communityId" value={community.id} />
+                        <input type="hidden" name="redirectTo" value="/profile/moderation" />
+                        <button type="submit" className={compactGhostActionClass}>
+                          Revert to informal
+                        </button>
+                      </form>
+                    ) : null}
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        ) : !communityCurationLoadError ? (
+          <EmptyState
+            title="No communities yet"
+            description="Communities will appear here for trust curation."
+            actionLabel="Open communities"
+            actionHref="/connect/communities"
           />
         ) : null}
       </section>

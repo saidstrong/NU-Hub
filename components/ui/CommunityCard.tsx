@@ -7,6 +7,8 @@ export type CommunityCardItem = {
   description: string;
   members: string;
   joinType: string;
+  communityType: "informal" | "formal";
+  formalKind: "club" | "organization" | "official" | null;
   tags: string[];
   status?: string;
   avatarUrl?: string;
@@ -17,7 +19,16 @@ type CommunityCardProps = {
   href?: string;
 };
 
+function formatFormalKindLabel(formalKind: CommunityCardItem["formalKind"]): string {
+  if (formalKind === "club") return "Club";
+  if (formalKind === "organization") return "Organization";
+  if (formalKind === "official") return "Official";
+  return "Official";
+}
+
 export function CommunityCard({ community, href }: CommunityCardProps) {
+  const isFormal = community.communityType === "formal";
+
   const content = (
     <div className="wire-card wire-hover">
       <div className="mb-2 flex items-center justify-between gap-3">
@@ -38,6 +49,13 @@ export function CommunityCard({ community, href }: CommunityCardProps) {
           {community.joinType}
         </span>
       </div>
+      {isFormal ? (
+        <div className="mb-2">
+          <span className="inline-flex rounded-full border border-accent/35 bg-accent/10 px-2 py-0.5 text-[11px] font-medium text-wire-100">
+            {formatFormalKindLabel(community.formalKind)}
+          </span>
+        </div>
+      ) : null}
 
       <p className="mb-2 wire-meta">{community.description}</p>
       {community.status ? (

@@ -139,7 +139,7 @@ export async function searchGlobalEntities(
       .limit(safeSectionLimit),
     supabase
       .from("communities")
-      .select("id, name, description, tags, join_type, avatar_path")
+      .select("id, name, description, tags, join_type, community_type, formal_kind, avatar_path")
       .ilike("search_text", pattern)
       .order("created_at", { ascending: false })
       .order("id", { ascending: false })

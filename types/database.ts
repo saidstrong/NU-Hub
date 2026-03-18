@@ -325,6 +325,8 @@ type DatabaseSchema = {
           category: string | null;
           avatar_path: string | null;
           join_type: "open" | "request";
+          community_type: "informal" | "formal";
+          formal_kind: "club" | "organization" | "official" | null;
           is_hidden: boolean;
           created_at: string;
           updated_at: string;
@@ -338,6 +340,8 @@ type DatabaseSchema = {
           category?: string | null;
           avatar_path?: string | null;
           join_type?: "open" | "request";
+          community_type?: "informal" | "formal";
+          formal_kind?: "club" | "organization" | "official" | null;
           is_hidden?: boolean;
           created_at?: string;
           updated_at?: string;
@@ -351,6 +355,8 @@ type DatabaseSchema = {
           category?: string | null;
           avatar_path?: string | null;
           join_type?: "open" | "request";
+          community_type?: "informal" | "formal";
+          formal_kind?: "club" | "organization" | "official" | null;
           is_hidden?: boolean;
           created_at?: string;
           updated_at?: string;

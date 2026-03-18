@@ -114,3 +114,14 @@ export const deleteCommunityPostSchema = z.object({
   communityId: z.string().uuid("Invalid community id."),
   postId: z.string().uuid("Invalid post id."),
 });
+
+export const setCommunityFormalKindSchema = z.object({
+  communityId: z.string().uuid("Invalid community id."),
+  formalKind: z.enum(["club", "organization", "official"]),
+  redirectTo: z.string().trim().optional(),
+});
+
+export const clearCommunityFormalStatusSchema = z.object({
+  communityId: z.string().uuid("Invalid community id."),
+  redirectTo: z.string().trim().optional(),
+});

@@ -10,6 +10,7 @@ import {
 } from "@/lib/actions/helpers";
 import { requireUser } from "@/lib/auth/session";
 import { isCommunityOwner } from "@/lib/connect/ownership";
+import { isAdminUser } from "@/lib/moderation/data";
 import { createAppError } from "@/lib/observability/errors";
 import {
   getDurationMs,
@@ -34,7 +35,9 @@ import {
   communityJoinSchema,
   communityRequestReviewSchema,
   createCommunityPostSchema,
+  clearCommunityFormalStatusSchema,
   deleteCommunityPostSchema,
+  setCommunityFormalKindSchema,
   updateCommunitySchema,
 } from "@/lib/validation/connect";
 import {
@@ -175,6 +178,20 @@ function mapDeleteCommunityPostErrorMessage(errorCode?: string): string {
   return "Failed to delete post.";
 }
 
+function mapCommunityCurationErrorMessage(errorCode?: string): string {
+  if (errorCode === "42501") {
+    return "Only admins can curate formal communities.";
+  }
+
+  return "Failed to update community curation.";
+}
+
+function formatFormalKindLabel(formalKind: "club" | "organization" | "official"): string {
+  if (formalKind === "club") return "club";
+  if (formalKind === "organization") return "organization";
+  return "official campus group";
+}
+
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
 
 function revalidateCommunityPaths(communityId: string) {
@@ -185,6 +202,13 @@ function revalidateCommunityPaths(communityId: string) {
   revalidatePath(`/connect/communities/${communityId}`);
   revalidatePath(`/connect/communities/${communityId}/edit`);
   revalidatePath("/profile/notifications");
+}
+
+function revalidateCommunityCurationPaths(communityId: string) {
+  revalidateCommunityPaths(communityId);
+  revalidatePath("/home");
+  revalidatePath("/search");
+  revalidatePath("/profile/moderation");
 }
 
 function revalidateFriendPaths(userId: string, otherUserId?: string) {
@@ -934,6 +958,115 @@ export async function reviewCommunityRequestAction(formData: FormData) {
   const successMessage = parsed.data.decision === "approve" ? "Request approved." : "Request rejected.";
 
   redirectWithMessage(redirectPath, successMessage);
+}
+
+export async function setCommunityFormalKindAction(formData: FormData) {
+  const requestContext = await getRequestContext({ action: "setCommunityFormalKindAction" });
+  const parsed = setCommunityFormalKindSchema.safeParse({
+    communityId: getStringValue(formData, "communityId"),
+    formalKind: getStringValue(formData, "formalKind"),
+    redirectTo: getStringValue(formData, "redirectTo"),
+  });
+
+  if (!parsed.success) {
+    redirectWithError("/profile/moderation", parsed.error.issues[0]?.message ?? "Invalid curation input.");
+  }
+
+  const redirectPath = sanitizeInternalPath(parsed.data.redirectTo, "/profile/moderation");
+  const user = await requireUser();
+
+  if (!isAdminUser(user)) {
+    logSecurityEvent("community_formal_curation_admin_violation", {
+      ...requestContext,
+      userId: user.id,
+      communityId: parsed.data.communityId,
+      formalKind: parsed.data.formalKind,
+    });
+    redirectWithError(redirectPath, "Not authorized.");
+  }
+
+  const supabase = await createClient();
+  const { data: updated, error: updateError } = await supabase
+    .from("communities")
+    .update({
+      community_type: "formal",
+      formal_kind: parsed.data.formalKind,
+    })
+    .eq("id", parsed.data.communityId)
+    .select("id")
+    .maybeSingle();
+
+  if (updateError) {
+    redirectWithError(redirectPath, mapCommunityCurationErrorMessage(updateError.code));
+  }
+
+  if (!updated) {
+    redirectWithError(redirectPath, "Community not found.");
+  }
+
+  revalidateCommunityCurationPaths(parsed.data.communityId);
+  logInfo("connect", "community_formal_kind_set", {
+    ...requestContext,
+    userId: user.id,
+    communityId: parsed.data.communityId,
+    formalKind: parsed.data.formalKind,
+  });
+  redirectWithMessage(
+    redirectPath,
+    `Community marked as ${formatFormalKindLabel(parsed.data.formalKind)}.`,
+  );
+}
+
+export async function clearCommunityFormalStatusAction(formData: FormData) {
+  const requestContext = await getRequestContext({ action: "clearCommunityFormalStatusAction" });
+  const parsed = clearCommunityFormalStatusSchema.safeParse({
+    communityId: getStringValue(formData, "communityId"),
+    redirectTo: getStringValue(formData, "redirectTo"),
+  });
+
+  if (!parsed.success) {
+    redirectWithError("/profile/moderation", parsed.error.issues[0]?.message ?? "Invalid curation input.");
+  }
+
+  const redirectPath = sanitizeInternalPath(parsed.data.redirectTo, "/profile/moderation");
+  const user = await requireUser();
+
+  if (!isAdminUser(user)) {
+    logSecurityEvent("community_formal_curation_admin_violation", {
+      ...requestContext,
+      userId: user.id,
+      communityId: parsed.data.communityId,
+      formalKind: null,
+    });
+    redirectWithError(redirectPath, "Not authorized.");
+  }
+
+  const supabase = await createClient();
+  const { data: updated, error: updateError } = await supabase
+    .from("communities")
+    .update({
+      community_type: "informal",
+      formal_kind: null,
+    })
+    .eq("id", parsed.data.communityId)
+    .select("id")
+    .maybeSingle();
+
+  if (updateError) {
+    redirectWithError(redirectPath, mapCommunityCurationErrorMessage(updateError.code));
+  }
+
+  if (!updated) {
+    redirectWithError(redirectPath, "Community not found.");
+  }
+
+  revalidateCommunityCurationPaths(parsed.data.communityId);
+  logInfo("connect", "community_formal_status_cleared", {
+    ...requestContext,
+    userId: user.id,
+    communityId: parsed.data.communityId,
+  });
+  redirectWithMessage(redirectPath, "Community set to informal.");
 }
 
 export async function sendFriendRequestAction(formData: FormData) {

@@ -32,6 +32,13 @@ function formatPostTime(createdAt: string): string {
   }).format(new Date(createdAt));
 }
 
+function formatFormalKindLabel(formalKind: "club" | "organization" | "official" | null): string {
+  if (formalKind === "club") return "Club";
+  if (formalKind === "organization") return "Organization";
+  if (formalKind === "official") return "Official campus group";
+  return "Official campus group";
+}
+
 export default async function CommunityProfilePage({
   params,
   searchParams,
@@ -89,6 +96,7 @@ export default async function CommunityProfilePage({
     .join(" • ");
   const joinActionLabel = community.join_type === "open" ? "Join community" : "Request to join";
   const joinPendingLabel = community.join_type === "open" ? "Joining..." : "Submitting...";
+  const isFormalCommunity = community.community_type === "formal";
   const statusLabel =
     membership?.status === "joined"
       ? "Joined"
@@ -136,6 +144,11 @@ export default async function CommunityProfilePage({
             <div className="min-w-0">
               <h2 className="truncate text-[30px] font-semibold leading-[36px] tracking-tight text-wire-100">{community.name}</h2>
               <p className="mt-1 wire-meta">{community.join_type === "open" ? "Open community" : "Request-to-join community"}</p>
+              {isFormalCommunity ? (
+                <div className="mt-2 inline-flex rounded-full border border-accent/35 bg-accent/10 px-2 py-0.5 text-[11px] font-medium text-wire-100">
+                  {formatFormalKindLabel(community.formal_kind)}
+                </div>
+              ) : null}
             </div>
           </div>
           {isOwner ? (

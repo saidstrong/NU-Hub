@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { requireUser } from "@/lib/auth/session";
 import { isCommunityOwner } from "@/lib/connect/ownership";
+import { isAdminUser } from "@/lib/moderation/data";
 import { getDurationMs, logWarn } from "@/lib/observability/logger";
 import { createPaginationWindow, splitPaginatedRows } from "@/lib/pagination";
 import { toPublicStorageUrl } from "@/lib/validation/media";
@@ -16,7 +17,14 @@ export type FriendMessageRow = Database["public"]["Tables"]["friend_messages"]["
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
 export type CommunityCardSource = Pick<
   CommunityRow,
-  "id" | "name" | "description" | "tags" | "join_type" | "avatar_path"
+  | "id"
+  | "name"
+  | "description"
+  | "tags"
+  | "join_type"
+  | "community_type"
+  | "formal_kind"
+  | "avatar_path"
 >;
 export type CommunityEditSource = Pick<
   CommunityRow,
@@ -56,9 +64,22 @@ export type CommunityCardData = {
   description: string;
   members: string;
   joinType: string;
+  communityType: CommunityRow["community_type"];
+  formalKind: CommunityRow["formal_kind"];
   tags: string[];
   status?: string;
   avatarUrl?: string;
+};
+
+export type CommunityCurationItem = {
+  id: string;
+  name: string;
+  ownerId: string;
+  ownerName: string;
+  communityType: CommunityRow["community_type"];
+  formalKind: CommunityRow["formal_kind"];
+  isHidden: boolean;
+  createdAt: string;
 };
 
 export type PersonCardData = {
@@ -249,6 +270,8 @@ export function toCommunityCardData(
     description: community.description,
     members: `${memberCount}`,
     joinType: formatJoinType(community.join_type),
+    communityType: community.community_type,
+    formalKind: community.formal_kind,
     tags: community.tags,
     status: options.status,
     avatarUrl: avatarUrl ?? undefined,
@@ -764,7 +787,7 @@ export async function getCommunitiesPage(
 
   const { data, error } = await supabase
     .from("communities")
-    .select("id, name, description, tags, join_type, avatar_path")
+    .select("id, name, description, tags, join_type, community_type, formal_kind, avatar_path")
     .order("created_at", { ascending: false })
     .order("id", { ascending: false })
     .range(from, to);
@@ -948,7 +971,7 @@ export async function getMyCommunitiesPage(
   if (view === "created") {
     const { data, error } = await supabase
       .from("communities")
-      .select("id, name, description, tags, join_type, avatar_path")
+      .select("id, name, description, tags, join_type, community_type, formal_kind, avatar_path")
       .eq("created_by", user.id)
       .order("created_at", { ascending: false })
       .order("id", { ascending: false })
@@ -1002,7 +1025,7 @@ export async function getMyCommunitiesPage(
   const communityIds = pagedMemberships.rows.map((membership) => membership.community_id);
   const { data: communities, error: communitiesError } = await supabase
     .from("communities")
-    .select("id, name, description, tags, join_type, avatar_path")
+    .select("id, name, description, tags, join_type, community_type, formal_kind, avatar_path")
     .in("id", communityIds);
 
   if (communitiesError) {
@@ -1123,4 +1146,53 @@ export async function getOwnerPendingCommunityRequests(limit = 80): Promise<Comm
         "Interested in joining this community.",
     };
   });
+}
+
+export async function getCommunitiesForCuration(limit = 80): Promise<CommunityCurationItem[]> {
+  const user = await requireUser();
+  if (!isAdminUser(user)) {
+    throw new Error("Only admins can load communities for curation.");
+  }
+
+  const supabase = await createClient();
+  const safeLimit = Math.max(1, Math.min(limit, 120));
+  const { data: communities, error: communitiesError } = await supabase
+    .from("communities")
+    .select("id, name, created_by, community_type, formal_kind, is_hidden, created_at")
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: false })
+    .limit(safeLimit);
+
+  if (communitiesError) {
+    throw new Error("Failed to load communities for curation.");
+  }
+
+  if (!communities || communities.length === 0) {
+    return [];
+  }
+
+  const ownerIds = dedupeStrings(communities.map((community) => community.created_by));
+  const { data: ownerProfiles, error: ownerProfilesError } = await supabase
+    .from("profiles")
+    .select("user_id, full_name")
+    .in("user_id", ownerIds);
+
+  if (ownerProfilesError) {
+    throw new Error("Failed to load community owner profiles.");
+  }
+
+  const ownerNameMap = new Map(
+    (ownerProfiles ?? []).map((profile) => [profile.user_id, fallbackText(profile.full_name, "NU student")]),
+  );
+
+  return communities.map((community) => ({
+    id: community.id,
+    name: community.name,
+    ownerId: community.created_by,
+    ownerName: ownerNameMap.get(community.created_by) ?? "NU student",
+    communityType: community.community_type,
+    formalKind: community.formal_kind,
+    isHidden: community.is_hidden,
+    createdAt: community.created_at,
+  }));
 }
