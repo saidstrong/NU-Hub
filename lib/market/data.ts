@@ -74,6 +74,8 @@ export type FeaturedListingReviewItem = {
   id: string;
   title: string;
   priceKzt: number;
+  listingType: ListingType;
+  pricingModel: PricingModel;
   status: ListingStatus;
   isFeatured: boolean;
   createdAt: string;
@@ -359,18 +361,28 @@ export async function getActiveListings(limit = 24): Promise<ListingWithCoverRow
   return listings;
 }
 
-export async function getFeaturedListings(limit = 4): Promise<ListingWithCoverRow[]> {
+export async function getFeaturedListings(
+  limit = 4,
+  options: {
+    listingType?: ListingType;
+  } = {},
+): Promise<ListingWithCoverRow[]> {
   const safeLimit = Math.max(1, Math.min(limit, 12));
   const supabase = await createClient();
-  const { data, error } = await supabase
+  let query = supabase
     .from("listings")
     .select(LISTING_CARD_SELECT)
     .eq("status", "active")
     .eq("is_hidden", false)
     .eq("is_featured", true)
     .order("created_at", { ascending: false })
-    .order("id", { ascending: false })
-    .limit(safeLimit);
+    .order("id", { ascending: false });
+
+  if (options.listingType) {
+    query = query.eq("listing_type", options.listingType);
+  }
+
+  const { data, error } = await query.limit(safeLimit);
 
   if (error) {
     throw new Error("Failed to load featured listings.");
@@ -472,7 +484,7 @@ export async function getFeaturedListingsForReview(limit = 60): Promise<Featured
   const supabase = await createClient();
   const { data: listings, error: listingsError } = await supabase
     .from("listings")
-    .select("id, title, price_kzt, status, is_featured, seller_id, created_at")
+    .select("id, title, price_kzt, listing_type, pricing_model, status, is_featured, seller_id, created_at")
     .eq("status", "active")
     .eq("is_hidden", false)
     .order("is_featured", { ascending: false })
@@ -507,6 +519,8 @@ export async function getFeaturedListingsForReview(limit = 60): Promise<Featured
     id: listing.id,
     title: listing.title,
     priceKzt: listing.price_kzt,
+    listingType: listing.listing_type,
+    pricingModel: listing.pricing_model,
     status: listing.status,
     isFeatured: listing.is_featured,
     createdAt: listing.created_at,

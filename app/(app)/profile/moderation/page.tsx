@@ -13,7 +13,8 @@ import { approveEventAction, rejectEventAction } from "@/lib/events/actions";
 import { formatEventDate, getPendingEventsForReview } from "@/lib/events/data";
 import { setListingFeaturedAction } from "@/lib/market/actions";
 import {
-  formatPriceKzt,
+  formatCompactListingPrice,
+  formatListingTypeLabel,
   formatStatusLabel,
   getFeaturedListingsForReview,
 } from "@/lib/market/data";
@@ -371,7 +372,9 @@ export default async function ModerationPage({ searchParams }: ModerationPagePro
                 <div className="mt-2 space-y-1">
                   <p className="wire-meta">Seller: {listing.sellerName}</p>
                   <p className="wire-meta">
-                    {formatPriceKzt(listing.priceKzt)} | {formatStatusLabel(listing.status)}
+                    Type: {formatListingTypeLabel(listing.listingType)} | Price:{" "}
+                    {formatCompactListingPrice(listing.priceKzt, listing.pricingModel)} | Status:{" "}
+                    {formatStatusLabel(listing.status)}
                   </p>
                   <p className="wire-meta">
                     Featured: {listing.isFeatured ? "Featured" : "Not featured"}

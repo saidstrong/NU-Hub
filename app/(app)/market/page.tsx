@@ -59,16 +59,16 @@ export default async function MarketHomePage({ searchParams }: MarketHomePagePro
   let loadError: string | null = null;
 
   try {
-    const [featured, pagedListings] = await Promise.all([
-      getFeaturedListings(4),
+    const [featuredListingsResult, pagedListings] = await Promise.all([
+      getFeaturedListings(4, {
+        listingType: listingTypeFilter,
+      }),
       getActiveListingsPage(page, MARKET_PAGE_SIZE, {
         excludeFeatured: true,
         listingType: listingTypeFilter,
       }),
     ]);
-    featuredListings = listingTypeFilter
-      ? featured.filter((listing) => listing.listing_type === listingTypeFilter)
-      : featured;
+    featuredListings = featuredListingsResult;
     listings = pagedListings.listings;
     hasMore = pagedListings.hasMore;
   } catch (error) {
