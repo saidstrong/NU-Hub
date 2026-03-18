@@ -231,7 +231,7 @@ export async function approveJobAction(formData: FormData) {
     .maybeSingle();
 
   if (error) {
-    redirectWithError(redirectPath, "Failed to approve job.");
+    redirectWithError(redirectPath, "Failed to publish job.");
   }
 
   if (!approved) {
@@ -239,7 +239,7 @@ export async function approveJobAction(formData: FormData) {
   }
 
   revalidateJobPaths(parsed.data.jobId);
-  redirectWithMessage(redirectPath, "Job approved.");
+  redirectWithMessage(redirectPath, "Job published.");
 }
 
 export async function rejectJobAction(formData: FormData) {

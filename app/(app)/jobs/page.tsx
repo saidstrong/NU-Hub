@@ -183,7 +183,7 @@ export default async function JobsPage({ searchParams }: JobsPageProps) {
                     </h2>
                     <p className="mt-1 text-[13px] text-wire-200">{job.organization_name}</p>
                   </div>
-                  <TagChip label="Campus reviewed" tone="status" />
+                  <TagChip label="Published" tone="status" />
                 </div>
                 <div className="mt-2.5 flex flex-wrap gap-2">
                   <TagChip label={formatJobTypeLabel(job.job_type)} active />

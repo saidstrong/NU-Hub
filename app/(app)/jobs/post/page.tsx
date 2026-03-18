@@ -42,7 +42,7 @@ export default async function JobsPostPage({ searchParams }: JobsPostPageProps) 
     <main>
       <TopBar
         title="Post Job"
-        subtitle="Create a campus-reviewed vacancy entry"
+        subtitle="Create a job post for review"
         backHref="/jobs"
       />
       {error ? (

@@ -203,8 +203,8 @@ export default async function EditJobPage({ params, searchParams }: EditJobPageP
             <input type="hidden" name="jobId" value={job.id} />
             <input type="hidden" name="redirectTo" value={`/jobs/${job.id}/edit`} />
             <SubmitButton
-              label="Approve"
-              pendingLabel="Approving..."
+              label="Publish"
+              pendingLabel="Publishing..."
               variant="primary"
               className="w-auto"
             />

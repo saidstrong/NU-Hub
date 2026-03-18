@@ -105,7 +105,7 @@ export default async function MyEventsPage({ searchParams }: MyEventsPageProps) 
                       ? event.is_hidden
                         ? "Rejected"
                         : event.is_published
-                          ? "Approved"
+                          ? "Published"
                           : "Pending review"
                       : undefined
                     : participationLabel,

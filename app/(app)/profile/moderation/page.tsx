@@ -62,7 +62,7 @@ function formatFormalKindLabel(formalKind: "club" | "organization" | "official" 
   if (formalKind === "club") return "Club";
   if (formalKind === "organization") return "Organization";
   if (formalKind === "official") return "Official";
-  return "Informal";
+  return "No trust label";
 }
 
 function formatReportTime(createdAt: string): string {
@@ -189,7 +189,7 @@ export default async function ModerationPage({ searchParams }: ModerationPagePro
             <p className="mt-1 text-lg font-semibold text-wire-100">{featuredListingsCount}</p>
           </div>
           <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-3 py-3">
-            <p className="wire-label">Formal communities</p>
+            <p className="wire-label">Curated communities</p>
             <p className="mt-1 text-lg font-semibold text-wire-100">{formalCommunitiesCount}</p>
           </div>
           <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-3 py-3">
@@ -237,8 +237,8 @@ export default async function ModerationPage({ searchParams }: ModerationPagePro
 
       <section className="wire-panel">
         <div className="mb-3 border-b border-wire-700 pb-3">
-          <h2 className="wire-section-title">Pending event approvals ({pendingEventsCount})</h2>
-          <p className="mt-1 wire-meta">Review submitted events before public visibility.</p>
+          <h2 className="wire-section-title">Pending event review ({pendingEventsCount})</h2>
+          <p className="mt-1 wire-meta">Review events before publishing them to students.</p>
         </div>
 
         {pendingEvents.length > 0 ? (
@@ -253,8 +253,8 @@ export default async function ModerationPage({ searchParams }: ModerationPagePro
                   <p className="wire-meta">Category: {event.category}</p>
                   <p className="wire-meta">Schedule: {formatEventDate(event.startsAt, event.endsAt)}</p>
                   <p className="wire-meta">Location: {event.location}</p>
-                  <p className="wire-meta">Submitted by: {event.creatorName}</p>
-                  <p className="wire-meta">Submitted at: {formatPendingCreatedTime(event.createdAt)}</p>
+                  <p className="wire-meta">Created by: {event.creatorName}</p>
+                  <p className="wire-meta">Created at: {formatPendingCreatedTime(event.createdAt)}</p>
                 </div>
                 <div className="mt-3 flex flex-wrap items-center gap-2">
                   <Link href={`/events/${event.id}`} className={compactSecondaryActionClass}>
@@ -264,7 +264,7 @@ export default async function ModerationPage({ searchParams }: ModerationPagePro
                     <input type="hidden" name="eventId" value={event.id} />
                     <input type="hidden" name="redirectTo" value="/profile/moderation" />
                     <button type="submit" className={compactPrimaryActionClass}>
-                      Approve
+                      Publish
                     </button>
                   </form>
                   <form action={rejectEventAction}>
@@ -280,8 +280,8 @@ export default async function ModerationPage({ searchParams }: ModerationPagePro
           </div>
         ) : !pendingLoadError ? (
           <EmptyState
-            title="No pending event submissions"
-            description="New event submissions will appear here for approval."
+            title="No events pending review"
+            description="New events pending review will appear here."
             actionLabel="Back to profile"
             actionHref="/profile"
           />
@@ -291,7 +291,7 @@ export default async function ModerationPage({ searchParams }: ModerationPagePro
       {jobsFeatureEnabled ? (
         <section className="wire-panel">
           <div className="mb-3 border-b border-wire-700 pb-3">
-            <h2 className="wire-section-title">Pending job approvals ({pendingJobsCount})</h2>
+            <h2 className="wire-section-title">Pending job review ({pendingJobsCount})</h2>
             <p className="mt-1 wire-meta">Review and publish campus job opportunities.</p>
           </div>
 
@@ -321,7 +321,7 @@ export default async function ModerationPage({ searchParams }: ModerationPagePro
                       <input type="hidden" name="jobId" value={job.id} />
                       <input type="hidden" name="redirectTo" value="/profile/moderation" />
                       <button type="submit" className={compactPrimaryActionClass}>
-                        Approve
+                        Publish
                       </button>
                     </form>
                     <form action={rejectJobAction}>
@@ -345,8 +345,8 @@ export default async function ModerationPage({ searchParams }: ModerationPagePro
             </div>
           ) : !jobsLoadError ? (
             <EmptyState
-              title="No pending job submissions"
-              description="New job postings will appear here for review."
+              title="No jobs pending review"
+              description="New jobs pending review will appear here."
               actionLabel="Open jobs"
               actionHref="/jobs"
             />
@@ -374,7 +374,7 @@ export default async function ModerationPage({ searchParams }: ModerationPagePro
                     {formatPriceKzt(listing.priceKzt)} | {formatStatusLabel(listing.status)}
                   </p>
                   <p className="wire-meta">
-                    Featured: {listing.isFeatured ? "Yes" : "No"}
+                    Featured: {listing.isFeatured ? "Featured" : "Not featured"}
                   </p>
                 </div>
                 <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -393,7 +393,7 @@ export default async function ModerationPage({ searchParams }: ModerationPagePro
                       type="submit"
                       className={listing.isFeatured ? compactGhostActionClass : compactPrimaryActionClass}
                     >
-                      {listing.isFeatured ? "Remove featured" : "Mark featured"}
+                      {listing.isFeatured ? "Remove featured status" : "Mark as featured"}
                     </button>
                   </form>
                 </div>
@@ -412,8 +412,8 @@ export default async function ModerationPage({ searchParams }: ModerationPagePro
 
       <section className="wire-panel">
         <div className="mb-3 border-b border-wire-700 pb-3">
-          <h2 className="wire-section-title">Community curation ({formalCommunitiesCount} formal)</h2>
-          <p className="mt-1 wire-meta">Set trust labels for clubs, organizations, and official campus groups.</p>
+          <h2 className="wire-section-title">Community curation ({formalCommunitiesCount} curated)</h2>
+          <p className="mt-1 wire-meta">Set trust labels for clubs, organizations, and official groups.</p>
         </div>
 
         {communitiesForCuration.length > 0 ? (
@@ -444,7 +444,7 @@ export default async function ModerationPage({ searchParams }: ModerationPagePro
                       <input type="hidden" name="formalKind" value="club" />
                       <input type="hidden" name="redirectTo" value="/profile/moderation" />
                       <button type="submit" disabled={isClub} className={isClub ? compactPrimaryActionClass : compactSecondaryActionClass}>
-                        Mark club
+                        Set club label
                       </button>
                     </form>
                     <form action={setCommunityFormalKindAction}>
@@ -456,7 +456,7 @@ export default async function ModerationPage({ searchParams }: ModerationPagePro
                         disabled={isOrganization}
                         className={isOrganization ? compactPrimaryActionClass : compactSecondaryActionClass}
                       >
-                        Mark organization
+                        Set organization label
                       </button>
                     </form>
                     <form action={setCommunityFormalKindAction}>
@@ -468,7 +468,7 @@ export default async function ModerationPage({ searchParams }: ModerationPagePro
                         disabled={isOfficial}
                         className={isOfficial ? compactPrimaryActionClass : compactSecondaryActionClass}
                       >
-                        Mark official
+                        Set official label
                       </button>
                     </form>
                     {isFormal ? (
@@ -476,7 +476,7 @@ export default async function ModerationPage({ searchParams }: ModerationPagePro
                         <input type="hidden" name="communityId" value={community.id} />
                         <input type="hidden" name="redirectTo" value="/profile/moderation" />
                         <button type="submit" className={compactGhostActionClass}>
-                          Revert to informal
+                          Clear trust label
                         </button>
                       </form>
                     ) : null}

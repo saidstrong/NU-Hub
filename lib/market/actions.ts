@@ -1044,5 +1044,8 @@ export async function setListingFeaturedAction(formData: FormData) {
   revalidatePath("/market");
   revalidatePath("/profile/moderation");
   revalidatePath(`/market/item/${listingId}`);
-  redirectWithMessage(redirectPath, nextIsFeatured ? "Listing featured." : "Featured removed.");
+  redirectWithMessage(
+    redirectPath,
+    nextIsFeatured ? "Listing marked as featured." : "Featured status removed.",
+  );
 }

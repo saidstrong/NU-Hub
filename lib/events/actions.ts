@@ -516,7 +516,7 @@ export async function approveEventAction(formData: FormData) {
     .maybeSingle();
 
   if (error) {
-    redirectWithError(redirectPath, "Failed to approve event.");
+    redirectWithError(redirectPath, "Failed to publish event.");
   }
 
   if (!approved) {
@@ -524,7 +524,7 @@ export async function approveEventAction(formData: FormData) {
   }
 
   revalidateEventPaths(parsed.data.eventId);
-  redirectWithMessage(redirectPath, "Event approved.");
+  redirectWithMessage(redirectPath, "Event published.");
 }
 
 export async function rejectEventAction(formData: FormData) {

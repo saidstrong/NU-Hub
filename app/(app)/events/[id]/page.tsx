@@ -143,7 +143,7 @@ export default async function EventDetailPage({ params, searchParams }: EventDet
       {message ? <FeedbackBanner tone="success" message={message} /> : null}
       {error ? <FeedbackBanner tone="error" message={error} /> : null}
       {isPendingReview && isOwner ? (
-        <FeedbackBanner tone="warning" message="This event is pending admin approval and visible only to you." />
+        <FeedbackBanner tone="warning" message="This event is pending review and visible only to you." />
       ) : null}
       {isRejected && isOwner ? (
         <FeedbackBanner tone="error" message="This event was rejected and is hidden from public discovery." />

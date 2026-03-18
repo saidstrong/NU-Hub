@@ -105,7 +105,7 @@ export default async function ConnectHomePage() {
           ) : !loadError ? (
             <EmptyState
               title="No communities yet"
-              description="Student communities will appear here once published."
+              description="Student communities will appear here as they become available."
             />
           ) : null}
         </SectionCard>

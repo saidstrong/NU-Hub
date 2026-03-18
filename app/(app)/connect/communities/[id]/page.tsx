@@ -35,8 +35,8 @@ function formatPostTime(createdAt: string): string {
 function formatFormalKindLabel(formalKind: "club" | "organization" | "official" | null): string {
   if (formalKind === "club") return "Club";
   if (formalKind === "organization") return "Organization";
-  if (formalKind === "official") return "Official campus group";
-  return "Official campus group";
+  if (formalKind === "official") return "Official";
+  return "Official";
 }
 
 export default async function CommunityProfilePage({

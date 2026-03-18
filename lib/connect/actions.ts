@@ -180,16 +180,16 @@ function mapDeleteCommunityPostErrorMessage(errorCode?: string): string {
 
 function mapCommunityCurationErrorMessage(errorCode?: string): string {
   if (errorCode === "42501") {
-    return "Only admins can curate formal communities.";
+    return "Only admins can curate community trust labels.";
   }
 
   return "Failed to update community curation.";
 }
 
 function formatFormalKindLabel(formalKind: "club" | "organization" | "official"): string {
-  if (formalKind === "club") return "club";
-  if (formalKind === "organization") return "organization";
-  return "official campus group";
+  if (formalKind === "club") return "Club";
+  if (formalKind === "organization") return "Organization";
+  return "Official";
 }
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
@@ -1013,7 +1013,7 @@ export async function setCommunityFormalKindAction(formData: FormData) {
   });
   redirectWithMessage(
     redirectPath,
-    `Community marked as ${formatFormalKindLabel(parsed.data.formalKind)}.`,
+    `Community trust label set to ${formatFormalKindLabel(parsed.data.formalKind)}.`,
   );
 }
 
@@ -1066,7 +1066,7 @@ export async function clearCommunityFormalStatusAction(formData: FormData) {
     userId: user.id,
     communityId: parsed.data.communityId,
   });
-  redirectWithMessage(redirectPath, "Community set to informal.");
+  redirectWithMessage(redirectPath, "Community trust label cleared.");
 }
 
 export async function sendFriendRequestAction(formData: FormData) {

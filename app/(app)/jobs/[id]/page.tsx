@@ -126,7 +126,7 @@ export default async function JobDetailPage({ params, searchParams }: JobDetailP
             <TagChip label={jobStatusLabel} tone="status" />
           </div>
           <div className="flex flex-wrap gap-2">
-            {isPublished ? <TagChip label="Campus reviewed" tone="status" /> : null}
+            {isPublished ? <TagChip label="Published" tone="status" /> : null}
             <TagChip label={formatJobTypeLabel(job.job_type)} active />
             <TagChip label={formatJobLocationModeLabel(job.location_mode)} tone="status" />
           </div>
@@ -159,7 +159,7 @@ export default async function JobDetailPage({ params, searchParams }: JobDetailP
         <FeedbackBanner tone="warning" message="This job is pending review and not visible to students yet." />
       ) : null}
       {job.status === "rejected" && canEdit ? (
-        <FeedbackBanner tone="error" message="This job is currently rejected and hidden from student browse." />
+        <FeedbackBanner tone="error" message="This job is rejected and not visible in jobs browse." />
       ) : null}
 
       <div className="grid gap-6 xl:grid-cols-[1.5fr_1fr]">

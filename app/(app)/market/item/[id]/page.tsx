@@ -187,8 +187,8 @@ export default async function MarketItemDetailPage({
                   <p className="mt-1 text-sm text-wire-100">{formatStatusLabel(listing.status)}</p>
                 </div>
                 <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-3 py-2">
-                  <p className="wire-label">Featured</p>
-                  <p className="mt-1 text-sm text-wire-100">{listing.is_featured ? "Yes" : "No"}</p>
+                  <p className="wire-label">Featured status</p>
+                  <p className="mt-1 text-sm text-wire-100">{listing.is_featured ? "Featured" : "Not featured"}</p>
                 </div>
                 <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-3 py-2">
                   <p className="wire-label">Posted</p>
