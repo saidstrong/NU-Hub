@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  Briefcase,
   CalendarDays,
   Home,
   Store,
@@ -10,21 +11,27 @@ import {
   Users,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { isFeatureEnabled } from "@/lib/config/features";
 
-const navItems = [
+const baseNavItems = [
   { label: "Home", href: "/home", icon: Home },
   { label: "Market", href: "/market", icon: Store },
   { label: "Events", href: "/events", icon: CalendarDays },
   { label: "Connect", href: "/connect", icon: Users },
   { label: "Profile", href: "/profile", icon: UserCircle2 },
-];
+] as const;
 
 export function BottomNav() {
   const pathname = usePathname();
+  const jobsEnabled = isFeatureEnabled("jobsBoard");
+  const navItems = jobsEnabled
+    ? [...baseNavItems.slice(0, 4), { label: "Jobs", href: "/jobs", icon: Briefcase }, baseNavItems[4]]
+    : baseNavItems;
+  const gridColumnsClass = jobsEnabled ? "grid-cols-6" : "grid-cols-5";
 
   return (
     <nav className="fixed bottom-0 left-1/2 z-30 w-full max-w-6xl -translate-x-1/2 border-t border-wire-700 bg-wire-900/96 px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-2 backdrop-blur sm:px-4">
-      <ul className="mx-auto grid max-w-[720px] grid-cols-5 gap-2">
+      <ul className={cn("mx-auto grid max-w-[720px] gap-2", gridColumnsClass)}>
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive =

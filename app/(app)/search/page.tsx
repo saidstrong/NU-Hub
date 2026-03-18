@@ -7,6 +7,7 @@ import { SearchBar } from "@/components/ui/SearchBar";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { TabRow } from "@/components/ui/TabRow";
 import { TopBar } from "@/components/ui/TopBar";
+import { isFeatureEnabled } from "@/lib/config/features";
 import { searchGlobalEntities } from "@/lib/search/data";
 import {
   parseSearchQueryParam,
@@ -21,6 +22,7 @@ type SearchPageProps = {
 };
 
 export default async function SearchPage({ searchParams }: SearchPageProps) {
+  const jobsEnabled = isFeatureEnabled("jobsBoard");
   const { q } = await searchParams;
   const { query, error: queryError } = parseSearchQueryParam(q);
   const canSearch = query.length >= SEARCH_MIN_QUERY_LENGTH;
@@ -47,7 +49,11 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
     <main>
       <TopBar title="Global Search" backHref="/home" />
       <SearchBar
-        placeholder="Search listings, events, people, communities"
+        placeholder={
+          jobsEnabled
+            ? "Search listings, events, jobs, people, communities"
+            : "Search listings, events, people, communities"
+        }
         queryName="q"
         defaultValue={q}
         action="/search"
@@ -69,6 +75,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
           { label: "All", href: "/search" },
           { label: "Market" },
           { label: "Events" },
+          ...(jobsEnabled ? [{ label: "Jobs", href: "/jobs" }] : []),
           { label: "People" },
           { label: "Communities" },
         ]}
@@ -77,7 +84,11 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
       {!q?.trim() ? (
         <EmptyState
           title="Start searching"
-          description="Use a keyword to search across listings, events, people, and communities."
+          description={
+            jobsEnabled
+              ? "Use a keyword to search across listings, events, jobs, people, and communities."
+              : "Use a keyword to search across listings, events, people, and communities."
+          }
         />
       ) : null}
 

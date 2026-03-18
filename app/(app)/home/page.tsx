@@ -1,6 +1,7 @@
 import Link from "next/link";
 import {
   ArrowRight,
+  Briefcase,
   CalendarDays,
   Compass,
   ShoppingBag,
@@ -15,6 +16,7 @@ import { PersonCard } from "@/components/ui/PersonCard";
 import { SearchBar } from "@/components/ui/SearchBar";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { SectionCard } from "@/components/ui/SectionCard";
+import { isFeatureEnabled } from "@/lib/config/features";
 import {
   getCommunities,
   getPeopleDiscovery,
@@ -25,6 +27,7 @@ import { getPublishedEvents, toEventCardData } from "@/lib/events/data";
 import { getActiveListings, toListingCardData } from "@/lib/market/data";
 
 export default async function HomePage() {
+  const jobsEnabled = isFeatureEnabled("jobsBoard");
   let listings: Awaited<ReturnType<typeof getActiveListings>> = [];
   let events: Awaited<ReturnType<typeof getPublishedEvents>> = [];
   let people: Awaited<ReturnType<typeof getPeopleDiscovery>> = [];
@@ -55,7 +58,11 @@ export default async function HomePage() {
         />
         <div className="mt-3">
           <SearchBar
-            placeholder="Search market, events, people, communities"
+            placeholder={
+              jobsEnabled
+                ? "Search market, events, jobs, people, communities"
+                : "Search market, events, people, communities"
+            }
             queryName="q"
             defaultValue=""
             action="/search"
@@ -115,7 +122,7 @@ export default async function HomePage() {
 
       <section className="wire-panel">
         <SectionHeader title="Quick access" />
-        <div className="grid grid-cols-2 gap-2.5 xl:grid-cols-4">
+        <div className={`grid grid-cols-2 gap-2.5 ${jobsEnabled ? "xl:grid-cols-5" : "xl:grid-cols-4"}`}>
           <Link
             href="/market"
             className="wire-card wire-hover flex min-h-[90px] flex-col justify-between rounded-[var(--radius-card)] p-3.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
@@ -146,6 +153,18 @@ export default async function HomePage() {
               <p className="text-[12px] text-wire-300">People and groups</p>
             </div>
           </Link>
+          {jobsEnabled ? (
+            <Link
+              href="/jobs"
+              className="wire-card wire-hover flex min-h-[90px] flex-col justify-between rounded-[var(--radius-card)] p-3.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+            >
+              <Briefcase className="h-4 w-4 text-wire-100" aria-hidden="true" />
+              <div>
+                <p className="text-[14px] font-semibold text-wire-100">Jobs</p>
+                <p className="text-[12px] text-wire-300">Campus openings</p>
+              </div>
+            </Link>
+          ) : null}
           <Link
             href="/campus"
             className="wire-card wire-hover flex min-h-[90px] flex-col justify-between rounded-[var(--radius-card)] p-3.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
