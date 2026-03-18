@@ -96,6 +96,8 @@ type DatabaseSchema = {
           title: string;
           description: string | null;
           price_kzt: number;
+          listing_type: "sale" | "rental" | "service";
+          pricing_model: "fixed" | "per_day" | "per_week" | "per_month" | "per_hour" | "starting_from";
           category: string;
           condition: string;
           pickup_location: string;
@@ -112,6 +114,8 @@ type DatabaseSchema = {
           title: string;
           description?: string | null;
           price_kzt: number;
+          listing_type?: "sale" | "rental" | "service";
+          pricing_model?: "fixed" | "per_day" | "per_week" | "per_month" | "per_hour" | "starting_from";
           category: string;
           condition: string;
           pickup_location: string;
@@ -128,6 +132,8 @@ type DatabaseSchema = {
           title?: string;
           description?: string | null;
           price_kzt?: number;
+          listing_type?: "sale" | "rental" | "service";
+          pricing_model?: "fixed" | "per_day" | "per_week" | "per_month" | "per_hour" | "starting_from";
           category?: string;
           condition?: string;
           pickup_location?: string;

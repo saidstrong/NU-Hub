@@ -14,7 +14,9 @@ import { notFound } from "next/navigation";
 import { startListingConversationAction, toggleSavedListingAction } from "@/lib/market/actions";
 import { reportContentAction } from "@/lib/moderation/actions";
 import {
-  formatPriceKzt,
+  formatCompactListingPrice,
+  formatListingTypeLabel,
+  formatPricingModelLabel,
   formatStatusLabel,
   getListingDetail,
 } from "@/lib/market/data";
@@ -84,10 +86,14 @@ export default async function MarketItemDetailPage({
     !isOwner
     && listing.status === "active"
     && !listing.is_hidden;
+  const pickupFallbackLabel =
+    listing.listing_type === "service"
+      ? "Service location not specified"
+      : "Pickup details not specified";
   const pickupLabel =
     typeof listing.pickup_location === "string" && listing.pickup_location.trim().length > 0
       ? listing.pickup_location.trim()
-      : "Pickup details not specified";
+      : pickupFallbackLabel;
   const descriptionLabel =
     typeof listing.description === "string" && listing.description.trim().length > 0
       ? listing.description.trim()
@@ -97,6 +103,10 @@ export default async function MarketItemDetailPage({
   const postedAtLabel = Number.isNaN(postedDate.getTime())
     ? "Recently posted"
     : postedDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  const listingTypeLabel = formatListingTypeLabel(listing.listing_type);
+  const pricingModelLabel = formatPricingModelLabel(listing.pricing_model);
+  const conditionFieldLabel = listing.listing_type === "service" ? "Condition / quality" : "Condition";
+  const locationFieldLabel = listing.listing_type === "service" ? "Service location" : "Pickup";
 
   return (
     <main>
@@ -115,21 +125,31 @@ export default async function MarketItemDetailPage({
               <h2 className="text-[28px] font-semibold leading-[34px] tracking-tight break-words text-wire-100">
                 {listing.title}
               </h2>
-              <p className="mt-1 text-[22px] font-semibold text-wire-100">{formatPriceKzt(listing.price_kzt)}</p>
+              <p className="mt-1 text-[22px] font-semibold text-wire-100">
+                {formatCompactListingPrice(listing.price_kzt, listing.pricing_model)}
+              </p>
             </div>
             <TagChip label={formatStatusLabel(listing.status)} tone="status" />
           </div>
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-6">
+            <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-3 py-2">
+              <p className="wire-label">Listing type</p>
+              <p className="mt-1 text-sm text-wire-100">{listingTypeLabel}</p>
+            </div>
+            <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-3 py-2">
+              <p className="wire-label">Pricing</p>
+              <p className="mt-1 text-sm text-wire-100">{pricingModelLabel}</p>
+            </div>
             <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-3 py-2">
               <p className="wire-label">Category</p>
               <p className="mt-1 text-sm text-wire-100">{listing.category}</p>
             </div>
             <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-3 py-2">
-              <p className="wire-label">Condition</p>
+              <p className="wire-label">{conditionFieldLabel}</p>
               <p className="mt-1 text-sm text-wire-100">{listing.condition}</p>
             </div>
             <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-3 py-2">
-              <p className="wire-label">Pickup</p>
+              <p className="wire-label">{locationFieldLabel}</p>
               <p className="mt-1 text-sm text-wire-100">{pickupLabel}</p>
             </div>
             <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-3 py-2">

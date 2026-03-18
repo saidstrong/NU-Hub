@@ -9,6 +9,24 @@ export const LISTING_IMAGE_MAX_COUNT = 4;
 export const LISTING_IMAGE_MAX_SIZE_BYTES = SHARED_LISTING_IMAGE_MAX_SIZE_BYTES;
 export const LISTING_IMAGE_ALLOWED_MIME_TYPES = IMAGE_ALLOWED_MIME_TYPES;
 export const LISTING_IMAGE_ALLOWED_EXTENSIONS = IMAGE_ALLOWED_EXTENSIONS;
+export const LISTING_TYPE_VALUES = ["sale", "rental", "service"] as const;
+export const PRICING_MODEL_VALUES = [
+  "fixed",
+  "per_day",
+  "per_week",
+  "per_month",
+  "per_hour",
+  "starting_from",
+] as const;
+
+type ListingTypeValue = (typeof LISTING_TYPE_VALUES)[number];
+type PricingModelValue = (typeof PRICING_MODEL_VALUES)[number];
+
+export const PRICING_MODELS_BY_LISTING_TYPE: Record<ListingTypeValue, readonly PricingModelValue[]> = {
+  sale: ["fixed"],
+  rental: ["per_day", "per_week", "per_month"],
+  service: ["fixed", "per_hour", "starting_from"],
+};
 
 const listingBaseSchema = z.object({
   title: z
@@ -26,6 +44,8 @@ const listingBaseSchema = z.object({
     .int("Price must be a whole number.")
     .min(0, "Price cannot be negative.")
     .max(100_000_000, "Price is too high for MVP input."),
+  listingType: z.enum(LISTING_TYPE_VALUES),
+  pricingModel: z.enum(PRICING_MODEL_VALUES),
   condition: z
     .string()
     .trim()
@@ -41,6 +61,24 @@ const listingBaseSchema = z.object({
     .trim()
     .min(2, "Pickup location is required.")
     .max(120, "Pickup location is too long."),
+}).superRefine((value, context) => {
+  const allowedPricingModels = PRICING_MODELS_BY_LISTING_TYPE[value.listingType];
+  if (allowedPricingModels.includes(value.pricingModel)) {
+    return;
+  }
+
+  const message =
+    value.listingType === "sale"
+      ? "Sale listings must use Fixed pricing."
+      : value.listingType === "rental"
+        ? "Rental listings must use Per day, Per week, or Per month pricing."
+        : "Service listings must use Fixed, Per hour, or Starting from pricing.";
+
+  context.addIssue({
+    code: z.ZodIssueCode.custom,
+    path: ["pricingModel"],
+    message,
+  });
 });
 
 export const listingCreateSchema = listingBaseSchema.extend({

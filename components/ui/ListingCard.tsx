@@ -5,6 +5,7 @@ export type ListingCardItem = {
   id: string;
   title: string;
   price: string;
+  listingTypeLabel?: string;
   category: string;
   condition: string;
   location: string;
@@ -50,13 +51,22 @@ export function ListingCard({ listing, href }: ListingCardProps) {
           )}
         </div>
         <div className="min-w-0 flex-1">
-          {listing.highlightLabel ? (
-            <span className="inline-flex rounded-full border border-accent/35 bg-accent/10 px-2 py-0.5 text-[11px] font-medium text-wire-100">
-              {listing.highlightLabel}
-            </span>
+          {listing.highlightLabel || listing.listingTypeLabel ? (
+            <div className="flex flex-wrap items-center gap-1.5">
+              {listing.highlightLabel ? (
+                <span className="inline-flex rounded-full border border-accent/35 bg-accent/10 px-2 py-0.5 text-[11px] font-medium text-wire-100">
+                  {listing.highlightLabel}
+                </span>
+              ) : null}
+              {listing.listingTypeLabel ? (
+                <span className="inline-flex rounded-full border border-wire-600 bg-wire-900 px-2 py-0.5 text-[11px] font-medium text-wire-300">
+                  {listing.listingTypeLabel}
+                </span>
+              ) : null}
+            </div>
           ) : null}
           <p
-            className={`${listing.highlightLabel ? "mt-1 " : ""}line-clamp-2 text-sm font-semibold tracking-tight text-wire-100 [overflow-wrap:anywhere]`}
+            className={`${listing.highlightLabel || listing.listingTypeLabel ? "mt-1 " : ""}line-clamp-2 text-sm font-semibold tracking-tight text-wire-100 [overflow-wrap:anywhere]`}
           >
             {listing.title}
           </p>

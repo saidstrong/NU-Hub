@@ -15,6 +15,8 @@ describe("market validation", () => {
       title: "TI-84 Plus Calculator",
       category: "Electronics",
       priceKzt: "19000",
+      listingType: "sale",
+      pricingModel: "fixed",
       condition: "Like new",
       description: "Barely used.",
       pickupLocation: "Main Library Lobby",
@@ -33,6 +35,8 @@ describe("market validation", () => {
       title: "Desk Lamp",
       category: "Dorm",
       priceKzt: "4500",
+      listingType: "sale",
+      pricingModel: "fixed",
       condition: "Good",
       description: "",
       pickupLocation: "Block 20 Dorm",
@@ -47,6 +51,8 @@ describe("market validation", () => {
       title: "Desk Lamp",
       category: "Dorm",
       priceKzt: "4500",
+      listingType: "rental",
+      pricingModel: "per_day",
       condition: "Good",
       description: "",
       pickupLocation: "Block 20 Dorm",
@@ -58,6 +64,47 @@ describe("market validation", () => {
       expect(result.data.status).toBe("reserved");
       expect(result.data.description).toBeNull();
     }
+  });
+
+  it("enforces listing type and pricing model combinations", () => {
+    const saleInvalid = listingCreateSchema.safeParse({
+      title: "Desk Lamp",
+      category: "Dorm",
+      priceKzt: "4500",
+      listingType: "sale",
+      pricingModel: "per_day",
+      condition: "Good",
+      description: "",
+      pickupLocation: "Block 20 Dorm",
+      status: "active",
+    });
+    expect(saleInvalid.success).toBe(false);
+
+    const rentalValid = listingCreateSchema.safeParse({
+      title: "Camera Rental",
+      category: "Electronics",
+      priceKzt: "7000",
+      listingType: "rental",
+      pricingModel: "per_week",
+      condition: "Good",
+      description: "",
+      pickupLocation: "Library",
+      status: "active",
+    });
+    expect(rentalValid.success).toBe(true);
+
+    const serviceValid = listingCreateSchema.safeParse({
+      title: "Math tutoring",
+      category: "Tutoring",
+      priceKzt: "3500",
+      listingType: "service",
+      pricingModel: "per_hour",
+      condition: "Experienced",
+      description: "",
+      pickupLocation: "Online",
+      status: "active",
+    });
+    expect(serviceValid.success).toBe(true);
   });
 
   it("validates listing mutation id as uuid", () => {

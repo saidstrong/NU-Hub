@@ -10,16 +10,36 @@ export type ListingImageRow = Database["public"]["Tables"]["listing_images"]["Ro
 export type ConversationRow = Database["public"]["Tables"]["conversations"]["Row"];
 export type MessageRow = Database["public"]["Tables"]["messages"]["Row"];
 export type ListingStatus = ListingRow["status"];
+export type ListingType = ListingRow["listing_type"];
+export type PricingModel = ListingRow["pricing_model"];
 export type ListingCardSource = Pick<
   ListingRow,
-  "id" | "title" | "price_kzt" | "category" | "condition" | "pickup_location" | "status"
+  | "id"
+  | "title"
+  | "price_kzt"
+  | "listing_type"
+  | "pricing_model"
+  | "category"
+  | "condition"
+  | "pickup_location"
+  | "status"
 > & {
   is_featured?: boolean;
 };
 export type ListingWithCoverRow = ListingCardSource & { cover_image_url: string | null };
 export type ListingEditSource = Pick<
   ListingRow,
-  "id" | "seller_id" | "title" | "description" | "price_kzt" | "category" | "condition" | "pickup_location" | "status"
+  | "id"
+  | "seller_id"
+  | "title"
+  | "description"
+  | "price_kzt"
+  | "listing_type"
+  | "pricing_model"
+  | "category"
+  | "condition"
+  | "pickup_location"
+  | "status"
 >;
 
 export type ListingSeller = Pick<
@@ -39,6 +59,7 @@ export type ListingCardData = {
   id: string;
   title: string;
   price: string;
+  listingTypeLabel: string;
   category: string;
   condition: string;
   location: string;
@@ -107,9 +128,9 @@ const LOADER_SLOW_THRESHOLD_MS = 150;
 const INBOX_INITIAL_LAST_MESSAGE_SCAN_MULTIPLIER = 8;
 const INBOX_MESSAGE_LOOKUP_BATCH_SIZE = 8;
 const LISTING_CARD_SELECT =
-  "id, title, price_kzt, category, condition, pickup_location, status, is_featured";
+  "id, title, price_kzt, listing_type, pricing_model, category, condition, pickup_location, status, is_featured";
 const LISTING_EDIT_SELECT =
-  "id, seller_id, title, description, price_kzt, category, condition, pickup_location, status";
+  "id, seller_id, title, description, price_kzt, listing_type, pricing_model, category, condition, pickup_location, status";
 
 type MarketplaceLatestMessageLookupRow = Pick<
   MessageRow,
@@ -118,6 +139,31 @@ type MarketplaceLatestMessageLookupRow = Pick<
 
 export function formatPriceKzt(priceKzt: number): string {
   return `${new Intl.NumberFormat("en-US").format(priceKzt)} KZT`;
+}
+
+export function formatListingTypeLabel(listingType: ListingType): string {
+  if (listingType === "rental") return "Rental";
+  if (listingType === "service") return "Service";
+  return "Sale";
+}
+
+export function formatPricingModelLabel(pricingModel: PricingModel): string {
+  if (pricingModel === "per_day") return "Per day";
+  if (pricingModel === "per_week") return "Per week";
+  if (pricingModel === "per_month") return "Per month";
+  if (pricingModel === "per_hour") return "Per hour";
+  if (pricingModel === "starting_from") return "Starting from";
+  return "Fixed";
+}
+
+export function formatCompactListingPrice(priceKzt: number, pricingModel: PricingModel): string {
+  const base = formatPriceKzt(priceKzt);
+  if (pricingModel === "per_day") return `${base}/day`;
+  if (pricingModel === "per_week") return `${base}/week`;
+  if (pricingModel === "per_month") return `${base}/month`;
+  if (pricingModel === "per_hour") return `${base}/hour`;
+  if (pricingModel === "starting_from") return `From ${base}`;
+  return base;
 }
 
 export function formatStatusLabel(status: ListingStatus): string {
@@ -294,7 +340,8 @@ export function toListingCardDataWithOptions(
   return {
     id: listing.id,
     title: listing.title,
-    price: formatPriceKzt(listing.price_kzt),
+    price: formatCompactListingPrice(listing.price_kzt, listing.pricing_model),
+    listingTypeLabel: formatListingTypeLabel(listing.listing_type),
     category: listing.category,
     condition: listing.condition,
     location: listing.pickup_location,
@@ -338,6 +385,7 @@ export async function getActiveListingsPage(
   pageSize = 24,
   options: {
     excludeFeatured?: boolean;
+    listingType?: ListingType;
   } = {},
 ): Promise<PaginatedListingResult> {
   const { from, to, pageSize: safePageSize } = createPaginationWindow({
@@ -358,6 +406,10 @@ export async function getActiveListingsPage(
 
   if (options.excludeFeatured) {
     query = query.eq("is_featured", false);
+  }
+
+  if (options.listingType) {
+    query = query.eq("listing_type", options.listingType);
   }
 
   const { data, error } = await query;
