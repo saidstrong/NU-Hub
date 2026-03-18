@@ -1,4 +1,5 @@
 import { requireUser } from "@/lib/auth/session";
+import { formatCampusMessageTimestamp } from "@/lib/datetime";
 import { getDurationMs, logWarn } from "@/lib/observability/logger";
 import { createPaginationWindow, splitPaginatedRows } from "@/lib/pagination";
 import { createClient } from "@/lib/supabase/server";
@@ -147,12 +148,5 @@ export async function getMyNotificationReadSummary(): Promise<NotificationReadSu
 }
 
 export function formatNotificationTime(createdAt: string): string {
-  const date = new Date(createdAt);
-
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(date);
+  return formatCampusMessageTimestamp(createdAt);
 }

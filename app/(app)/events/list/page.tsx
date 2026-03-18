@@ -1,6 +1,5 @@
 import { EmptyState } from "@/components/ui/EmptyState";
 import { EventCard } from "@/components/ui/EventCard";
-import { FilterRow } from "@/components/ui/FilterRow";
 import { TopBar } from "@/components/ui/TopBar";
 import { getPublishedEvents, toEventCardData } from "@/lib/events/data";
 
@@ -18,7 +17,7 @@ export default async function EventsListPage() {
     <main>
       <TopBar
         title="Events List"
-        subtitle="Browse all events with simple filters"
+        subtitle="Browse all published events"
         backHref="/events"
       />
       {loadError ? (
@@ -26,7 +25,6 @@ export default async function EventsListPage() {
           {loadError}
         </div>
       ) : null}
-      <FilterRow filters={["This week", "Category", "Location", "Time"]} />
       {events.length > 0 ? (
         <div className="wire-list">
           {events.map((event) => (

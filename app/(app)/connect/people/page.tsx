@@ -1,6 +1,5 @@
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PersonCard } from "@/components/ui/PersonCard";
-import { SearchBar } from "@/components/ui/SearchBar";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { TopBar } from "@/components/ui/TopBar";
 import { getPeopleDiscovery, toPersonCardData } from "@/lib/connect/data";
@@ -26,7 +25,6 @@ export default async function PeopleDiscoveryPage() {
           {loadError}
         </div>
       ) : null}
-      <SearchBar placeholder="Find students" />
 
       <SectionCard title="Students You May Work With">
         {people.length > 0 ? (

@@ -14,6 +14,7 @@ import {
   joinOrRequestCommunityAction,
 } from "@/lib/connect/actions";
 import { getCommunityDetail } from "@/lib/connect/data";
+import { formatCampusMessageTimestamp } from "@/lib/datetime";
 import { reportContentAction } from "@/lib/moderation/actions";
 import { toPublicStorageUrl } from "@/lib/validation/media";
 import { isUuid } from "@/lib/validation/uuid";
@@ -22,15 +23,6 @@ type CommunityProfilePageProps = {
   params: Promise<{ id: string }>;
   searchParams: Promise<{ message?: string; error?: string }>;
 };
-
-function formatPostTime(createdAt: string): string {
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(createdAt));
-}
 
 function formatFormalKindLabel(formalKind: "club" | "organization" | "official" | null): string {
   if (formalKind === "club") return "Club";
@@ -230,7 +222,7 @@ export default async function CommunityProfilePage({
                             )}
                             <div className="min-w-0">
                               <p className="truncate text-[13px] font-medium text-wire-100">{post.authorName}</p>
-                              <p className="wire-meta">{formatPostTime(post.createdAt)}</p>
+                              <p className="wire-meta">{formatCampusMessageTimestamp(post.createdAt)}</p>
                             </div>
                           </div>
                           <div className="flex items-center gap-2">

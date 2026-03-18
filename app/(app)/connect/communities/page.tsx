@@ -1,9 +1,7 @@
 import Link from "next/link";
 import { CommunityCard } from "@/components/ui/CommunityCard";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { FilterRow } from "@/components/ui/FilterRow";
 import { PageNavigation } from "@/components/ui/PageNavigation";
-import { SearchBar } from "@/components/ui/SearchBar";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { TopBar } from "@/components/ui/TopBar";
 import { getCommunitiesPage, toCommunityCardData } from "@/lib/connect/data";
@@ -62,12 +60,6 @@ export default async function CommunitiesDiscoveryPage({
           {loadError}
         </div>
       ) : null}
-      <SearchBar placeholder="Search communities" />
-
-      <section className="wire-panel">
-        <p className="wire-section-title mb-3">Refine Communities</p>
-        <FilterRow filters={["All", "Academic", "Project", "Open", "Request"]} />
-      </section>
 
       <SectionCard title="Student Communities">
         {communities.length > 0 ? (

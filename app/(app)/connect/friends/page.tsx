@@ -5,6 +5,7 @@ import { TopBar } from "@/components/ui/TopBar";
 import { requireUser } from "@/lib/auth/session";
 import { acceptFriendRequestAction, rejectFriendRequestAction } from "@/lib/connect/actions";
 import { getFriendRequests, getFriends } from "@/lib/connect/data";
+import { formatCampusMessageTimestamp } from "@/lib/datetime";
 import { toPublicStorageUrl } from "@/lib/validation/media";
 
 type ConnectFriendsPageProps = {
@@ -13,15 +14,6 @@ type ConnectFriendsPageProps = {
     error?: string;
   }>;
 };
-
-function formatRequestTime(value: string): string {
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(value));
-}
 
 export default async function ConnectFriendsPage({ searchParams }: ConnectFriendsPageProps) {
   const { message, error } = await searchParams;
@@ -99,7 +91,7 @@ export default async function ConnectFriendsPage({ searchParams }: ConnectFriend
                         <p className="wire-meta">{requesterMeta || "Campus member"}</p>
                       </div>
                     </div>
-                    <p className="wire-meta shrink-0">{formatRequestTime(request.createdAt)}</p>
+                    <p className="wire-meta shrink-0">{formatCampusMessageTimestamp(request.createdAt)}</p>
                   </div>
                   <div className="mt-3 flex gap-2">
                     <form action={acceptFriendRequestAction} className="w-full">

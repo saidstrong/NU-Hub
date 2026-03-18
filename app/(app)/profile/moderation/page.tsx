@@ -66,19 +66,6 @@ function formatFormalKindLabel(formalKind: "club" | "organization" | "official" 
   return "No trust label";
 }
 
-function formatReportTime(createdAt: string): string {
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(createdAt));
-}
-
-function formatPendingCreatedTime(createdAt: string): string {
-  return formatCampusMessageTimestamp(createdAt);
-}
-
 export default async function ModerationPage({ searchParams }: ModerationPageProps) {
   const { error, message } = await searchParams;
   const adminUser = await requireAdminUser();
@@ -255,7 +242,7 @@ export default async function ModerationPage({ searchParams }: ModerationPagePro
                   <p className="wire-meta">Schedule: {formatEventDate(event.startsAt, event.endsAt)}</p>
                   <p className="wire-meta">Location: {event.location}</p>
                   <p className="wire-meta">Created by: {event.creatorName}</p>
-                  <p className="wire-meta">Created at: {formatPendingCreatedTime(event.createdAt)}</p>
+                  <p className="wire-meta">Created at: {formatCampusMessageTimestamp(event.createdAt)}</p>
                 </div>
                 <div className="mt-3 flex flex-wrap items-center gap-2">
                   <Link href={`/events/${event.id}`} className={compactSecondaryActionClass}>
@@ -521,7 +508,7 @@ export default async function ModerationPage({ searchParams }: ModerationPagePro
                   <p className="mt-1 text-sm text-wire-200">{report.targetLabel}</p>
                   <div className="mt-2 space-y-1">
                     <p className="wire-meta">
-                      Reported by {report.reporterName} - {formatReportTime(report.createdAt)}
+                      Reported by {report.reporterName} - {formatCampusMessageTimestamp(report.createdAt)}
                     </p>
                     <p className="wire-meta">Reason: {formatReasonLabel(report.reason)}</p>
                     <p className="wire-meta">
