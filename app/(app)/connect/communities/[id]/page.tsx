@@ -31,6 +31,10 @@ function formatFormalKindLabel(formalKind: "club" | "organization" | "official" 
   return "Official";
 }
 
+function formatJoinAccessLabel(joinType: "open" | "request"): string {
+  return joinType === "open" ? "Open to NU students" : "Owner approval required";
+}
+
 export default async function CommunityProfilePage({
   params,
   searchParams,
@@ -56,8 +60,8 @@ export default async function CommunityProfilePage({
       <main>
         <section className="wire-panel">
           <SectionHeader
-            title="Community profile"
-            subtitle="Purpose, membership, and participation details."
+            title="Community"
+            subtitle="Leadership, membership, and updates for this community."
             actionNode={
               <Link href="/connect/communities" className="wire-link">
                 Back to communities
@@ -82,13 +86,62 @@ export default async function CommunityProfilePage({
   const isOwner = community.created_by === user.id;
   const canCreatePost = membership?.status === "joined";
   const ownerName = ownerProfile?.full_name?.trim() || "Community owner";
+  const ownerContextMeta = [ownerProfile?.school, ownerProfile?.major, ownerProfile?.year_label]
+    .map((value) => value?.trim())
+    .filter(Boolean)
+    .join(" | ");
   const ownerMeta = [ownerProfile?.school, ownerProfile?.major, ownerProfile?.year_label]
     .map((value) => value?.trim())
     .filter(Boolean)
     .join(" • ");
+  const ownerDisplayMeta = ownerContextMeta || ownerMeta;
   const joinActionLabel = community.join_type === "open" ? "Join community" : "Request to join";
   const joinPendingLabel = community.join_type === "open" ? "Joining..." : "Submitting...";
   const isFormalCommunity = community.community_type === "formal";
+  const categoryLabel = community.category?.trim() || null;
+  const visibleTags = community.tags.filter((tag) => tag.trim().toLowerCase() !== categoryLabel?.toLowerCase());
+  const joinAccessLabel = formatJoinAccessLabel(community.join_type);
+  const joinAccessNote =
+    community.join_type === "open"
+      ? "Any NU student can join immediately and share updates after joining."
+      : "Students request access first. The owner reviews requests before members can join and post updates.";
+  const memberSummary = memberCount === 1 ? "1 joined member" : `${memberCount} joined members`;
+  const statusDisplayLabel =
+    membership?.status === "joined"
+      ? "Joined member"
+      : membership?.status === "pending"
+        ? "Request pending"
+        : membership?.status === "rejected"
+          ? "Request not approved"
+          : membership?.status === "left"
+            ? "Left community"
+            : null;
+  const actionSubtitle = isOwner
+    ? "Run this community, review requests, and keep members updated."
+    : membership?.status === "joined"
+      ? "You are part of this community and can share updates below."
+      : membership?.status === "pending"
+        ? "Your request is waiting for owner review."
+        : membership?.status === "rejected"
+          ? "This community uses owner review before new members join."
+          : membership?.status === "left"
+            ? "Rejoining is currently unavailable for this community."
+            : community.join_type === "open"
+              ? "Any NU student can join immediately."
+              : "Request access before joining and posting updates.";
+  const actionNote = isOwner
+    ? "Use Community updates to share something members should see."
+    : membership?.status === "joined"
+      ? "Joined members can share text updates in this community."
+      : membership?.status === "pending"
+        ? "You will be able to post after the owner approves your request."
+        : membership?.status === "rejected"
+          ? "You can still review the community before deciding whether to contact the lead."
+          : membership?.status === "left"
+            ? "If you need access again, contact the community lead directly."
+            : community.join_type === "open"
+              ? "Join now to follow updates and take part in the community."
+              : "Request access to join and share updates once approved.";
   const statusLabel =
     membership?.status === "joined"
       ? "Joined"
@@ -107,14 +160,15 @@ export default async function CommunityProfilePage({
         : membership?.status === "left"
           ? "You have left this community."
         : null;
+  const membershipStatusLabel = statusDisplayLabel ?? statusLabel;
   const avatarUrl = toPublicStorageUrl("avatars", community.avatar_path);
 
   return (
     <main>
       <section className="wire-panel">
         <SectionHeader
-          title="Community profile"
-          subtitle="Purpose, membership, and participation details."
+          title="Community"
+          subtitle="Leadership, membership, and updates for this community."
           actionNode={
             <Link href="/connect/communities" className="wire-link">
               Back to communities
@@ -135,26 +189,56 @@ export default async function CommunityProfilePage({
             )}
             <div className="min-w-0">
               <h2 className="truncate text-[30px] font-semibold leading-[36px] tracking-tight text-wire-100">{community.name}</h2>
-              <p className="mt-1 wire-meta">{community.join_type === "open" ? "Open community" : "Request-to-join community"}</p>
-              {isFormalCommunity ? (
-                <div className="mt-2 inline-flex rounded-full border border-accent/35 bg-accent/10 px-2 py-0.5 text-[11px] font-medium text-wire-100">
-                  {formatFormalKindLabel(community.formal_kind)}
-                </div>
-              ) : null}
+              <p className="mt-1 wire-meta">
+                {(categoryLabel ? `${categoryLabel} community` : "Student community")}
+                {" | "}
+                {community.join_type === "open" ? "Open join" : "Join by request"}
+              </p>
+              <p className="mt-2 text-[13px] leading-relaxed text-wire-200">
+                Led by{" "}
+                <Link
+                  href={`/connect/people/${community.created_by}`}
+                  className="underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/40"
+                >
+                  {ownerName}
+                </Link>
+                {ownerDisplayMeta ? <span className="text-wire-300">{` | ${ownerDisplayMeta}`}</span> : null}
+              </p>
             </div>
           </div>
           {isOwner ? (
             <Link href={`/connect/communities/${community.id}/edit`} className="wire-action-compact">
-              Edit
+              Edit details
             </Link>
           ) : null}
         </div>
         <div className="mb-2 flex flex-wrap gap-2">
-          {community.tags.length > 0 ? community.tags.map((tag) => <TagChip key={tag} label={tag} tone="status" />) : null}
+          {isFormalCommunity ? (
+            <div className="inline-flex rounded-full border border-accent/35 bg-accent/10 px-2 py-0.5 text-[11px] font-medium text-wire-100">
+              {formatFormalKindLabel(community.formal_kind)}
+            </div>
+          ) : null}
+          {categoryLabel ? <TagChip label={categoryLabel} tone="status" /> : null}
+          {visibleTags.length > 0 ? visibleTags.map((tag) => <TagChip key={tag} label={tag} tone="status" />) : null}
         </div>
-        <p className="wire-meta">Members: {memberCount}</p>
-        {statusLabel ? <p className="mt-1 wire-meta">Your status: {statusLabel}</p> : null}
-        {statusNote ? <p className="mt-1 text-[13px] text-wire-300">{statusNote}</p> : null}
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-3 py-3">
+            <p className="wire-label">Members</p>
+            <p className="mt-1 text-[14px] font-medium text-wire-100">{memberSummary}</p>
+            <p className="mt-1 wire-meta">
+              {joinedMemberPreview.length > 0
+                ? `Previewing ${joinedMemberPreview.length} current members below.`
+                : "Member previews appear here as people join."}
+            </p>
+          </div>
+          <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-3 py-3">
+            <p className="wire-label">Join access</p>
+            <p className="mt-1 text-[14px] font-medium text-wire-100">{joinAccessLabel}</p>
+            <p className="mt-1 wire-meta">{joinAccessNote}</p>
+            {membershipStatusLabel ? <p className="mt-2 text-[12px] font-medium text-wire-200">Your status: {membershipStatusLabel}</p> : null}
+            {statusNote ? <p className="mt-1 text-[12px] leading-relaxed text-wire-300">{statusNote}</p> : null}
+          </div>
+        </div>
       </section>
 
       {message ? <FeedbackBanner tone="success" message={message} /> : null}
@@ -163,11 +247,11 @@ export default async function CommunityProfilePage({
 
       <div className="grid gap-6 xl:grid-cols-[1.45fr_1fr]">
         <div className="space-y-6">
-          <SectionCard title="Description" subtitle="Community purpose and scope.">
+          <SectionCard title="Purpose" subtitle="Who this community is for and what members do here.">
             <p className="text-[14px] leading-relaxed text-wire-200">{community.description}</p>
           </SectionCard>
 
-          <SectionCard title="Posts" subtitle="Recent updates from joined members.">
+          <SectionCard title="Community updates" subtitle="Updates from the lead and joined members.">
             {canCreatePost ? (
               <form action={createCommunityPostAction} className="space-y-3">
                 <input type="hidden" name="communityId" value={community.id} />
@@ -178,14 +262,14 @@ export default async function CommunityProfilePage({
                     required
                     rows={4}
                     maxLength={1200}
-                    placeholder="Share something useful for this community."
+                    placeholder="Share an update members should see."
                     className="wire-textarea-field"
                   />
                 </label>
                 <div className="max-w-xs">
                   <SubmitButton
-                    label="Post update"
-                    pendingLabel="Posting..."
+                    label="Share update"
+                    pendingLabel="Sharing..."
                     variant="primary"
                   />
                 </div>
@@ -202,6 +286,7 @@ export default async function CommunityProfilePage({
                     const authorAvatarUrl = toPublicStorageUrl("avatars", authorAvatarPath);
                     const canDeletePost = post.authorId === user.id || isOwner;
                     const canReportPost = post.authorId !== user.id;
+                    const isLeadUpdate = post.authorId === community.created_by;
 
                     return (
                       <article
@@ -221,7 +306,14 @@ export default async function CommunityProfilePage({
                               <div className="h-8 w-8 shrink-0 rounded-full border border-dashed border-wire-600 bg-wire-900" />
                             )}
                             <div className="min-w-0">
-                              <p className="truncate text-[13px] font-medium text-wire-100">{post.authorName}</p>
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                <p className="truncate text-[13px] font-medium text-wire-100">{post.authorName}</p>
+                                {isLeadUpdate ? (
+                                  <span className="inline-flex rounded-full border border-accent/35 bg-accent/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.04em] text-wire-100">
+                                    Lead update
+                                  </span>
+                                ) : null}
+                              </div>
                               <p className="wire-meta">{formatCampusMessageTimestamp(post.createdAt)}</p>
                             </div>
                           </div>
@@ -256,14 +348,14 @@ export default async function CommunityProfilePage({
                   })}
                 </div>
               ) : (
-                <p className="wire-inline-empty">No posts yet. Be the first to share an update.</p>
+                <p className="wire-inline-empty">No updates yet. Joined members can share the first update.</p>
               )}
             </div>
           </SectionCard>
         </div>
 
         <div className="space-y-6">
-          <SectionCard title="Members" subtitle="Joined members in this community.">
+          <SectionCard title="Members" subtitle="Current joined members in this community.">
             {joinedMemberPreview.length > 0 ? (
               <div className="space-y-2">
                 {joinedMemberPreview.map((member) => {
@@ -310,53 +402,72 @@ export default async function CommunityProfilePage({
             )}
           </SectionCard>
 
-          <SectionCard title="Owner" subtitle="Community owner profile context.">
+          <SectionCard title="Lead" subtitle="Who runs this community.">
             <Link
               href={`/connect/people/${community.created_by}`}
               className="text-[13px] text-wire-200 underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/40"
             >
               {ownerName}
             </Link>
-            {ownerMeta ? <p className="mt-1 wire-meta">{ownerMeta}</p> : null}
+            <p className="mt-1 wire-meta">Community owner</p>
+            {ownerDisplayMeta ? <p className="mt-1 wire-meta">{ownerDisplayMeta}</p> : null}
           </SectionCard>
 
           <section className="wire-panel">
             <SectionHeader
               title="Actions"
-              subtitle="Primary community action and lightweight utilities."
+              subtitle={actionSubtitle}
             />
             {isOwner ? (
-              <div className="wire-action-row">
-                <ShellButton label="Manage requests" href="/connect/communities/requests" variant="primary" />
-                <Link href="/connect/my-communities?view=created" className="wire-action">
-                  My communities
-                </Link>
+              <div className="space-y-3">
+                <div className="wire-action-row">
+                  <ShellButton label="Manage requests" href="/connect/communities/requests" variant="primary" />
+                  <Link href={`/connect/communities/${community.id}/edit`} className="wire-action">
+                    Edit details
+                  </Link>
+                </div>
+                <p className="text-[12px] leading-relaxed text-wire-300">{actionNote}</p>
               </div>
             ) : membership?.status === "joined" ? (
-              <button type="button" className="wire-action-primary w-full" disabled>
-                Joined community
-              </button>
+              <div className="space-y-3">
+                <button type="button" className="wire-action-primary w-full" disabled>
+                  Joined community
+                </button>
+                <p className="text-[12px] leading-relaxed text-wire-300">{actionNote}</p>
+              </div>
             ) : membership?.status === "pending" ? (
-              <button type="button" className="wire-action w-full" disabled>
-                Request pending
-              </button>
+              <div className="space-y-3">
+                <button type="button" className="wire-action w-full" disabled>
+                  Request pending
+                </button>
+                <p className="text-[12px] leading-relaxed text-wire-300">{actionNote}</p>
+              </div>
             ) : membership?.status === "rejected" ? (
-              <button type="button" className="wire-action w-full" disabled>
-                Request rejected
-              </button>
+              <div className="space-y-3">
+                <button type="button" className="wire-action w-full" disabled>
+                  Request not approved
+                </button>
+                <p className="text-[12px] leading-relaxed text-wire-300">{actionNote}</p>
+              </div>
             ) : membership?.status === "left" ? (
-              <button type="button" className="wire-action w-full" disabled>
-                Rejoin unavailable
-              </button>
+              <div className="space-y-3">
+                <button type="button" className="wire-action w-full" disabled>
+                  Rejoin unavailable
+                </button>
+                <p className="text-[12px] leading-relaxed text-wire-300">{actionNote}</p>
+              </div>
             ) : (
-              <form action={joinOrRequestCommunityAction} className="max-w-xs">
-                <input type="hidden" name="communityId" value={community.id} />
-                <SubmitButton
-                  label={joinActionLabel}
-                  pendingLabel={joinPendingLabel}
-                  variant="primary"
-                />
-              </form>
+              <div className="space-y-3">
+                <form action={joinOrRequestCommunityAction} className="max-w-xs">
+                  <input type="hidden" name="communityId" value={community.id} />
+                  <SubmitButton
+                    label={joinActionLabel}
+                    pendingLabel={joinPendingLabel}
+                    variant="primary"
+                  />
+                </form>
+                <p className="text-[12px] leading-relaxed text-wire-300">{actionNote}</p>
+              </div>
             )}
 
             {!isOwner ? (

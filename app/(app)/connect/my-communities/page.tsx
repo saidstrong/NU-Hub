@@ -52,12 +52,32 @@ export default async function MyCommunitiesPage({ searchParams }: MyCommunitiesP
   const nextHref = hasMore
     ? buildPageHref("/connect/my-communities", page + 1, { view: selectedView })
     : undefined;
+  const viewSummary = selectedView === "joined"
+    ? "Communities where you already belong. Open one to follow updates, review members, or take part."
+    : selectedView === "created"
+      ? "Communities you run or own. Open one to manage requests, edit details, and keep members updated."
+      : "Community requests still waiting for owner review. Open a community to review details while you wait.";
+  const viewCountLabel = communities.length === 1
+    ? "1 community on this page"
+    : `${communities.length} communities on this page`;
+  const emptyStateTitle = selectedView === "joined"
+    ? "No joined communities yet"
+    : selectedView === "created"
+      ? "No communities run by you yet"
+      : "No pending community requests";
+  const emptyStateDescription = selectedView === "joined"
+    ? "Communities you join will stay here so you can return to their updates and member context."
+    : selectedView === "created"
+      ? "Create a community to start running a campus group, club, or student initiative from Atrium."
+      : "Requests waiting for owner approval will appear here until they are approved or declined.";
+  const emptyStateActionLabel = selectedView === "created" ? "Create community" : "Browse communities";
+  const emptyStateActionHref = selectedView === "created" ? "/connect/communities/create" : "/connect/communities";
 
   return (
     <main>
       <TopBar
         title="My Communities"
-        subtitle="Overview of joined, created, and pending communities"
+        subtitle="Track communities you belong to, run, or are still waiting to join"
         backHref="/connect/communities"
       />
       {message ? (
@@ -85,6 +105,16 @@ export default async function MyCommunitiesPage({ searchParams }: MyCommunitiesP
         activeIndex={activeIndex}
       />
 
+      <section className="wire-panel py-3">
+        <p className="wire-label">Current view</p>
+        <p className="mt-1 text-[13px] leading-relaxed text-wire-300">
+          {viewSummary}
+        </p>
+        {!loadError ? (
+          <p className="mt-2 text-[12px] font-medium text-wire-200">{viewCountLabel}</p>
+        ) : null}
+      </section>
+
       {communities.length > 0 ? (
         <div className="wire-list">
           {communities.map((entry) => (
@@ -101,18 +131,10 @@ export default async function MyCommunitiesPage({ searchParams }: MyCommunitiesP
 
       {communities.length === 0 && !loadError ? (
         <EmptyState
-          title={`No ${selectedView} communities yet`}
-          description={
-            selectedView === "created"
-              ? "Create a community and it will appear here."
-              : selectedView === "pending"
-                ? "Pending join requests will appear here."
-                : "Communities you join will appear here."
-          }
-          actionLabel={selectedView === "created" ? "Create community" : "Browse communities"}
-          actionHref={
-            selectedView === "created" ? "/connect/communities/create" : "/connect/communities"
-          }
+          title={emptyStateTitle}
+          description={emptyStateDescription}
+          actionLabel={emptyStateActionLabel}
+          actionHref={emptyStateActionHref}
         />
       ) : null}
       <PageNavigation
