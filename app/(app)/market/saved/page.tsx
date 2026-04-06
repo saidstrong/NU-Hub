@@ -3,7 +3,7 @@ import { ListingCard } from "@/components/ui/ListingCard";
 import { PageNavigation } from "@/components/ui/PageNavigation";
 import { TopBar } from "@/components/ui/TopBar";
 import { toggleSavedListingAction } from "@/lib/market/actions";
-import { getSavedListingsPage, toListingCardData } from "@/lib/market/data";
+import { getSavedListingsPage, toListingCardDataWithOptions } from "@/lib/market/data";
 import { buildPageHref, parsePageParam } from "@/lib/pagination";
 
 type SavedListingsPageProps = {
@@ -38,9 +38,16 @@ export default async function SavedListingsPage({ searchParams }: SavedListingsP
     <main>
       <TopBar
         title="Saved Listings"
-        subtitle="Items bookmarked for later review"
+        subtitle="Track saved listings before you message or arrange pickup"
         backHref="/market"
       />
+      <section className="wire-panel py-3">
+        <p className="wire-label">Watchlist</p>
+        <p className="mt-1 text-[13px] leading-relaxed text-wire-300">
+          Saved listings keep current status visible so you can quickly see what is still active,
+          what is reserved, and what has already sold.
+        </p>
+      </section>
       {loadError ? (
         <div className="rounded-xl border border-red-400/30 bg-red-400/10 px-3 py-2 text-[13px] text-red-200">
           {loadError}
@@ -51,22 +58,28 @@ export default async function SavedListingsPage({ searchParams }: SavedListingsP
         <div className="wire-list">
           {listings.map((listing) => (
             <div key={listing.id}>
-              <ListingCard listing={toListingCardData(listing)} href={`/market/item/${listing.id}`} />
-              <form action={toggleSavedListingAction} className="mt-2">
-                <input type="hidden" name="listingId" value={listing.id} />
-                <input type="hidden" name="redirectTo" value={currentPageHref} />
-                <button type="submit" className="wire-action w-full text-[12px]">
-                  Remove from saved
-                </button>
-              </form>
+              <ListingCard
+                listing={toListingCardDataWithOptions(listing, { showStatus: true })}
+                href={`/market/item/${listing.id}`}
+              />
+              <div className="mt-2 flex items-center justify-between gap-3 px-1">
+                <p className="text-[12px] text-wire-300">Open the listing to review current details.</p>
+                <form action={toggleSavedListingAction}>
+                  <input type="hidden" name="listingId" value={listing.id} />
+                  <input type="hidden" name="redirectTo" value={currentPageHref} />
+                  <button type="submit" className="wire-action-ghost min-h-9 px-2 text-[12px]">
+                    Remove
+                  </button>
+                </form>
+              </div>
             </div>
           ))}
         </div>
       ) : !loadError ? (
         <EmptyState
-          title="No saved listings yet"
-          description="Save listings from the market feed or listing detail to review later."
-          actionLabel="Browse market"
+          title="No watchlist items yet"
+          description="Save listings from the market when you want to revisit availability, price, or pickup details."
+          actionLabel="Browse listings"
           actionHref="/market"
         />
       ) : null}

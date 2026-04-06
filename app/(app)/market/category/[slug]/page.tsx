@@ -28,9 +28,15 @@ export default async function MarketCategoryPage({ params }: MarketCategoryPageP
     <main>
       <TopBar
         title={categoryTitle}
-        subtitle="Category listings within the NU marketplace"
+        subtitle={`Browse active ${categoryTitle.toLowerCase()} listings from the NU market`}
         backHref="/market"
       />
+      <section className="wire-panel py-3">
+        <p className="wire-label">Category view</p>
+        <p className="mt-1 text-[13px] leading-relaxed text-wire-300">
+          Open a listing to review availability, condition, and pickup details before you message.
+        </p>
+      </section>
       {loadError ? (
         <div className="rounded-xl border border-red-400/30 bg-red-400/10 px-3 py-2 text-[13px] text-red-200">
           {loadError}
@@ -49,9 +55,9 @@ export default async function MarketCategoryPage({ params }: MarketCategoryPageP
         </div>
       ) : !loadError ? (
         <EmptyState
-          title="No listings in this category"
-          description="Try another category or check back later."
-          actionLabel="Back to market"
+          title={`No active ${categoryTitle.toLowerCase()} listings`}
+          description="Browse all market listings or check back later for new posts in this category."
+          actionLabel="Browse all listings"
           actionHref="/market"
         />
       ) : null}

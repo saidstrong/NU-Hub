@@ -83,7 +83,7 @@ export default async function MarketHomePage({ searchParams }: MarketHomePagePro
       <section className="wire-panel">
         <SectionHeader
           title="Market"
-          subtitle="Buy, sell, rent, and arrange services with other NU students."
+          subtitle="The NU exchange for browsing active listings and moving deals into messages."
           actionNode={
             <Link href="/market/my-listings" className="wire-link">
               My listings
@@ -92,15 +92,22 @@ export default async function MarketHomePage({ searchParams }: MarketHomePagePro
         />
         <div className="mt-3">
           <SearchBar
-            placeholder="Search market listings"
+            placeholder="Search active listings"
             queryName="q"
             defaultValue=""
             action="/search"
           />
         </div>
+        <p className="mt-3 text-[13px] leading-relaxed text-wire-300">
+          Start here to browse active listings, then use saved listings, messages, and my listings to
+          keep an exchange moving.
+        </p>
       </section>
 
       <section className="wire-panel py-4">
+        <p className="mb-3 text-[13px] leading-relaxed text-wire-300">
+          Narrow the active market by listing type or category.
+        </p>
         <p className="mb-2 wire-label">Listing type</p>
         <div className="-mx-1 mb-3 flex snap-x snap-mandatory gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {MARKET_TYPE_FILTERS.map((filterValue) => (
@@ -128,24 +135,41 @@ export default async function MarketHomePage({ searchParams }: MarketHomePagePro
       </section>
 
       <section className="wire-panel py-4">
+        <p className="wire-label">Marketplace tools</p>
+        <p className="mt-1 text-[13px] leading-relaxed text-wire-300">
+          Post something new, continue buyer-seller conversations, or track the listings that still
+          need your attention.
+        </p>
         <div className="flex flex-wrap items-center gap-2">
           <ShellButton label="Post listing" href="/market/post" variant="primary" block={false} />
           <Link href="/market/messages" className="wire-action">
-            Messages
+            Market messages
           </Link>
         </div>
-        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
-          <Link href="/market/saved" className="wire-link">
-            Saved listings
+        <div className="mt-3 grid gap-2 sm:grid-cols-2">
+          <Link
+            href="/market/saved"
+            className="rounded-[var(--radius-card)] border border-wire-700 bg-wire-900/70 px-3 py-3 transition-colors duration-150 hover:border-wire-600 hover:bg-wire-800/80"
+          >
+            <p className="text-sm font-medium text-wire-100">Saved listings</p>
+            <p className="mt-1 text-[12px] leading-relaxed text-wire-300">
+              Revisit items before you message or arrange pickup.
+            </p>
           </Link>
-          <Link href="/market/my-listings" className="wire-link">
-            Listing status
+          <Link
+            href="/market/my-listings"
+            className="rounded-[var(--radius-card)] border border-wire-700 bg-wire-900/70 px-3 py-3 transition-colors duration-150 hover:border-wire-600 hover:bg-wire-800/80"
+          >
+            <p className="text-sm font-medium text-wire-100">My listings</p>
+            <p className="mt-1 text-[12px] leading-relaxed text-wire-300">
+              Check current, reserved, and sold status for what you posted.
+            </p>
           </Link>
         </div>
       </section>
 
       {featuredListings.length > 0 ? (
-        <SectionCard title="Featured listings" subtitle="Highlighted student-to-student listings.">
+        <SectionCard title="Featured listings" subtitle="Highlighted NU listings worth checking first.">
           <div className="grid gap-3 lg:grid-cols-2">
             {featuredListings.map((listing) => {
               const cardData = toListingCardDataWithOptions(listing, { showStatus: true });
@@ -167,7 +191,7 @@ export default async function MarketHomePage({ searchParams }: MarketHomePagePro
 
       <SectionCard
         title={selectedType === "all" ? "Recent listings" : `Recent ${formatMarketTypeLabel(selectedType).toLowerCase()} listings`}
-        subtitle="Active student listings in the NU network."
+        subtitle="Active NU listings ready for review and follow-up."
         actionLabel="Saved listings"
         actionHref="/market/saved"
       >
@@ -190,13 +214,13 @@ export default async function MarketHomePage({ searchParams }: MarketHomePagePro
           </div>
         ) : !loadError ? (
           <EmptyState
-            title={selectedType === "all" ? "No market listings yet" : `No active ${formatMarketTypeLabel(selectedType).toLowerCase()} listings`}
+            title={selectedType === "all" ? "No active listings right now" : `No active ${formatMarketTypeLabel(selectedType).toLowerCase()} listings`}
             description={
               selectedType === "all"
-                ? "Listings from NU students will appear here when they are posted."
+                ? "New NU listings will appear here when students post them."
                 : `${formatMarketTypeLabel(selectedType)} listings will appear here when NU students post them.`
             }
-            actionLabel="Post item"
+            actionLabel="Post listing"
             actionHref="/market/post"
           />
         ) : null}
