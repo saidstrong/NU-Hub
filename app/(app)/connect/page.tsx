@@ -22,7 +22,7 @@ export default async function ConnectHomePage() {
   try {
     [people, communities] = await Promise.all([getPeopleDiscovery(3), getCommunities(3)]);
   } catch (error) {
-    loadError = error instanceof Error ? error.message : "Failed to load connect discovery.";
+    loadError = error instanceof Error ? error.message : "Failed to load the campus network.";
   }
 
   return (
@@ -30,6 +30,7 @@ export default async function ConnectHomePage() {
       <section className="wire-panel">
         <SectionHeader
           title="Connect"
+          subtitle="Find NU students, join communities, and keep campus coordination close to home."
           actionNode={
             <Link href="/connect/friends" className="wire-link">
               Friends
@@ -38,7 +39,7 @@ export default async function ConnectHomePage() {
         />
         <div className="mt-3">
           <SearchBar
-            placeholder="Search students and communities"
+            placeholder="Search students, communities, and shared interests"
             queryName="q"
             defaultValue=""
             action="/search"
@@ -50,7 +51,7 @@ export default async function ConnectHomePage() {
 
       <section className="wire-panel py-4">
         <div className="flex flex-wrap items-center gap-2">
-          <ShellButton label="Find people" href="/connect/people" variant="primary" block={false} />
+          <ShellButton label="Find students" href="/connect/people" variant="primary" block={false} />
           <Link href="/connect/communities" className="wire-action">
             Communities
           </Link>
@@ -65,7 +66,8 @@ export default async function ConnectHomePage() {
 
       <div className="grid gap-6 xl:grid-cols-2">
         <SectionCard
-          title="Suggested people"
+          title="Students to know"
+          subtitle="People around campus you can message, meet, or collaborate with."
           actionLabel="See all"
           actionHref="/connect/people"
         >
@@ -81,16 +83,17 @@ export default async function ConnectHomePage() {
             </div>
           ) : !loadError ? (
             <EmptyState
-              title="No people discovered yet"
-              description="Profiles with completed onboarding will appear here."
-              actionLabel="See all people"
+              title="No student profiles yet"
+              description="Completed NU student profiles will appear here for discovery."
+              actionLabel="See all students"
               actionHref="/connect/people"
             />
           ) : null}
         </SectionCard>
 
         <SectionCard
-          title="Suggested communities"
+          title="Communities to join"
+          subtitle="Clubs, circles, and student-led groups coordinating activity on campus."
           actionLabel="See all"
           actionHref="/connect/communities"
         >
@@ -107,7 +110,7 @@ export default async function ConnectHomePage() {
           ) : !loadError ? (
             <EmptyState
               title="No communities yet"
-              description="Student communities will appear here as they become available."
+              description="Student communities will appear here as organizers open them to the campus network."
               actionLabel="See all communities"
               actionHref="/connect/communities"
             />

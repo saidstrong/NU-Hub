@@ -12,7 +12,7 @@ export const metadata: Metadata = {
     default: "NU Atrium",
     template: "%s | NU Atrium",
   },
-  description: "NU-Hub campus platform for students.",
+  description: "Trusted campus network for participation, coordination, and student exchange at NU.",
 };
 
 export default function RootLayout({

@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FeedbackBanner } from "@/components/ui/FeedbackBanner";
 import { MessageComposer } from "@/components/ui/MessageComposer";
+import { TagChip } from "@/components/ui/TagChip";
 import { ThreadAutoRefresh } from "@/components/ui/ThreadAutoRefresh";
 import { TopBar } from "@/components/ui/TopBar";
 import { formatCampusMessageTimestamp } from "@/lib/datetime";
@@ -73,6 +74,13 @@ export default async function MarketConversationPage({
       ? formatCompactListingPrice(thread.listingPriceKzt, thread.pricingModel)
       : formatPriceKzt(thread.listingPriceKzt)
     : "Price unavailable";
+  const viewerRoleLabel = thread.viewerRole === "buyer" ? "Buyer" : "Seller";
+  const counterpartRoleLabel = thread.counterpartRole === "buyer" ? "Buyer" : "Seller";
+  const listingAvailabilityNote = listingStatusLabel && thread.listingStatus !== "active"
+    ? `This listing is marked ${listingStatusLabel.toLowerCase()}. Confirm whether it is still available before arranging pickup or handoff.`
+    : thread.viewerRole === "buyer" && !thread.listingHref
+      ? "This listing is no longer visible in the active market feed. Confirm current availability and handoff details in this conversation."
+      : null;
 
   return (
     <main className="mx-auto w-full max-w-4xl">
@@ -102,7 +110,9 @@ export default async function MarketConversationPage({
               <p className="line-clamp-1 text-sm font-medium text-wire-100 [overflow-wrap:anywhere]">
                 {thread.counterpartName}
               </p>
-              <p className="wire-meta">Marketplace conversation</p>
+              <p className="wire-meta">
+                {thread.counterpartName} is the {counterpartRoleLabel.toLowerCase()} in this listing conversation.
+              </p>
             </div>
           </div>
 
@@ -126,8 +136,8 @@ export default async function MarketConversationPage({
                 </p>
                 <p className="mt-0.5 text-[11px] text-wire-300">
                   {listingPriceLabel}
-                  {listingTypeLabel ? ` • ${listingTypeLabel}` : ""}
-                  {listingStatusLabel ? ` • ${listingStatusLabel}` : ""}
+                  {listingTypeLabel ? ` | ${listingTypeLabel}` : ""}
+                  {listingStatusLabel ? ` | ${listingStatusLabel}` : ""}
                 </p>
               </div>
             </Link>
@@ -137,6 +147,35 @@ export default async function MarketConversationPage({
               <p className="mt-0.5 text-[11px] text-wire-300">Listing unavailable</p>
             </div>
           )}
+          <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-900/40 px-3 py-2.5">
+            <p className="wire-label">Coordination context</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <TagChip label={`You: ${viewerRoleLabel}`} active />
+              <TagChip label={`Counterpart: ${counterpartRoleLabel}`} />
+              {listingStatusLabel && thread.listingStatus !== "active" ? (
+                <TagChip label={`Listing ${listingStatusLabel}`} tone="status" />
+              ) : null}
+            </div>
+            {thread.listingPickupLocation ? (
+              <p className="mt-2 text-[12px] leading-relaxed text-wire-300">
+                Pickup / handoff: {thread.listingPickupLocation}
+              </p>
+            ) : null}
+          </div>
+          {listingAvailabilityNote ? (
+            <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-900/40 px-3 py-2.5">
+              <p className="wire-label">Listing availability</p>
+              <p className="mt-1 text-[12px] leading-relaxed text-wire-300">
+                {listingAvailabilityNote}
+              </p>
+            </div>
+          ) : null}
+          <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-900/40 px-3 py-2.5">
+            <p className="wire-label">Safety reminder</p>
+            <p className="mt-1 text-[12px] leading-relaxed text-wire-300">
+              Review the listing details before confirming, meet in a public campus location, and use the listing page to report suspicious activity.
+            </p>
+          </div>
         </div>
       </section>
 

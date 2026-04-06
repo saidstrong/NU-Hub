@@ -37,6 +37,7 @@ export type PersonProfileDetail = Pick<
   | "school"
   | "major"
   | "year_label"
+  | "created_at"
   | "bio"
   | "interests"
   | "goals"
@@ -421,13 +422,31 @@ export async function getPersonProfile(personId: string): Promise<PersonProfileD
   const { data, error } = await supabase
     .from("profiles")
     .select(
-      "user_id, full_name, school, major, year_label, bio, interests, goals, looking_for, skills, projects, resume_url, links, avatar_path",
+      "user_id, full_name, school, major, year_label, created_at, bio, interests, goals, looking_for, skills, projects, resume_url, links, avatar_path",
     )
     .eq("user_id", personId)
     .maybeSingle();
 
   if (error) {
     throw new Error("Failed to load person profile.");
+  }
+
+  return data;
+}
+
+export async function getProfileTrustContext(
+  userId: string,
+): Promise<Pick<ProfileRow, "school" | "year_label"> | null> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("school, year_label")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error("Failed to load profile trust context.");
   }
 
   return data;

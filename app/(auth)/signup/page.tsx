@@ -19,7 +19,7 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
       <section className="wire-panel mx-auto w-full max-w-md">
         <SectionHeader
           title="Create account"
-          subtitle="Use your NU email to join the campus platform."
+          subtitle="Use your NU email to join the trusted campus network."
           actionNode={
             <Link href="/welcome" className="wire-link">
               Welcome

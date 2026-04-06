@@ -45,9 +45,13 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
 
   return (
     <main>
-      <TopBar title="Global Search" backHref="/home" />
+      <TopBar
+        title="Campus Search"
+        subtitle="Search students, communities, events, and market listings."
+        backHref="/home"
+      />
       <SearchBar
-        placeholder="Search listings, events, people, communities"
+        placeholder="Search market, events, students, communities"
         queryName="q"
         defaultValue={q}
         action="/search"
@@ -69,7 +73,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
           { label: "All", href: "/search" },
           { label: "Market" },
           { label: "Events" },
-          { label: "People" },
+          { label: "Students" },
           { label: "Communities" },
         ]}
       />
@@ -77,7 +81,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
       {!q?.trim() ? (
         <EmptyState
           title="Start searching"
-          description="Use a keyword to search across listings, events, people, and communities."
+          description="Use a keyword to search across market listings, events, students, and communities."
         />
       ) : null}
 
@@ -118,7 +122,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
             )}
           </SectionCard>
 
-          <SectionCard title="People">
+          <SectionCard title="Students">
             {results.people.length > 0 ? (
               <div className="wire-list">
                 {results.people.map((person) => (
@@ -130,7 +134,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                 ))}
               </div>
             ) : (
-              <p className="wire-meta">No people match.</p>
+              <p className="wire-meta">No student matches.</p>
             )}
           </SectionCard>
 

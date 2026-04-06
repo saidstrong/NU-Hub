@@ -83,6 +83,7 @@ export default async function MarketHomePage({ searchParams }: MarketHomePagePro
       <section className="wire-panel">
         <SectionHeader
           title="Market"
+          subtitle="Buy, sell, rent, and arrange services with other NU students."
           actionNode={
             <Link href="/market/my-listings" className="wire-link">
               My listings
@@ -91,7 +92,7 @@ export default async function MarketHomePage({ searchParams }: MarketHomePagePro
         />
         <div className="mt-3">
           <SearchBar
-            placeholder="Search marketplace"
+            placeholder="Search market listings"
             queryName="q"
             defaultValue=""
             action="/search"
@@ -144,7 +145,7 @@ export default async function MarketHomePage({ searchParams }: MarketHomePagePro
       </section>
 
       {featuredListings.length > 0 ? (
-        <SectionCard title="Featured listings">
+        <SectionCard title="Featured listings" subtitle="Highlighted student-to-student listings.">
           <div className="grid gap-3 lg:grid-cols-2">
             {featuredListings.map((listing) => {
               const cardData = toListingCardDataWithOptions(listing, { showStatus: true });
@@ -166,6 +167,7 @@ export default async function MarketHomePage({ searchParams }: MarketHomePagePro
 
       <SectionCard
         title={selectedType === "all" ? "Recent listings" : `Recent ${formatMarketTypeLabel(selectedType).toLowerCase()} listings`}
+        subtitle="Active student listings in the NU network."
         actionLabel="Saved listings"
         actionHref="/market/saved"
       >
@@ -188,11 +190,11 @@ export default async function MarketHomePage({ searchParams }: MarketHomePagePro
           </div>
         ) : !loadError ? (
           <EmptyState
-            title={selectedType === "all" ? "No active listings yet" : `No active ${formatMarketTypeLabel(selectedType).toLowerCase()} listings`}
+            title={selectedType === "all" ? "No market listings yet" : `No active ${formatMarketTypeLabel(selectedType).toLowerCase()} listings`}
             description={
               selectedType === "all"
-                ? "Listings will appear here as soon as students post items."
-                : `Listings in ${formatMarketTypeLabel(selectedType)} will appear here when available.`
+                ? "Listings from NU students will appear here when they are posted."
+                : `${formatMarketTypeLabel(selectedType)} listings will appear here when NU students post them.`
             }
             actionLabel="Post item"
             actionHref="/market/post"

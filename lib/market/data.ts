@@ -44,7 +44,7 @@ export type ListingEditSource = Pick<
 
 export type ListingSeller = Pick<
   Database["public"]["Tables"]["profiles"]["Row"],
-  "user_id" | "full_name" | "school" | "major" | "year_label" | "avatar_path"
+  "user_id" | "full_name" | "school" | "major" | "year_label" | "avatar_path" | "created_at"
 >;
 type ProfileIdentity = Pick<
   Database["public"]["Tables"]["profiles"]["Row"],
@@ -120,9 +120,12 @@ export type MarketplaceConversationThread = {
   listingType: ListingType | null;
   pricingModel: PricingModel | null;
   listingStatus: ListingStatus | null;
+  listingPickupLocation: string | null;
   listingCoverImageUrl: string | null;
   listingHref: string | null;
   currentUserId: string;
+  viewerRole: "buyer" | "seller";
+  counterpartRole: "buyer" | "seller";
   counterpartId: string;
   counterpartName: string;
   counterpartAvatarPath: string | null;
@@ -692,6 +695,7 @@ export async function getListingDetail(listingId: string): Promise<{
   seller: ListingSeller | null;
   isSaved: boolean;
   isOwner: boolean;
+  existingConversationId: string | null;
   imageUrls: string[];
 }> {
   const user = await requireUser();
@@ -713,14 +717,17 @@ export async function getListingDetail(listingId: string): Promise<{
       seller: null,
       isSaved: false,
       isOwner: false,
+      existingConversationId: null,
       imageUrls: [],
     };
   }
 
-  const [{ data: seller, error: sellerError }, { data: savedRow, error: savedRowError }, imageUrls] = await Promise.all([
+  const isOwner = isListingOwner(listing.seller_id, user.id);
+
+  const [{ data: seller, error: sellerError }, { data: savedRow, error: savedRowError }, { data: existingConversation, error: existingConversationError }, imageUrls] = await Promise.all([
     supabase
       .from("profiles")
-      .select("user_id, full_name, school, major, year_label, avatar_path")
+      .select("user_id, full_name, school, major, year_label, avatar_path, created_at")
       .eq("user_id", listing.seller_id)
       .maybeSingle(),
     supabase
@@ -729,6 +736,14 @@ export async function getListingDetail(listingId: string): Promise<{
       .eq("user_id", user.id)
       .eq("listing_id", listing.id)
       .maybeSingle(),
+    isOwner
+      ? Promise.resolve({ data: null, error: null })
+      : supabase
+          .from("conversations")
+          .select("id")
+          .eq("listing_id", listing.id)
+          .eq("buyer_id", user.id)
+          .maybeSingle(),
     getListingImageUrls(supabase, listing.id),
   ]);
 
@@ -740,11 +755,16 @@ export async function getListingDetail(listingId: string): Promise<{
     throw new Error("Failed to load saved listing status.");
   }
 
+  if (existingConversationError) {
+    throw new Error("Failed to load listing conversation state.");
+  }
+
   return {
     listing,
     seller,
     isSaved: Boolean(savedRow),
-    isOwner: isListingOwner(listing.seller_id, user.id),
+    isOwner,
+    existingConversationId: existingConversation?.id ?? null,
     imageUrls,
   };
 }
@@ -916,7 +936,7 @@ export async function getMarketplaceConversationThread(
     const [listingResult, profilesResult, messagesResult, listingCoverMap] = await Promise.all([
       supabase
         .from("listings")
-        .select("id, title, price_kzt, listing_type, pricing_model, status")
+        .select("id, title, price_kzt, listing_type, pricing_model, status, pickup_location")
         .eq("id", conversation.listing_id)
         .maybeSingle(),
       supabase
@@ -951,9 +971,15 @@ export async function getMarketplaceConversationThread(
       listingType: listingResult.data?.listing_type ?? null,
       pricingModel: listingResult.data?.pricing_model ?? null,
       listingStatus: listingResult.data?.status ?? null,
+      listingPickupLocation:
+        typeof listingResult.data?.pickup_location === "string" && listingResult.data.pickup_location.trim().length > 0
+          ? listingResult.data.pickup_location.trim()
+          : null,
       listingCoverImageUrl,
       listingHref,
       currentUserId: user.id,
+      viewerRole: isBuyer ? "buyer" : "seller",
+      counterpartRole: isBuyer ? "seller" : "buyer",
       counterpartId,
       counterpartName: normalizeName(counterpartProfile?.full_name),
       counterpartAvatarPath: counterpartProfile?.avatar_path ?? null,

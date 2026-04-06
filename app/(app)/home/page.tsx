@@ -39,7 +39,7 @@ export default async function HomePage() {
       getCommunities(1),
     ]);
   } catch (error) {
-    loadError = error instanceof Error ? error.message : "Failed to load home feed.";
+    loadError = error instanceof Error ? error.message : "Failed to load the campus overview.";
   }
 
   return (
@@ -47,6 +47,7 @@ export default async function HomePage() {
       <section className="wire-panel">
         <SectionHeader
           title="NU Atrium"
+          subtitle="Trusted campus participation, coordination, and student exchange at NU."
           actionNode={
             <Link href="/profile" className="wire-link">
               Profile
@@ -55,7 +56,7 @@ export default async function HomePage() {
         />
         <div className="mt-3">
           <SearchBar
-            placeholder="Search market, events, people, communities"
+            placeholder="Search market, events, students, communities"
             queryName="q"
             defaultValue=""
             action="/search"
@@ -67,7 +68,8 @@ export default async function HomePage() {
 
       <div className="grid gap-6 xl:grid-cols-2">
         <SectionCard
-          title="Featured listings"
+          title="Featured Market Listings"
+          subtitle="Recent listings from other NU students."
           actionLabel="Open market"
           actionHref="/market"
         >
@@ -82,17 +84,18 @@ export default async function HomePage() {
               ))}
             </div>
           ) : !loadError ? (
-          <EmptyState
-            title="No active listings yet"
-            description="New market items will appear here as soon as they are posted."
-            actionLabel="Open market"
-            actionHref="/market"
-          />
+            <EmptyState
+              title="No market listings yet"
+              description="Student listings will appear here once they are posted."
+              actionLabel="Open market"
+              actionHref="/market"
+            />
           ) : null}
         </SectionCard>
 
         <SectionCard
-          title="Upcoming events"
+          title="Upcoming Events"
+          subtitle="Campus events students can join soon."
           actionLabel="Open events"
           actionHref="/events"
         >
@@ -105,7 +108,7 @@ export default async function HomePage() {
           ) : !loadError ? (
             <EmptyState
               title="No upcoming events"
-              description="New published events will appear here as they are scheduled."
+              description="Published campus events will appear here as they are scheduled."
               actionLabel="Open events"
               actionHref="/events"
             />
@@ -114,7 +117,10 @@ export default async function HomePage() {
       </div>
 
       <section className="wire-panel">
-        <SectionHeader title="Quick access" />
+        <SectionHeader
+          title="Quick Access"
+          subtitle="Go straight to the parts of Atrium where students join, coordinate, and exchange."
+        />
         <div className="grid grid-cols-2 gap-2.5 xl:grid-cols-5">
           <Link
             href="/market"
@@ -123,7 +129,7 @@ export default async function HomePage() {
             <ShoppingBag className="h-4 w-4 text-wire-100" aria-hidden="true" />
             <div>
               <p className="text-[14px] font-semibold text-wire-100">Market</p>
-              <p className="text-[12px] text-wire-300">Buy and sell</p>
+              <p className="text-[12px] text-wire-300">Student-to-student listings</p>
             </div>
           </Link>
           <Link
@@ -133,7 +139,7 @@ export default async function HomePage() {
             <CalendarDays className="h-4 w-4 text-wire-100" aria-hidden="true" />
             <div>
               <p className="text-[14px] font-semibold text-wire-100">Events</p>
-              <p className="text-[12px] text-wire-300">Plan your week</p>
+              <p className="text-[12px] text-wire-300">Join campus activity</p>
             </div>
           </Link>
           <Link
@@ -143,7 +149,7 @@ export default async function HomePage() {
             <Users className="h-4 w-4 text-wire-100" aria-hidden="true" />
             <div>
               <p className="text-[14px] font-semibold text-wire-100">Connect</p>
-              <p className="text-[12px] text-wire-300">People and groups</p>
+              <p className="text-[12px] text-wire-300">People and communities</p>
             </div>
           </Link>
           <Link
@@ -153,7 +159,7 @@ export default async function HomePage() {
             <Briefcase className="h-4 w-4 text-wire-100" aria-hidden="true" />
             <div>
               <p className="text-[14px] font-semibold text-wire-100">Jobs</p>
-              <p className="text-[12px] text-wire-300">Campus openings</p>
+              <p className="text-[12px] text-wire-300">Campus opportunities</p>
             </div>
           </Link>
           <Link
@@ -163,14 +169,15 @@ export default async function HomePage() {
             <Compass className="h-4 w-4 text-wire-100" aria-hidden="true" />
             <div>
               <p className="text-[14px] font-semibold text-wire-100">Campus</p>
-              <p className="text-[12px] text-wire-300">Info and services</p>
+              <p className="text-[12px] text-wire-300">Reliable info and services</p>
             </div>
           </Link>
         </div>
       </section>
 
       <SectionCard
-        title="Suggested people & communities"
+        title="Suggested People / Communities"
+        subtitle="Find peers, organizers, and groups to coordinate with."
         actionLabel="Open connect"
         actionHref="/connect"
       >
@@ -191,8 +198,8 @@ export default async function HomePage() {
           </div>
         ) : !loadError ? (
           <EmptyState
-            title="No new suggestions right now"
-            description="Open Connect to explore people and communities directly."
+            title="No introductions yet"
+            description="Open Connect to explore students and communities across NU."
             actionLabel="Open connect"
             actionHref="/connect"
           />

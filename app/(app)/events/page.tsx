@@ -44,6 +44,7 @@ export default async function EventsHomePage({ searchParams }: EventsHomePagePro
       <section className="wire-panel">
         <SectionHeader
           title="Events"
+          subtitle="Find campus activity worth joining and keep your participation organized."
           actionNode={
             <Link href="/events/my-events" className="wire-link">
               My events
@@ -52,7 +53,7 @@ export default async function EventsHomePage({ searchParams }: EventsHomePagePro
         />
         <div className="mt-3">
           <SearchBar
-            placeholder="Search events"
+            placeholder="Search campus activity"
             queryName="q"
             defaultValue=""
             action="/search"
@@ -70,8 +71,8 @@ export default async function EventsHomePage({ searchParams }: EventsHomePagePro
       </section>
 
       <SectionCard
-        title="Upcoming events"
-        subtitle="Published events ordered by start time."
+        title="Upcoming activity"
+        subtitle="Published NU events ordered by start time."
         actionLabel="See all"
         actionHref="/events/list"
       >
@@ -85,8 +86,8 @@ export default async function EventsHomePage({ searchParams }: EventsHomePagePro
           <EventCard event={toEventCardData(featuredEvent)} href={`/events/${featuredEvent.id}`} />
         ) : !loadError ? (
           <EmptyState
-            title="No upcoming events right now"
-            description="Check back soon or publish a new campus event."
+            title="No upcoming activity right now"
+            description="Check back soon or publish a campus event students can join."
             actionLabel="Create event"
             actionHref="/events/create"
           />

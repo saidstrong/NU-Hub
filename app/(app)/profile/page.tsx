@@ -29,6 +29,27 @@ function joinLine(parts: Array<string | null>): string {
   return safeParts.length > 0 ? safeParts.join(" | ") : "";
 }
 
+function hasText(value: string | null | undefined): boolean {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function formatMemberSinceLabel(value: string | null | undefined): string | null {
+  const safeValue = typeof value === "string" ? value.trim() : "";
+  if (!safeValue) return null;
+
+  const date = new Date(safeValue);
+  if (Number.isNaN(date.getTime())) return null;
+
+  return date.toLocaleDateString("en-US", { month: "short", year: "numeric" });
+}
+
+function formatFieldList(fields: string[]): string {
+  if (fields.length === 0) return "";
+  if (fields.length === 1) return fields[0];
+  if (fields.length === 2) return `${fields[0]} or ${fields[1]}`;
+  return `${fields.slice(0, -1).join(", ")}, or ${fields[fields.length - 1]}`;
+}
+
 function parseProjects(projects: unknown): Array<{ title: string; summary?: string }> {
   if (!Array.isArray(projects)) return [];
 
@@ -117,6 +138,22 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
   const bioText = typeof profile.bio === "string" ? profile.bio.trim() : "";
   const privateBirthday = formatPrivateBirthday(extras.birthday);
   const isBirthdayToday = isBirthdayTodayInCampusTimeZone(extras.birthday);
+  const memberSinceLabel = formatMemberSinceLabel(profile.created_at);
+  const missingBasics = [
+    hasText(profile.full_name) ? null : "your name",
+    hasText(profile.school) ? null : "school",
+    hasText(profile.major) ? null : "major",
+    hasText(profile.year_label) ? null : "year",
+    bioText ? null : "a short bio",
+    profile.interests.length > 0 || profile.looking_for.length > 0 ? null : "a focus area",
+  ].filter((value): value is string => Boolean(value));
+  const profileBasicsComplete = missingBasics.length === 0;
+  const missingBasicsPreview = missingBasics.slice(0, 3);
+  const basicsGuidance = profileBasicsComplete
+    ? null
+    : missingBasics.length > missingBasicsPreview.length
+      ? `Add ${formatFieldList(missingBasicsPreview)} and a few other basics to strengthen your profile.`
+      : `Add ${formatFieldList(missingBasicsPreview)} to strengthen your profile.`;
 
   return (
     <main>
@@ -162,6 +199,20 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
         </div>
 
         {message ? <FeedbackBanner tone="success" message={message} className="mt-4" /> : null}
+
+        <div className="mt-5 rounded-[var(--radius-card)] border border-wire-700 bg-wire-900/40 px-4 py-3">
+          <p className="wire-label">Trust summary</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <TagChip label="NU account" active />
+            {memberSinceLabel ? <TagChip label={`Member since ${memberSinceLabel}`} /> : null}
+            <TagChip label={profileBasicsComplete ? "Profile basics complete" : "Add basics to strengthen your profile"} />
+          </div>
+          {basicsGuidance ? (
+            <p className="mt-2 text-[12px] leading-relaxed text-wire-300">
+              {basicsGuidance}
+            </p>
+          ) : null}
+        </div>
 
         <div className="mt-5 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
           <ShellButton label="Edit profile" href="/profile/edit" variant="primary" />

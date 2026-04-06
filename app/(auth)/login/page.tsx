@@ -21,7 +21,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
       <section className="wire-panel mx-auto w-full max-w-md">
         <SectionHeader
           title="Log in"
-          subtitle="Sign in with your NU account to access your activity and messages."
+          subtitle="Sign in with your NU account to access communities, events, and student exchange."
           actionNode={
             <Link href="/welcome" className="wire-link">
               Welcome

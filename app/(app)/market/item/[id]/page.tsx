@@ -72,8 +72,11 @@ export default async function MarketItemDetailPage({
     );
   }
 
-  const { listing, seller, isSaved, isOwner } = detail;
+  const { listing, seller, isSaved, isOwner, existingConversationId } = detail;
   const listingImages = detail.imageUrls;
+  const existingConversationHref = existingConversationId
+    ? `/market/messages/${existingConversationId}`
+    : null;
   const sellerMeta = [seller?.school, seller?.major, seller?.year_label]
     .map((value) => value?.trim())
     .filter(Boolean)
@@ -103,6 +106,11 @@ export default async function MarketItemDetailPage({
   const postedAtLabel = Number.isNaN(postedDate.getTime())
     ? "Recently posted"
     : postedDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  const sellerJoinedDate = seller?.created_at ? new Date(seller.created_at) : null;
+  const sellerMemberSinceLabel =
+    sellerJoinedDate && !Number.isNaN(sellerJoinedDate.getTime())
+      ? sellerJoinedDate.toLocaleDateString("en-US", { month: "short", year: "numeric" })
+      : null;
   const listingTypeLabel = formatListingTypeLabel(listing.listing_type);
   const pricingModelLabel = formatPricingModelLabel(listing.pricing_model);
   const conditionFieldLabel = listing.listing_type === "service" ? "Condition / quality" : "Condition";
@@ -220,7 +228,7 @@ export default async function MarketItemDetailPage({
 
           <SectionCard
             title="Seller"
-            subtitle="Seller identity and campus context."
+            subtitle="Student identity and listing trust cues."
           >
             <Link
               href={`/connect/people/${listing.seller_id}`}
@@ -243,6 +251,30 @@ export default async function MarketItemDetailPage({
                 </div>
               </div>
             </Link>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <TagChip label="NU account" active />
+              {sellerMemberSinceLabel ? <TagChip label={`Member since ${sellerMemberSinceLabel}`} /> : null}
+            </div>
+            <div className="mt-3 grid gap-2 sm:grid-cols-2">
+              <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-3 py-2">
+                <p className="wire-label">Listing posted</p>
+                <p className="mt-1 text-sm text-wire-100">{postedAtLabel}</p>
+              </div>
+              <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-3 py-2">
+                <p className="wire-label">Campus context</p>
+                <p className="mt-1 text-sm text-wire-100">{sellerMetaLabel}</p>
+              </div>
+              {!isOwner ? (
+                <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-3 py-2 sm:col-span-2">
+                  <p className="wire-label">Listing views</p>
+                  <ListingViewCount
+                    listingId={listing.id}
+                    initialCount={initialViewCount}
+                    shouldTrack={shouldTrackView}
+                  />
+                </div>
+              ) : null}
+            </div>
           </SectionCard>
 
           <section className="wire-panel">
@@ -252,6 +284,12 @@ export default async function MarketItemDetailPage({
                 <ShellButton
                   label="Edit listing"
                   href={`/market/item/${listing.id}/edit`}
+                  variant="primary"
+                />
+              ) : existingConversationHref ? (
+                <ShellButton
+                  label="Continue conversation"
+                  href={existingConversationHref}
                   variant="primary"
                 />
               ) : (
@@ -266,6 +304,11 @@ export default async function MarketItemDetailPage({
                   />
                 </form>
               )}
+              {!isOwner ? (
+                <p className="text-[12px] leading-relaxed text-wire-300">
+                  Confirm availability, condition, and pickup or handoff details in the listing conversation.
+                </p>
+              ) : null}
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 <form action={toggleSavedListingAction} className="w-full">
                   <input type="hidden" name="listingId" value={listing.id} />
@@ -280,14 +323,17 @@ export default async function MarketItemDetailPage({
               </div>
             </div>
             {!isOwner ? (
-              <div className="mt-3">
+              <div className="mt-3 border-t border-wire-700 pt-3">
+                <p className="mb-2 text-[12px] leading-relaxed text-wire-300">
+                  If this listing feels misleading, suspicious, or unsafe, report it for review.
+                </p>
                 <form action={reportContentAction}>
                   <input type="hidden" name="targetType" value="listing" />
                   <input type="hidden" name="targetId" value={listing.id} />
                   <input type="hidden" name="reason" value="inappropriate" />
                   <input type="hidden" name="redirectTo" value={`/market/item/${listing.id}`} />
                   <SubmitButton
-                    label="Report listing"
+                    label="Report suspicious listing"
                     pendingLabel="Submitting..."
                     variant="ghost"
                     className="w-auto"

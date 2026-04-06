@@ -45,6 +45,17 @@ export default async function MarketMessagesPage({ searchParams }: MarketMessage
         : "Failed to load conversations.";
   }
 
+  const prioritizedConversations = [...conversations].sort((left, right) => {
+    const leftNeedsReply = left.lastMessageSenderId === left.counterpartId;
+    const rightNeedsReply = right.lastMessageSenderId === right.counterpartId;
+
+    if (leftNeedsReply === rightNeedsReply) {
+      return 0;
+    }
+
+    return leftNeedsReply ? -1 : 1;
+  });
+
   const previousHref = page > 1 ? buildPageHref("/market/messages", page - 1) : undefined;
   const nextHref = hasMore ? buildPageHref("/market/messages", page + 1) : undefined;
 
@@ -52,7 +63,7 @@ export default async function MarketMessagesPage({ searchParams }: MarketMessage
     <main className="mx-auto w-full max-w-4xl">
       <TopBar
         title="Messages"
-        subtitle="Listing conversations"
+        subtitle="Marketplace deal inbox"
         backHref="/market"
       />
       {message ? <FeedbackBanner tone="success" message={message} /> : null}
@@ -60,14 +71,17 @@ export default async function MarketMessagesPage({ searchParams }: MarketMessage
       {loadError ? <FeedbackBanner tone="error" message={loadError} /> : null}
 
       <section className="wire-panel">
-        <SectionHeader title="Inbox" />
+        <SectionHeader
+          title="Inbox"
+          subtitle="Reply-needed listing conversations appear first."
+        />
 
-        {conversations.length > 0 ? (
+        {prioritizedConversations.length > 0 ? (
           <div className="space-y-2.5">
-            {conversations.map((conversation) => {
+            {prioritizedConversations.map((conversation) => {
               const counterpartAvatarUrl = toPublicStorageUrl("avatars", conversation.counterpartAvatarPath);
               const needsReply = conversation.lastMessageSenderId === conversation.counterpartId;
-              const replyStateLabel = needsReply ? "Needs reply" : "You replied";
+              const replyStateLabel = needsReply ? "Reply needed" : "You replied";
               const timestampValue = conversation.lastMessageCreatedAt ?? conversation.updatedAt;
               const listingStatusLabel = conversation.listingStatus
                 ? formatStatusLabel(conversation.listingStatus)
@@ -80,12 +94,20 @@ export default async function MarketMessagesPage({ searchParams }: MarketMessage
                   ? formatCompactListingPrice(conversation.listingPriceKzt, conversation.pricingModel)
                   : formatPriceKzt(conversation.listingPriceKzt)
                 : "Price unavailable";
+              const listingStatusClass = conversation.listingStatus === "active"
+                ? "border-accent/35 bg-accent/10 text-wire-100"
+                : conversation.listingStatus === "reserved"
+                  ? "border-amber-300/35 bg-amber-300/10 text-amber-100"
+                  : "border-wire-600 bg-wire-900 text-wire-300";
+              const rowClass = needsReply
+                ? "block rounded-[var(--radius-card)] border border-accent/35 bg-wire-800 px-3.5 py-3.5 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/40 sm:px-4"
+                : "block rounded-[var(--radius-card)] border border-wire-700 bg-wire-800 px-3.5 py-3.5 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/40 sm:px-4";
 
               return (
                 <Link
                   key={conversation.id}
                   href={`/market/messages/${conversation.id}`}
-                  className="block rounded-[var(--radius-card)] border border-wire-700 bg-wire-800 px-3.5 py-3.5 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/40 sm:px-4"
+                  className={rowClass}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
@@ -126,13 +148,19 @@ export default async function MarketMessagesPage({ searchParams }: MarketMessage
                       <div className="h-11 w-11 shrink-0 rounded-[10px] border border-dashed border-wire-600 bg-wire-900" />
                     )}
                     <div className="min-w-0">
-                      <p className="line-clamp-1 text-[13px] font-medium text-wire-100 [overflow-wrap:anywhere]">
-                        {conversation.listingTitle}
-                      </p>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="line-clamp-1 text-[13px] font-medium text-wire-100 [overflow-wrap:anywhere]">
+                          {conversation.listingTitle}
+                        </p>
+                        {listingStatusLabel ? (
+                          <span className={`rounded-full border px-2 py-0.5 text-[10px] font-medium ${listingStatusClass}`}>
+                            {listingStatusLabel}
+                          </span>
+                        ) : null}
+                      </div>
                       <p className="mt-0.5 text-[11px] text-wire-300">
                         {listingPriceLabel}
-                        {listingTypeLabel ? ` • ${listingTypeLabel}` : ""}
-                        {listingStatusLabel ? ` • ${listingStatusLabel}` : ""}
+                        {listingTypeLabel ? ` | ${listingTypeLabel}` : ""}
                       </p>
                     </div>
                   </div>
@@ -148,9 +176,9 @@ export default async function MarketMessagesPage({ searchParams }: MarketMessage
           </div>
         ) : !loadError ? (
           <EmptyState
-            title="No conversations yet"
-            description="Message a seller from any listing to start a conversation."
-            actionLabel="Open market"
+            title="No listing conversations yet"
+            description="Message a seller from any listing to open a marketplace conversation."
+            actionLabel="Browse listings"
             actionHref="/market"
             className="py-6"
           />

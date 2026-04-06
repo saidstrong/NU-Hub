@@ -22,7 +22,7 @@ export default async function MarketPostPage({ searchParams }: MarketPostPagePro
     <main>
       <TopBar
         title="Post listing"
-        subtitle="Create a marketplace sale, rental, or service listing"
+        subtitle="Create a marketplace sale, rental, or service listing with clear campus details."
         backHref="/market"
       />
       {error ? (
@@ -34,6 +34,9 @@ export default async function MarketPostPage({ searchParams }: MarketPostPagePro
       <form action={publishListingAction} className="flex flex-col gap-5">
         <section className="wire-panel">
           <h3 className="mb-2 text-sm font-semibold text-wire-100">Upload images</h3>
+          <p className="mb-3 wire-meta">
+            Use clear photos of the actual item so other students can judge condition quickly.
+          </p>
           <DirectListingImageUpload />
         </section>
 
@@ -80,12 +83,17 @@ export default async function MarketPostPage({ searchParams }: MarketPostPagePro
               ))}
             </select>
           </label>
+          <p className="wire-meta">Choose the most accurate condition so buyers know what to expect.</p>
         </FormSection>
         <FormSection title="Description">
           <WireTextarea label="Describe item" name="description" rows={5} />
+          <p className="wire-meta">
+            Include useful details like size, what is included, timing, and anything another NU student should know.
+          </p>
         </FormSection>
         <FormSection title="Location">
           <WireField label="Location details" name="pickupLocation" required />
+          <p className="wire-meta">Be specific about where you can meet on campus for pickup or handoff.</p>
         </FormSection>
 
         <div className="wire-action-row">

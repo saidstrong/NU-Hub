@@ -15,7 +15,11 @@ import {
   startFriendConversationAction,
   sendFriendRequestAction,
 } from "@/lib/connect/actions";
-import { getFriendshipWithPerson, getPersonProfile } from "@/lib/connect/data";
+import {
+  getFriendshipWithPerson,
+  getPersonProfile,
+  getProfileTrustContext,
+} from "@/lib/connect/data";
 import { toPublicStorageUrl } from "@/lib/validation/media";
 import { isUuid } from "@/lib/validation/uuid";
 
@@ -23,6 +27,41 @@ type PersonProfilePageProps = {
   params: Promise<{ id: string }>;
   searchParams: Promise<{ message?: string; error?: string }>;
 };
+
+function hasText(value: string | null | undefined): boolean {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function joinLine(parts: Array<string | null | undefined>): string {
+  return parts
+    .map((value) => value?.trim())
+    .filter((value): value is string => Boolean(value))
+    .join(" | ");
+}
+
+function formatMemberSinceLabel(value: string | null | undefined): string | null {
+  const safeValue = typeof value === "string" ? value.trim() : "";
+  if (!safeValue) return null;
+
+  const date = new Date(safeValue);
+  if (Number.isNaN(date.getTime())) return null;
+
+  return date.toLocaleDateString("en-US", { month: "short", year: "numeric" });
+}
+
+function matchesSharedContext(
+  viewerValue: string | null | undefined,
+  personValue: string | null | undefined,
+): boolean {
+  const safeViewerValue = typeof viewerValue === "string" ? viewerValue.trim().toLowerCase() : "";
+  const safePersonValue = typeof personValue === "string" ? personValue.trim().toLowerCase() : "";
+
+  if (!safeViewerValue || !safePersonValue) {
+    return false;
+  }
+
+  return safeViewerValue === safePersonValue;
+}
 
 export default async function PersonProfilePage({ params, searchParams }: PersonProfilePageProps) {
   const [{ id }, { message, error }] = await Promise.all([params, searchParams]);
@@ -32,17 +71,22 @@ export default async function PersonProfilePage({ params, searchParams }: Person
   }
 
   const user = await requireUser();
+  let viewerContext = null as Awaited<ReturnType<typeof getProfileTrustContext>>;
   let person = null as Awaited<ReturnType<typeof getPersonProfile>>;
   let friendship = null as Awaited<ReturnType<typeof getFriendshipWithPerson>>;
   let loadError: string | null = null;
 
   try {
-    person = await getPersonProfile(id);
+    [person, viewerContext] = await Promise.all([
+      getPersonProfile(id),
+      getProfileTrustContext(user.id),
+    ]);
+
     if (person && person.user_id !== user.id) {
       friendship = await getFriendshipWithPerson(person.user_id);
     }
-  } catch (error) {
-    loadError = error instanceof Error ? error.message : "Failed to load student profile.";
+  } catch (pageError) {
+    loadError = pageError instanceof Error ? pageError.message : "Failed to load student profile.";
   }
 
   if (!person) {
@@ -72,10 +116,7 @@ export default async function PersonProfilePage({ params, searchParams }: Person
   }
 
   const isSelfProfile = person.user_id === user.id;
-  const academicLabel = [person.school, person.major, person.year_label]
-    .map((value) => value?.trim())
-    .filter(Boolean)
-    .join(" • ");
+  const academicLabel = joinLine([person.school, person.major, person.year_label]);
   const hasBio = typeof person.bio === "string" && person.bio.trim().length > 0;
   const avatarUrl = toPublicStorageUrl("avatars", person.avatar_path);
   const name =
@@ -105,6 +146,13 @@ export default async function PersonProfilePage({ params, searchParams }: Person
       ? links.birthday.trim()
       : null;
   const isBirthdayToday = isBirthdayTodayInCampusTimeZone(birthdayValue);
+  const memberSinceLabel = formatMemberSinceLabel(person.created_at);
+  const sharedContextLabels = !isSelfProfile
+    ? [
+        matchesSharedContext(viewerContext?.school, person.school) ? "Same school" : null,
+        matchesSharedContext(viewerContext?.year_label, person.year_label) ? "Same year" : null,
+      ].filter((value): value is string => Boolean(value))
+    : [];
   const hasProfessionalLinks =
     Boolean(person.resume_url) ||
     typeof links.github === "string" ||
@@ -155,7 +203,14 @@ export default async function PersonProfilePage({ params, searchParams }: Person
                 Birthday today
               </div>
             ) : null}
-            <p className="mt-1 text-[12px] text-wire-400">NU Atrium student profile</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <TagChip label="NU account" active />
+              {memberSinceLabel ? <TagChip label={`Member since ${memberSinceLabel}`} /> : null}
+              {sharedContextLabels.map((label) => (
+                <TagChip key={label} label={label} />
+              ))}
+            </div>
+            <p className="mt-2 text-[12px] text-wire-400">NU Atrium student profile</p>
           </div>
         </div>
         {person.interests.length > 0 ? (
