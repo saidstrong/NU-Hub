@@ -47,16 +47,16 @@ export default async function HomePage() {
       <section className="wire-panel">
         <SectionHeader
           title="NU Atrium"
-          subtitle="Trusted campus participation, coordination, and student exchange at NU."
+          subtitle="Your starting point for student exchange, events, connections, opportunities, and campus essentials."
           actionNode={
             <Link href="/profile" className="wire-link">
-              Profile
+              Open profile
             </Link>
           }
         />
         <div className="mt-3">
           <SearchBar
-            placeholder="Search market, events, students, communities"
+            placeholder="Search across market, events, students, communities, and more"
             queryName="q"
             defaultValue=""
             action="/search"
@@ -68,8 +68,8 @@ export default async function HomePage() {
 
       <div className="grid gap-6 xl:grid-cols-2">
         <SectionCard
-          title="Featured Market Listings"
-          subtitle="Recent listings from other NU students."
+          title="Market right now"
+          subtitle="Recent student listings worth checking first."
           actionLabel="Open market"
           actionHref="/market"
         >
@@ -86,7 +86,7 @@ export default async function HomePage() {
           ) : !loadError ? (
             <EmptyState
               title="No market listings yet"
-              description="Student listings will appear here once they are posted."
+              description="Open Market to browse the latest student listings as they start appearing."
               actionLabel="Open market"
               actionHref="/market"
             />
@@ -94,8 +94,8 @@ export default async function HomePage() {
         </SectionCard>
 
         <SectionCard
-          title="Upcoming Events"
-          subtitle="Campus events students can join soon."
+          title="Events coming up"
+          subtitle="Published events students can review, save, or join."
           actionLabel="Open events"
           actionHref="/events"
         >
@@ -108,7 +108,7 @@ export default async function HomePage() {
           ) : !loadError ? (
             <EmptyState
               title="No upcoming events"
-              description="Published campus events will appear here as they are scheduled."
+              description="Open Events to browse published campus activity as new events are scheduled."
               actionLabel="Open events"
               actionHref="/events"
             />
@@ -118,8 +118,8 @@ export default async function HomePage() {
 
       <section className="wire-panel">
         <SectionHeader
-          title="Quick Access"
-          subtitle="Go straight to the parts of Atrium where students join, coordinate, and exchange."
+          title="Main destinations"
+          subtitle="Jump straight into the parts of Atrium students use most."
         />
         <div className="grid grid-cols-2 gap-2.5 xl:grid-cols-5">
           <Link
@@ -176,8 +176,8 @@ export default async function HomePage() {
       </section>
 
       <SectionCard
-        title="Suggested People / Communities"
-        subtitle="Find peers, organizers, and groups to coordinate with."
+        title="People and communities"
+        subtitle="Find classmates, organizers, and campus groups to connect with."
         actionLabel="Open connect"
         actionHref="/connect"
       >
@@ -198,8 +198,8 @@ export default async function HomePage() {
           </div>
         ) : !loadError ? (
           <EmptyState
-            title="No introductions yet"
-            description="Open Connect to explore students and communities across NU."
+            title="No people or communities to show yet"
+            description="Open Connect to browse student profiles and campus communities across NU."
             actionLabel="Open connect"
             actionHref="/connect"
           />

@@ -30,16 +30,16 @@ export default async function ConnectHomePage() {
       <section className="wire-panel">
         <SectionHeader
           title="Connect"
-          subtitle="Find NU students, join communities, and keep campus coordination close to home."
+          subtitle="The hub for students, friends, communities, and direct campus conversations."
           actionNode={
             <Link href="/connect/friends" className="wire-link">
-              Friends
+              Open friends
             </Link>
           }
         />
         <div className="mt-3">
           <SearchBar
-            placeholder="Search students, communities, and shared interests"
+            placeholder="Search students, communities, and shared interests across Atrium"
             queryName="q"
             defaultValue=""
             action="/search"
@@ -50,13 +50,18 @@ export default async function ConnectHomePage() {
       {loadError ? <FeedbackBanner tone="error" message={loadError} /> : null}
 
       <section className="wire-panel py-4">
+        <SectionHeader
+          title="Start here"
+          subtitle="Use people discovery first, then jump to friends, communities, or messages."
+          className="mb-3 pb-3"
+        />
         <div className="flex flex-wrap items-center gap-2">
           <ShellButton label="Find students" href="/connect/people" variant="primary" block={false} />
           <Link href="/connect/communities" className="wire-action">
-            Communities
+            Open communities
           </Link>
           <Link href="/connect/messages" className="wire-action-compact">
-            Messages
+            Friend messages
           </Link>
           <Link href="/connect/my-communities" className="wire-action-compact">
             My communities
@@ -68,7 +73,7 @@ export default async function ConnectHomePage() {
         <SectionCard
           title="Students to know"
           subtitle="People around campus you can message, meet, or collaborate with."
-          actionLabel="See all"
+          actionLabel="Browse students"
           actionHref="/connect/people"
         >
           {people.length > 0 ? (
@@ -84,8 +89,8 @@ export default async function ConnectHomePage() {
           ) : !loadError ? (
             <EmptyState
               title="No student profiles yet"
-              description="Completed NU student profiles will appear here for discovery."
-              actionLabel="See all students"
+              description="Browse People to discover NU student profiles as they become available."
+              actionLabel="Browse students"
               actionHref="/connect/people"
             />
           ) : null}
@@ -94,7 +99,7 @@ export default async function ConnectHomePage() {
         <SectionCard
           title="Communities to join"
           subtitle="Clubs, circles, and student-led groups coordinating activity on campus."
-          actionLabel="See all"
+          actionLabel="Browse communities"
           actionHref="/connect/communities"
         >
           {communities.length > 0 ? (
@@ -110,8 +115,8 @@ export default async function ConnectHomePage() {
           ) : !loadError ? (
             <EmptyState
               title="No communities yet"
-              description="Student communities will appear here as organizers open them to the campus network."
-              actionLabel="See all communities"
+              description="Browse Communities to explore groups as organizers open them to the campus network."
+              actionLabel="Browse communities"
               actionHref="/connect/communities"
             />
           ) : null}
