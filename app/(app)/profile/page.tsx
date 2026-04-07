@@ -159,10 +159,11 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
     <main>
       <section className="wire-panel">
         <SectionHeader
-          title="Profile"
+          title="Your profile"
+          subtitle="Your campus identity, trust cues, and shortcuts."
           actionNode={
             <Link href="/profile/settings" className="wire-link">
-              Settings
+              Profile settings
             </Link>
           }
         />
@@ -211,7 +212,11 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
             <p className="mt-2 text-[12px] leading-relaxed text-wire-300">
               {basicsGuidance}
             </p>
-          ) : null}
+          ) : (
+            <p className="mt-2 text-[12px] leading-relaxed text-wire-300">
+              Your core profile details are in place and ready to use across Atrium.
+            </p>
+          )}
         </div>
 
         <div className="mt-5 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
@@ -220,7 +225,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
             Notifications
           </Link>
           <Link href="/profile/settings" className="wire-action w-full">
-            Settings
+            Profile settings
           </Link>
         </div>
 
@@ -237,7 +242,10 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
       </section>
 
       <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-        <SectionCard title="About">
+        <SectionCard
+          title="About"
+          subtitle="The short introduction other students see first."
+        >
           {bioText ? (
             <p className="text-[14px] leading-relaxed text-wire-200">{bioText}</p>
           ) : (
@@ -245,7 +253,10 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
           )}
         </SectionCard>
 
-        <SectionCard title="Academic and campus context">
+        <SectionCard
+          title="Campus identity"
+          subtitle="The academic details that help people place your profile quickly."
+        >
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 xl:grid-cols-1">
             <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-4 py-3">
               <p className="wire-label">School</p>
@@ -270,7 +281,10 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
       </div>
 
       <div className="grid gap-6 xl:grid-cols-2">
-        <SectionCard title="Interests and goals">
+        <SectionCard
+          title="Interests and goals"
+          subtitle="What you care about and what you want to build toward."
+        >
           <div>
             <p className="mb-2 wire-label">Interests</p>
             {profile.interests.length > 0 ? (
@@ -280,7 +294,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
                 ))}
               </div>
             ) : (
-              <EmptyText text="No interests added yet." />
+              <EmptyText text="Add a few interests so other students know what you pay attention to." />
             )}
           </div>
 
@@ -298,7 +312,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
                 ))}
               </div>
             ) : (
-              <EmptyText text="No goals added yet." />
+              <EmptyText text="Add one or two goals to make your profile direction clearer." />
             )}
           </div>
 
@@ -311,12 +325,15 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
                 ))}
               </div>
             ) : (
-              <EmptyText text="No collaboration preferences added yet." />
+              <EmptyText text="Add what you are looking for so classmates know how to reach out." />
             )}
           </div>
         </SectionCard>
 
-        <SectionCard title="Public links and socials">
+        <SectionCard
+          title="Public links and socials"
+          subtitle="Optional links and handles that make follow-up easier."
+        >
           <div>
             <p className="mb-2 wire-label">Professional details</p>
             <div className="space-y-2">
@@ -333,7 +350,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
                 </p>
               ))}
               {!hasPublicLinks ? (
-                <EmptyText text="No public links added yet." />
+                <EmptyText text="Add a resume or public link if you want people to learn more about your work." />
               ) : null}
             </div>
           </div>
@@ -356,7 +373,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
                 ) : null}
               </div>
             ) : (
-              <EmptyText text="No social handles added yet." />
+              <EmptyText text="Add a contact handle if you want an easier way for people to follow up." />
             )}
           </div>
 
@@ -383,7 +400,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
                 ))}
               </div>
             ) : (
-              <EmptyText text="No skills listed." />
+              <EmptyText text="Add a few skills to make your profile more useful for collaboration." />
             )}
           </div>
 
@@ -404,7 +421,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
                 ))}
               </div>
             ) : (
-              <EmptyText text="No projects added." />
+              <EmptyText text="Add a project when you want to show what you have worked on." />
             )}
           </div>
         </SectionCard>
@@ -412,7 +429,8 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
 
       <SectionCard
         title="Quick access"
-        actionLabel="Settings"
+        subtitle="Jump back into the Atrium surfaces you use most."
+        actionLabel="Profile settings"
         actionHref="/profile/settings"
       >
         <QuickAccessGrid items={quickAccessItems} columns={2} />

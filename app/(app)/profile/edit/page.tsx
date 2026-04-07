@@ -73,7 +73,7 @@ export default async function EditProfilePage({ searchParams }: EditProfilePageP
     <main>
       <TopBar
         title="Edit Profile"
-        subtitle="Update profile sections used across NU Atrium"
+        subtitle="Keep your campus identity and profile details clear and current."
         backHref="/profile"
       />
       {error ? (
@@ -84,8 +84,8 @@ export default async function EditProfilePage({ searchParams }: EditProfilePageP
 
       <form action={updateProfileAction} className="flex flex-col gap-5" encType="multipart/form-data">
         <FormSection
-          title="Basic info"
-          description="Core identity details visible in your student profile."
+          title="Identity basics"
+          description="The core details other students use to understand who you are."
         >
           <label className="block space-y-2">
             <span className="wire-label">Avatar (optional)</span>
@@ -130,7 +130,7 @@ export default async function EditProfilePage({ searchParams }: EditProfilePageP
 
         <FormSection
           title="Interests and goals"
-          description="Help peers and communities understand your focus."
+          description="Show what you care about and how people can connect with you."
         >
           <WireField
             label="Interests (comma separated)"
@@ -151,7 +151,7 @@ export default async function EditProfilePage({ searchParams }: EditProfilePageP
 
         <FormSection
           title="Professional details (optional)"
-          description="Share only what is useful for campus collaboration."
+          description="Add only the public links and details that help with campus collaboration."
         >
           <WireField
             label="Skills (comma separated)"
@@ -197,7 +197,7 @@ export default async function EditProfilePage({ searchParams }: EditProfilePageP
           <Link href="/profile" className="wire-action">
             Cancel
           </Link>
-          <SubmitButton label="Save changes" pendingLabel="Saving..." variant="primary" />
+          <SubmitButton label="Save profile" pendingLabel="Saving..." variant="primary" />
         </div>
       </form>
     </main>
