@@ -61,8 +61,12 @@ function readPayloadKind(payload: unknown): string | null {
 function getNotificationActionLabel(link: string): string {
   if (link.startsWith("/events/")) return "Open event";
   if (link.startsWith("/connect/communities/requests")) return "Review requests";
+  if (link === "/connect/communities" || link.startsWith("/connect/communities?")) {
+    return "Browse communities";
+  }
   if (link.startsWith("/connect/communities/")) return "Open community";
-  if (link.startsWith("/connect/my-communities")) return "Open communities";
+  if (link.startsWith("/connect/my-communities?view=joined")) return "Open joined communities";
+  if (link.startsWith("/connect/my-communities")) return "Open my communities";
   if (link.startsWith("/market/item/")) return "Open listing";
   if (link.startsWith("/profile/")) return "Open profile";
   return "Open update";
@@ -85,6 +89,19 @@ function toDisplayMessage(title: string, message: string): { primary: string; se
   }
 
   return { primary: safeMessage, secondary: safeTitle };
+}
+
+function shouldShowSecondary(
+  secondary: string | null,
+  contextLabel: string | null,
+): boolean {
+  if (!secondary) return false;
+  if (!contextLabel) return true;
+
+  const normalizedSecondary = secondary.trim().toLowerCase();
+  const normalizedContext = contextLabel.trim().toLowerCase();
+
+  return !normalizedSecondary.includes(normalizedContext);
 }
 
 function toInternalLink(link: string | null): string | null {
@@ -124,7 +141,7 @@ export default async function NotificationsPage({ searchParams }: NotificationsP
     <main>
       <TopBar
         title="Notifications"
-        subtitle="Recent updates related to your profile and activity"
+        subtitle="Linked updates about events, communities, and activity that involves you."
         backHref="/profile"
       />
       {error ? <FeedbackBanner tone="error" message={error} /> : null}
@@ -132,8 +149,8 @@ export default async function NotificationsPage({ searchParams }: NotificationsP
 
       <section className="wire-panel">
         <div className="mb-4 border-b border-wire-700 pb-3">
-          <h2 className="wire-section-title">Recent activity</h2>
-          <p className="mt-1 wire-meta">In-app updates for communities and events.</p>
+          <h2 className="wire-section-title">Recent updates</h2>
+          <p className="mt-1 wire-meta">Open the linked page when you want more context or need to follow up.</p>
           <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
             <p className="wire-meta">
               {totalCount === 0
@@ -160,6 +177,7 @@ export default async function NotificationsPage({ searchParams }: NotificationsP
               const payloadKind = readPayloadKind(notification.payload);
               const contextLabel = payloadKind ? formatNotificationKind(payloadKind) : null;
               const display = toDisplayMessage(notification.title, notification.message);
+              const showSecondary = shouldShowSecondary(display.secondary, contextLabel);
               const unread = !notification.is_read;
 
               return (
@@ -194,7 +212,7 @@ export default async function NotificationsPage({ searchParams }: NotificationsP
                     </div>
                   </div>
 
-                  {display.secondary ? (
+                  {showSecondary ? (
                     <p className="mt-2 line-clamp-1 text-[12px] text-wire-400">{display.secondary}</p>
                   ) : null}
                   <p className="mt-1 text-[13px] leading-relaxed text-wire-100 [overflow-wrap:anywhere]">
@@ -226,7 +244,7 @@ export default async function NotificationsPage({ searchParams }: NotificationsP
         ) : !loadError ? (
           <EmptyState
             title="No notifications yet"
-            description="Activity updates from events and communities will appear here."
+            description="When events, communities, or requests involve you, the linked updates will appear here."
             actionLabel="Back to profile"
             actionHref="/profile"
           />
