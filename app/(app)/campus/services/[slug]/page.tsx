@@ -43,16 +43,22 @@ export default async function CampusServiceDetailPage({ params }: CampusServiceD
     <main>
       <TopBar
         title={service.name}
-        subtitle="Service details, contacts, and pricing references."
+        subtitle="Trusted campus service details, contact points, and price references."
         backHref="/campus"
       />
 
       <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-        <SectionCard title="Overview">
+        <SectionCard
+          title="What this service covers"
+          subtitle="The main purpose of this campus service."
+        >
           <p className="text-[14px] leading-relaxed text-wire-200">{service.description}</p>
         </SectionCard>
 
-        <SectionCard title="Service details">
+        <SectionCard
+          title="Practical details"
+          subtitle="The first details students usually need before reaching out."
+        >
           <dl className="grid grid-cols-[86px_1fr] gap-y-2 text-[12px]">
             <dt className="text-wire-300">Location</dt>
             <dd className="text-wire-200">{valueOrFallback(service.location)}</dd>
@@ -64,7 +70,10 @@ export default async function CampusServiceDetailPage({ params }: CampusServiceD
         </SectionCard>
       </div>
 
-      <SectionCard title="Contact">
+      <SectionCard
+        title="Contact this office"
+        subtitle="Use the official contact details below for the latest service guidance."
+      >
         <dl className="grid grid-cols-[86px_1fr] gap-y-2 text-[12px]">
           <dt className="text-wire-300">Email</dt>
           <dd className="text-wire-200">
@@ -89,7 +98,10 @@ export default async function CampusServiceDetailPage({ params }: CampusServiceD
         </dl>
       </SectionCard>
 
-      <SectionCard title="Pricing asset">
+      <SectionCard
+        title="Price reference"
+        subtitle="Open the attached pricing or fee reference when one is available."
+      >
         {hasPriceAsset ? (
           priceAssetIsImage ? (
             <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 p-3">
@@ -105,7 +117,7 @@ export default async function CampusServiceDetailPage({ params }: CampusServiceD
                 rel="noreferrer"
                 className="wire-action-primary mt-3 inline-flex w-auto px-4"
               >
-                Open pricing asset
+                Open price reference
               </a>
             </div>
           ) : (
@@ -120,20 +132,20 @@ export default async function CampusServiceDetailPage({ params }: CampusServiceD
                 rel="noreferrer"
                 className="wire-action-primary mt-3 inline-flex w-auto px-4"
               >
-                Open pricing asset
+                Open price reference
               </a>
             </div>
           )
         ) : (
           <EmptyState
-            title="No pricing asset yet"
-            description="Contact the service office for latest rates and fees."
+            title="No price reference attached"
+            description="Use the contact details above to confirm the latest rates, fees, or access rules."
           />
         )}
       </SectionCard>
 
       <section className="wire-panel">
-        <ShellButton label="Back to campus overview" href="/campus" variant="default" block={false} />
+        <ShellButton label="Back to campus guide" href="/campus" variant="default" block={false} />
       </section>
     </main>
   );

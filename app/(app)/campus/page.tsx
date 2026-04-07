@@ -31,12 +31,15 @@ export default function CampusInfoPage() {
   return (
     <main>
       <TopBar
-        title="Campus Information"
-        subtitle="Essential campus resources, services, and contacts."
+        title="Campus guide"
+        subtitle="Core services, contacts, policies, and campus references for student life."
         backHref="/home"
       />
 
-      <SectionCard title="Services & Prices">
+      <SectionCard
+        title="Campus services"
+        subtitle="Reference pages for the student services you may need most often."
+      >
         {campusServices.length > 0 ? (
           <div className="grid gap-3 sm:grid-cols-2">
             {campusServices.map((service) => (
@@ -52,7 +55,7 @@ export default function CampusInfoPage() {
                 </div>
                 <div className="mt-3">
                   <ShellButton
-                    label="View service details"
+                    label="Open service page"
                     href={`/campus/services/${service.slug}`}
                     block={false}
                     variant="default"
@@ -63,13 +66,16 @@ export default function CampusInfoPage() {
           </div>
         ) : (
           <EmptyState
-            title="No services listed"
-            description="Campus service references will appear here."
+            title="No campus services listed"
+            description="Campus service reference pages are not available right now."
           />
         )}
       </SectionCard>
 
-      <SectionCard title="Important Contacts">
+      <SectionCard
+        title="Important contacts"
+        subtitle="Official offices students commonly need for support, wellbeing, and campus services."
+      >
         {importantContacts.length > 0 ? (
           <div className="grid gap-3 sm:grid-cols-2">
             {importantContacts.map((contact) => (
@@ -96,13 +102,16 @@ export default function CampusInfoPage() {
         ) : (
           <EmptyState
             title="No contacts available"
-            description="Campus contact references will appear here."
+            description="Official campus contact details are not available right now."
           />
         )}
       </SectionCard>
 
       <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
-        <SectionCard title="Code of Conduct">
+        <SectionCard
+          title="Code of conduct"
+          subtitle="Official guidance for respectful behavior, academic integrity, and safe participation."
+        >
           <p className="mb-3 text-[14px] leading-relaxed text-wire-200">
             {campusCodeOfConduct.summary}
           </p>
@@ -114,12 +123,15 @@ export default function CampusInfoPage() {
               rel="noreferrer"
               className="wire-action-primary mt-3 inline-flex w-auto px-4"
             >
-              Open PDF
+              Open conduct PDF
             </a>
           </div>
         </SectionCard>
 
-        <SectionCard title="Campus Map">
+        <SectionCard
+          title="Campus map"
+          subtitle="Find main campus buildings, service points, and map references."
+        >
           <p className="mb-3 text-[14px] leading-relaxed text-wire-200">{campusMap.summary}</p>
 
           {mapIsImage ? (
@@ -136,7 +148,7 @@ export default function CampusInfoPage() {
                 rel="noreferrer"
                 className="wire-action-primary mt-3 inline-flex w-auto px-4"
               >
-                Open map
+                Open full map
               </a>
             </div>
           ) : mapIsPdf ? (
@@ -149,13 +161,13 @@ export default function CampusInfoPage() {
                 rel="noreferrer"
                 className="wire-action-primary mt-3 inline-flex w-auto px-4"
               >
-                Open map document
+                Open map PDF
               </a>
             </div>
           ) : (
             <EmptyState
-              title="Map asset unavailable"
-              description="Map reference file is not currently available."
+              title="Map file unavailable"
+              description="Use the external campus map link below while the local reference file is unavailable."
             />
           )}
 
