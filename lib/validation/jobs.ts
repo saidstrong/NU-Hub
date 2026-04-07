@@ -154,6 +154,11 @@ export const moderateJobSchema = z.object({
   redirectTo: z.string().optional(),
 });
 
+export const toggleSavedJobSchema = z.object({
+  jobId: z.string().uuid("Invalid job id."),
+  redirectTo: z.string().optional(),
+});
+
 export const setJobHiddenSchema = moderateJobSchema.extend({
   isHiddenInput: z.enum(["true", "false"]),
 });

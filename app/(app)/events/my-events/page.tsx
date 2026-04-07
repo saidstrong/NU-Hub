@@ -64,12 +64,32 @@ export default async function MyEventsPage({ searchParams }: MyEventsPageProps) 
   const nextHref = hasMore
     ? buildPageHref("/events/my-events", page + 1, { status: selectedStatus })
     : undefined;
+  const viewSummary = selectedStatus === "interested"
+    ? "Events you may attend. Keep track of them here while you decide."
+    : selectedStatus === "going"
+      ? "Events you plan to attend. Open one to review details or update your RSVP if plans change."
+      : "Events you organize. Open one to manage event details, publishing status, and attendee-facing information.";
+  const viewCountLabel = events.length === 1
+    ? "1 event on this page"
+    : `${events.length} events on this page`;
+  const emptyStateTitle = selectedStatus === "interested"
+    ? "No interested events yet"
+    : selectedStatus === "going"
+      ? "No planned events yet"
+      : "No organized events yet";
+  const emptyStateDescription = selectedStatus === "interested"
+    ? "Mark an event as Interested to keep it here while you decide whether to attend."
+    : selectedStatus === "going"
+      ? "Events marked Going will stay here so you can track what you plan to attend."
+      : "Create an event to start running a campus activity from Atrium.";
+  const emptyStateActionLabel = selectedStatus === "created" ? "Create event" : "Browse events";
+  const emptyStateActionHref = selectedStatus === "created" ? "/events/create" : "/events";
 
   return (
     <main>
       <TopBar
         title="My Events"
-        subtitle="Keep track of interested, going, and created events"
+        subtitle="Track events you may attend, plan to attend, or organize"
         backHref="/events"
       />
       {message ? (
@@ -86,6 +106,16 @@ export default async function MyEventsPage({ searchParams }: MyEventsPageProps) 
         ]}
         activeIndex={activeIndex}
       />
+
+      <section className="wire-panel py-3">
+        <p className="wire-label">Current view</p>
+        <p className="mt-1 text-[13px] leading-relaxed text-wire-300">
+          {viewSummary}
+        </p>
+        {!loadError ? (
+          <p className="mt-2 text-[12px] font-medium text-wire-200">{viewCountLabel}</p>
+        ) : null}
+      </section>
 
       {loadError ? (
         <div className="rounded-xl border border-red-400/30 bg-red-400/10 px-3 py-2 text-[13px] text-red-200">
@@ -116,19 +146,12 @@ export default async function MyEventsPage({ searchParams }: MyEventsPageProps) 
         </div>
       ) : null}
 
-      {selectedStatus === "created" && events.length === 0 && !loadError ? (
+      {events.length === 0 && !loadError ? (
         <EmptyState
-          title="No created events yet"
-          description="Create your first event and it will appear here."
-          actionLabel="Create event"
-          actionHref="/events/create"
-        />
-      ) : events.length === 0 && !loadError ? (
-        <EmptyState
-          title={`No ${selectedStatus} events yet`}
-          description="When you interact with events, they will appear in this view."
-          actionLabel="Browse events"
-          actionHref="/events"
+          title={emptyStateTitle}
+          description={emptyStateDescription}
+          actionLabel={emptyStateActionLabel}
+          actionHref={emptyStateActionHref}
         />
       ) : null}
       <PageNavigation

@@ -114,14 +114,17 @@ export default async function JobsPage({ searchParams }: JobsPageProps) {
   return (
     <main>
       <TopBar
-        title="Jobs"
-        subtitle="Campus internships, part-time roles, and research opportunities"
+        title="Jobs & Opportunities"
+        subtitle="Internships, part-time roles, volunteer openings, and research opportunities students can pursue."
         backHref="/home"
-        actions={isAdmin ? [{ label: "Post", href: "/jobs/post" }] : []}
+        actions={[
+          { label: "Saved", href: "/jobs/saved", variant: "ghost" },
+          ...(isAdmin ? [{ label: "Post", href: "/jobs/post" as const }] : []),
+        ]}
       />
 
       <SearchBar
-        placeholder="Search jobs by title, organization, or keywords"
+        placeholder="Search opportunities by title, organization, or keywords"
         queryName="q"
         defaultValue={q}
         action="/jobs"
@@ -131,6 +134,13 @@ export default async function JobsPage({ searchParams }: JobsPageProps) {
       {error ? <FeedbackBanner tone="error" message={error} /> : null}
       {parsedQuery.error ? <FeedbackBanner tone="error" message={parsedQuery.error} /> : null}
       {loadError ? <FeedbackBanner tone="error" message={loadError} /> : null}
+
+      <section className="wire-panel py-3">
+        <p className="wire-label">Current scope</p>
+        <p className="mt-1 text-[13px] leading-relaxed text-wire-300">
+          Atrium currently supports internships, part-time roles, volunteer openings, and research positions. Open an opportunity to review the details, save it for later, and apply through the listed method.
+        </p>
+      </section>
 
       <section className="wire-panel py-4">
         <p className="mb-2 wire-label">Type</p>
@@ -168,7 +178,10 @@ export default async function JobsPage({ searchParams }: JobsPageProps) {
         </div>
       </section>
 
-      <SectionCard title="Open positions">
+      <SectionCard
+        title="Open opportunities"
+        subtitle="Current student-facing openings that can still be pursued."
+      >
         {jobs.length > 0 ? (
           <div className="wire-list">
             {jobs.map((job) => (
@@ -183,7 +196,7 @@ export default async function JobsPage({ searchParams }: JobsPageProps) {
                     </h2>
                     <p className="mt-1 text-[13px] text-wire-200">{job.organization_name}</p>
                   </div>
-                  <TagChip label="Published" tone="status" />
+                  <TagChip label="Open" tone="status" />
                 </div>
                 <div className="mt-2.5 flex flex-wrap gap-2">
                   <TagChip label={formatJobTypeLabel(job.job_type)} active />
@@ -199,7 +212,7 @@ export default async function JobsPage({ searchParams }: JobsPageProps) {
                 </div>
                 <div className="mt-3">
                   <Link href={`/jobs/${job.id}`} className="wire-link">
-                    View role
+                    Open opportunity
                   </Link>
                 </div>
               </article>
@@ -207,8 +220,10 @@ export default async function JobsPage({ searchParams }: JobsPageProps) {
           </div>
         ) : !loadError ? (
           <EmptyState
-            title="No open jobs right now"
-            description="New opportunities will appear here once they are reviewed and published."
+            title="No open opportunities right now"
+            description="Published internships, part-time roles, volunteer openings, and research positions will appear here when available."
+            actionLabel="Back to home"
+            actionHref="/home"
           />
         ) : null}
       </SectionCard>

@@ -41,8 +41,8 @@ export default async function JobsPostPage({ searchParams }: JobsPostPageProps) 
   return (
     <main>
       <TopBar
-        title="Post Job"
-        subtitle="Create a job post for review"
+        title="Post Opportunity"
+        subtitle="Create an opportunity students can review and apply to externally"
         backHref="/jobs"
       />
       {error ? (
@@ -51,12 +51,22 @@ export default async function JobsPostPage({ searchParams }: JobsPostPageProps) 
         </div>
       ) : null}
 
+      <section className="wire-panel py-3">
+        <p className="wire-label">Opportunity setup</p>
+        <p className="mt-1 text-[13px] leading-relaxed text-wire-300">
+          Be clear about what the opportunity is, who it suits, where it happens, how students apply, and when it closes. Students will apply through the method you list here, not inside Atrium.
+        </p>
+      </section>
+
       <form action={createJobAction} className="flex flex-col gap-5">
-        <FormSection title="Role">
-          <WireField label="Job title" name="title" required placeholder="Research Assistant (AI Lab)" />
+        <FormSection
+          title="Opportunity"
+          description="State what the opening is, who it is with, and who it is relevant to."
+        >
+          <WireField label="Opportunity title" name="title" required placeholder="Research Assistant (AI Lab)" />
           <WireField label="Organization" name="organizationName" required placeholder="NU AI Lab" />
           <label className="block space-y-2">
-            <span className="wire-label">Job type</span>
+            <span className="wire-label">Opportunity type</span>
             <select name="jobType" required className="wire-input-field" defaultValue={JOB_TYPE_VALUES[0]}>
               {JOB_TYPE_VALUES.map((jobType) => (
                 <option key={jobType} value={jobType}>
@@ -67,7 +77,10 @@ export default async function JobsPostPage({ searchParams }: JobsPostPageProps) 
           </label>
         </FormSection>
 
-        <FormSection title="Location">
+        <FormSection
+          title="Location"
+          description="Use the location mode and details students should plan around before applying."
+        >
           <label className="block space-y-2">
             <span className="wire-label">Location mode</span>
             <select
@@ -90,12 +103,15 @@ export default async function JobsPostPage({ searchParams }: JobsPostPageProps) 
           />
         </FormSection>
 
-        <FormSection title="Description">
+        <FormSection
+          title="Details"
+          description="Explain what students will do, who the opportunity suits, and any expectations they should understand before applying."
+        >
           <WireTextarea
-            label="Role details"
+            label="Opportunity details"
             name="description"
             rows={7}
-            placeholder="Describe responsibilities, expected workload, and role scope."
+            placeholder="Describe the work, expected time commitment, and who this opportunity is best suited for."
           />
           <WireTextarea
             label="Requirements (optional)"
@@ -110,7 +126,10 @@ export default async function JobsPostPage({ searchParams }: JobsPostPageProps) 
           />
         </FormSection>
 
-        <FormSection title="Apply">
+        <FormSection
+          title="Apply"
+          description="Students will apply outside Atrium using one listed method before the closing date."
+        >
           <label className="block space-y-2">
             <span className="wire-label">Apply method</span>
             <select
@@ -127,23 +146,23 @@ export default async function JobsPostPage({ searchParams }: JobsPostPageProps) 
             </select>
           </label>
           <WireField
-            label="Application link (for External link)"
+            label="External application link"
             name="applyUrl"
             placeholder="https://..."
           />
           <WireField
-            label="Application email (for Email)"
+            label="Application email"
             name="applyEmail"
             type="email"
             placeholder="careers@example.com"
           />
           <WireField
-            label="Telegram contact (for Telegram)"
+            label="Telegram contact"
             name="applyTelegram"
             placeholder="@team_handle or https://t.me/team_handle"
           />
           <WireField
-            label="Expires at"
+            label="Closes at"
             name="expiresAtInput"
             type="datetime-local"
             required
@@ -151,7 +170,7 @@ export default async function JobsPostPage({ searchParams }: JobsPostPageProps) 
         </FormSection>
 
         <div className="wire-action-row-single">
-          <SubmitButton label="Submit for review" pendingLabel="Submitting..." variant="primary" />
+          <SubmitButton label="Submit opportunity for review" pendingLabel="Submitting..." variant="primary" />
         </div>
       </form>
     </main>

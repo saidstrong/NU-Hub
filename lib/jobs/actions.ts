@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import {
   getStringValue,
   redirectWithError,
@@ -16,12 +17,14 @@ import {
   jobMutationIdSchema,
   moderateJobSchema,
   setJobHiddenSchema,
+  toggleSavedJobSchema,
   updateJobSchema,
 } from "@/lib/validation/jobs";
 import { nuLocalDateTimeToUtcIso } from "@/lib/validation/events";
 
 function revalidateJobPaths(jobId: string) {
   revalidatePath("/jobs");
+  revalidatePath("/jobs/saved");
   revalidatePath(`/jobs/${jobId}`);
   revalidatePath(`/jobs/${jobId}/edit`);
   revalidatePath("/profile/moderation");
@@ -320,4 +323,82 @@ export async function setJobHiddenAction(formData: FormData) {
 
   revalidateJobPaths(parsed.data.jobId);
   redirectWithMessage(redirectPath, isHidden ? "Job hidden." : "Job unhidden.");
+}
+
+export async function toggleSavedJobAction(formData: FormData) {
+  assertJobsBoardEnabled("/jobs");
+  const parsed = toggleSavedJobSchema.safeParse({
+    jobId: getStringValue(formData, "jobId"),
+    redirectTo: getStringValue(formData, "redirectTo"),
+  });
+
+  if (!parsed.success) {
+    redirectWithError("/jobs", parsed.error.issues[0]?.message ?? "Invalid save request.");
+  }
+
+  const detailPath = `/jobs/${parsed.data.jobId}`;
+  const redirectPath = sanitizeInternalPath(parsed.data.redirectTo, detailPath);
+  const user = await requireUser();
+  const supabase = await createClient();
+
+  const { data: existing, error: existingError } = await supabase
+    .from("saved_jobs")
+    .select("job_id")
+    .eq("user_id", user.id)
+    .eq("job_id", parsed.data.jobId)
+    .maybeSingle();
+
+  if (existingError) {
+    redirectWithError(redirectPath, "Failed to check saved opportunity.");
+  }
+
+  if (existing) {
+    const { error: deleteError } = await supabase
+      .from("saved_jobs")
+      .delete()
+      .eq("user_id", user.id)
+      .eq("job_id", parsed.data.jobId);
+
+    if (deleteError) {
+      redirectWithError(redirectPath, "Failed to remove saved opportunity.");
+    }
+  } else {
+    const nowIso = new Date().toISOString();
+    const { data: visibleJob, error: jobError } = await supabase
+      .from("jobs")
+      .select("id")
+      .eq("id", parsed.data.jobId)
+      .eq("status", "published")
+      .eq("is_hidden", false)
+      .gt("expires_at", nowIso)
+      .maybeSingle();
+
+    if (jobError) {
+      redirectWithError(redirectPath, "Failed to verify opportunity visibility.");
+    }
+
+    if (!visibleJob) {
+      redirectWithError(
+        redirectPath,
+        "Only currently visible opportunities can be saved.",
+      );
+    }
+
+    const { error: insertError } = await supabase.from("saved_jobs").insert({
+      user_id: user.id,
+      job_id: parsed.data.jobId,
+    });
+
+    if (insertError?.code === "23505") {
+      redirect(redirectPath);
+    }
+
+    if (insertError) {
+      redirectWithError(redirectPath, "Failed to save opportunity.");
+    }
+  }
+
+  revalidatePath("/jobs/saved");
+  revalidatePath(detailPath);
+  redirect(redirectPath);
 }

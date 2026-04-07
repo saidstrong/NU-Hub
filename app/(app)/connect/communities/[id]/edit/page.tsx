@@ -48,7 +48,7 @@ export default async function EditCommunityPage({ params, searchParams }: EditCo
       <main>
         <TopBar
           title="Edit Community"
-          subtitle="Update the core settings for your community"
+          subtitle="Keep this community's purpose and join access clear"
           backHref={`/connect/communities/${id}`}
         />
         <div className="rounded-xl border border-red-400/30 bg-red-400/10 px-3 py-2 text-[13px] text-red-200">
@@ -77,7 +77,7 @@ export default async function EditCommunityPage({ params, searchParams }: EditCo
     <main>
       <TopBar
         title="Edit Community"
-        subtitle="Update the core settings for your community"
+        subtitle="Keep this community's purpose and join access clear"
         backHref={`/connect/communities/${community.id}`}
       />
       {error ? (
@@ -86,10 +86,18 @@ export default async function EditCommunityPage({ params, searchParams }: EditCo
         </div>
       ) : null}
 
+      <section className="wire-panel py-3">
+        <p className="wire-label">Community maintenance</p>
+        <p className="mt-1 text-[13px] leading-relaxed text-wire-300">
+          Keep the name, purpose, and join access aligned with how the community actually runs so
+          students know what to expect before they join and follow updates.
+        </p>
+      </section>
+
       <form action={updateCommunityAction} className="flex flex-col gap-5" encType="multipart/form-data">
         <input type="hidden" name="communityId" value={community.id} />
 
-        <FormSection title="Avatar (optional)">
+        <FormSection title="Avatar (optional)" description="Update the visual identity students see for this community.">
           <label className="block space-y-2">
             <span className="wire-label">Replace community avatar</span>
             <input
@@ -102,7 +110,7 @@ export default async function EditCommunityPage({ params, searchParams }: EditCo
           <p className="wire-meta">Leave empty to keep the current avatar. Max 5MB.</p>
         </FormSection>
 
-        <FormSection title="Community name">
+        <FormSection title="Community name" description="Keep the name students already recognize on campus.">
           <WireField
             label="Name"
             name="name"
@@ -112,17 +120,17 @@ export default async function EditCommunityPage({ params, searchParams }: EditCo
           />
         </FormSection>
 
-        <FormSection title="Description" description="Share the community purpose and what members can do here.">
+        <FormSection title="Purpose" description="Keep the purpose, audience, and member expectations clear.">
           <WireTextarea
-            label="Description"
+            label="Purpose"
             name="description"
             rows={6}
-            placeholder="A student community for product thinking, startup practice, and peer feedback."
+            placeholder="A student group for product thinking, peer critique, and practical workshops for NU builders."
             defaultValue={community.description}
           />
         </FormSection>
 
-        <FormSection title="Category">
+        <FormSection title="Category" description="Helps students understand what kind of community this is.">
           <label className="block space-y-2">
             <span className="wire-label">Category (optional)</span>
             <select name="category" className="wire-input-field" defaultValue={community.category ?? ""}>
@@ -136,7 +144,7 @@ export default async function EditCommunityPage({ params, searchParams }: EditCo
           </label>
         </FormSection>
 
-        <FormSection title="Tags" description="Optional comma-separated tags.">
+        <FormSection title="Focus tags" description="Optional short tags that help students scan the community quickly.">
           <WireField
             label="Tags"
             name="tagsInput"
@@ -145,7 +153,7 @@ export default async function EditCommunityPage({ params, searchParams }: EditCo
           />
         </FormSection>
 
-        <FormSection title="Join access">
+        <FormSection title="Join access" description="Keep this aligned with how you review members and run the community.">
           <label className="block space-y-2">
             <span className="wire-label">Join type</span>
             <select
@@ -154,8 +162,8 @@ export default async function EditCommunityPage({ params, searchParams }: EditCo
               className="wire-input-field"
               defaultValue={community.join_type}
             >
-              <option value="open">Open (any student can join)</option>
-              <option value="request">Request (owner approval required)</option>
+              <option value="open">Open (students join immediately)</option>
+              <option value="request">Request (owner review before joining)</option>
             </select>
           </label>
         </FormSection>
@@ -175,7 +183,7 @@ export default async function EditCommunityPage({ params, searchParams }: EditCo
       <section className="wire-panel">
         <h2 className="text-[16px] font-semibold tracking-tight text-wire-100">Delete community</h2>
         <p className="mt-1 wire-meta">
-          This permanently removes the community, memberships, and pending requests.
+          This permanently removes the community, member access, and pending join requests.
         </p>
         <form action={deleteCommunityAction} className="mt-3">
           <input type="hidden" name="communityId" value={community.id} />

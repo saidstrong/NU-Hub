@@ -16,10 +16,21 @@ export default async function EventsListPage() {
   return (
     <main>
       <TopBar
-        title="Events List"
-        subtitle="Browse all published events"
+        title="All Events"
+        subtitle="Published NU events you can review, save, or join."
         backHref="/events"
       />
+      <section className="wire-panel py-3">
+        <p className="wire-label">Published events</p>
+        <p className="mt-1 text-[13px] leading-relaxed text-wire-300">
+          Open an event to review details, check the organizer, and decide whether to save it or RSVP.
+        </p>
+        {!loadError ? (
+          <p className="mt-2 text-[12px] font-medium text-wire-200">
+            {events.length} published event{events.length === 1 ? "" : "s"} in this list
+          </p>
+        ) : null}
+      </section>
       {loadError ? (
         <div className="rounded-xl border border-red-400/30 bg-red-400/10 px-3 py-2 text-[13px] text-red-200">
           {loadError}
@@ -34,7 +45,7 @@ export default async function EventsListPage() {
       ) : !loadError ? (
         <EmptyState
           title="No events published yet"
-          description="Published events will appear in this list."
+          description="Published events students can join will appear here once they are available."
           actionLabel="Back to events"
           actionHref="/events"
         />

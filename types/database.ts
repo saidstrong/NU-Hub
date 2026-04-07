@@ -346,6 +346,23 @@ type DatabaseSchema = {
           updated_at?: string;
         };
       };
+      saved_jobs: {
+        Row: {
+          user_id: string;
+          job_id: string;
+          created_at: string;
+        };
+        Insert: {
+          user_id: string;
+          job_id: string;
+          created_at?: string;
+        };
+        Update: {
+          user_id?: string;
+          job_id?: string;
+          created_at?: string;
+        };
+      };
       event_participants: {
         Row: {
           event_id: string;

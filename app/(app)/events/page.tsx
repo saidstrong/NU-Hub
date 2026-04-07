@@ -44,7 +44,7 @@ export default async function EventsHomePage({ searchParams }: EventsHomePagePro
       <section className="wire-panel">
         <SectionHeader
           title="Events"
-          subtitle="Find campus activity worth joining and keep your participation organized."
+          subtitle="Find upcoming NU events, save what you want to revisit, and keep your plans organized."
           actionNode={
             <Link href="/events/my-events" className="wire-link">
               My events
@@ -62,39 +62,45 @@ export default async function EventsHomePage({ searchParams }: EventsHomePagePro
         <div className="mt-4 flex flex-wrap items-center gap-2">
           <ShellButton label="Create event" href="/events/create" variant="primary" block={false} />
           <Link href="/events/list" className="wire-action-compact">
-            See all
+            All events
           </Link>
           <Link href="/events/saved" className="wire-action-compact">
-            Saved
+            Saved events
           </Link>
         </div>
+        <section className="mt-4 rounded-xl border border-wire-700 bg-wire-900/70 px-3 py-3">
+          <p className="wire-label">Event flow</p>
+          <p className="mt-1 text-[13px] leading-relaxed text-wire-300">
+            Browse upcoming events here, save the ones you want to revisit, and use My Events to track what you may attend, plan to attend, or organize.
+          </p>
+        </section>
       </section>
 
       <SectionCard
-        title="Upcoming activity"
-        subtitle="Published NU events ordered by start time."
-        actionLabel="See all"
+        title="Upcoming events"
+        subtitle="Published campus events you can review, save, or join."
+        actionLabel="All events"
         actionHref="/events/list"
       >
         {loadError ? <FeedbackBanner tone="error" message={loadError} className="mb-3" /> : null}
         {!loadError && events.length > 0 ? (
           <p className="mb-3 text-[12px] text-wire-300">
-            {events.length} event{events.length === 1 ? "" : "s"} in this view
+            {events.length} published event{events.length === 1 ? "" : "s"} in this view
           </p>
         ) : null}
         {featuredEvent ? (
           <EventCard event={toEventCardData(featuredEvent)} href={`/events/${featuredEvent.id}`} />
         ) : !loadError ? (
           <EmptyState
-            title="No upcoming activity right now"
-            description="Check back soon or publish a campus event students can join."
+            title="No upcoming events right now"
+            description="Published events students can join will appear here. You can still create one."
             actionLabel="Create event"
             actionHref="/events/create"
           />
         ) : null}
         {upcomingEvents.length > 0 ? (
           <div className="mt-5 border-t border-wire-700 pt-4">
-            <p className="mb-3 wire-label">Next Up</p>
+            <p className="mb-3 wire-label">More upcoming events</p>
             <div className="grid gap-3 sm:grid-cols-2">
               {upcomingEvents.map((event) => (
                 <EventCard key={event.id} event={toEventCardData(event)} href={`/events/${event.id}`} />

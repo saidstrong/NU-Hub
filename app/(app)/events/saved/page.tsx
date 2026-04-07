@@ -38,9 +38,20 @@ export default async function SavedEventsPage({ searchParams }: SavedEventsPageP
     <main>
       <TopBar
         title="Saved Events"
-        subtitle="Events you want to revisit and track"
+        subtitle="Events you want to revisit before deciding whether to attend"
         backHref="/events"
       />
+      <section className="wire-panel py-3">
+        <p className="wire-label">Saved for later</p>
+        <p className="mt-1 text-[13px] leading-relaxed text-wire-300">
+          Saved events help you revisit details and compare options. Open one when you want to review it again or remove it from this list.
+        </p>
+        {!loadError ? (
+          <p className="mt-2 text-[12px] font-medium text-wire-200">
+            {events.length} saved event{events.length === 1 ? "" : "s"} on this page
+          </p>
+        ) : null}
+      </section>
       {loadError ? (
         <div className="rounded-xl border border-red-400/30 bg-red-400/10 px-3 py-2 text-[13px] text-red-200">
           {loadError}
@@ -64,8 +75,8 @@ export default async function SavedEventsPage({ searchParams }: SavedEventsPageP
         </div>
       ) : !loadError ? (
         <EmptyState
-          title="No saved events"
-          description="Saved events will appear here as soon as you add them."
+          title="No saved events yet"
+          description="Save an event when you want to revisit the details before deciding whether to attend."
           actionLabel="Browse events"
           actionHref="/events"
         />

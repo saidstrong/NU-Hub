@@ -67,13 +67,13 @@ export default async function EditJobPage({ params, searchParams }: EditJobPageP
   if (!job) {
     return (
       <main>
-        <TopBar title="Edit Job" backHref="/jobs" />
+        <TopBar title="Edit Opportunity" backHref="/jobs" />
         {loadError ? (
           <div className="rounded-xl border border-red-400/30 bg-red-400/10 px-3 py-2 text-[13px] text-red-200">
             {loadError}
           </div>
         ) : null}
-        <p className="wire-inline-empty">Job not found.</p>
+        <p className="wire-inline-empty">Opportunity not found.</p>
       </main>
     );
   }
@@ -83,8 +83,8 @@ export default async function EditJobPage({ params, searchParams }: EditJobPageP
   return (
     <main>
       <TopBar
-        title="Edit Job"
-        subtitle="Update role details and moderation state"
+        title="Edit Opportunity"
+        subtitle="Keep this opportunity clear for students who may still review and apply to it"
         backHref={`/jobs/${job.id}`}
       />
       {message ? (
@@ -98,6 +98,13 @@ export default async function EditJobPage({ params, searchParams }: EditJobPageP
         </div>
       ) : null}
 
+      <section className="wire-panel py-3">
+        <p className="wire-label">Opportunity maintenance</p>
+        <p className="mt-1 text-[13px] leading-relaxed text-wire-300">
+          Keep the organization, location, application method, and closing date accurate so students can still understand the opening and apply outside Atrium.
+        </p>
+      </section>
+
       <section className="wire-panel py-4">
         <div className="flex flex-wrap items-center gap-2">
           <TagChip label={formatJobStatusLabel(job.status)} tone="status" />
@@ -108,11 +115,14 @@ export default async function EditJobPage({ params, searchParams }: EditJobPageP
       <form action={updateJobAction} className="flex flex-col gap-5">
         <input type="hidden" name="jobId" value={job.id} />
 
-        <FormSection title="Role">
-          <WireField label="Job title" name="title" required defaultValue={job.title} />
+        <FormSection
+          title="Opportunity"
+          description="Keep the title, organization, and type clear so students can judge the opening quickly."
+        >
+          <WireField label="Opportunity title" name="title" required defaultValue={job.title} />
           <WireField label="Organization" name="organizationName" required defaultValue={job.organization_name} />
           <label className="block space-y-2">
-            <span className="wire-label">Job type</span>
+            <span className="wire-label">Opportunity type</span>
             <select name="jobType" required className="wire-input-field" defaultValue={job.job_type}>
               {JOB_TYPE_VALUES.map((jobType) => (
                 <option key={jobType} value={jobType}>
@@ -123,7 +133,10 @@ export default async function EditJobPage({ params, searchParams }: EditJobPageP
           </label>
         </FormSection>
 
-        <FormSection title="Location">
+        <FormSection
+          title="Location"
+          description="Keep the location mode and details aligned with where students should actually expect the opportunity to happen."
+        >
           <label className="block space-y-2">
             <span className="wire-label">Location mode</span>
             <select name="locationMode" required className="wire-input-field" defaultValue={job.location_mode}>
@@ -137,8 +150,11 @@ export default async function EditJobPage({ params, searchParams }: EditJobPageP
           <WireField label="Location details (optional)" name="locationText" defaultValue={job.location_text ?? ""} />
         </FormSection>
 
-        <FormSection title="Description">
-          <WireTextarea label="Role details" name="description" rows={7} defaultValue={job.description} />
+        <FormSection
+          title="Details"
+          description="Keep the responsibilities, audience fit, and expectations easy to understand before a student applies."
+        >
+          <WireTextarea label="Opportunity details" name="description" rows={7} defaultValue={job.description} />
           <WireTextarea
             label="Requirements (optional)"
             name="requirements"
@@ -152,7 +168,10 @@ export default async function EditJobPage({ params, searchParams }: EditJobPageP
           />
         </FormSection>
 
-        <FormSection title="Apply">
+        <FormSection
+          title="Apply"
+          description="Students will use one listed method to apply outside Atrium before the closing date."
+        >
           <label className="block space-y-2">
             <span className="wire-label">Apply method</span>
             <select name="applyMethod" required className="wire-input-field" defaultValue={job.apply_method}>
@@ -164,23 +183,23 @@ export default async function EditJobPage({ params, searchParams }: EditJobPageP
             </select>
           </label>
           <WireField
-            label="Application link (for External link)"
+            label="External application link"
             name="applyUrl"
             defaultValue={job.apply_url ?? ""}
           />
           <WireField
-            label="Application email (for Email)"
+            label="Application email"
             name="applyEmail"
             type="email"
             defaultValue={job.apply_email ?? ""}
           />
           <WireField
-            label="Telegram contact (for Telegram)"
+            label="Telegram contact"
             name="applyTelegram"
             defaultValue={job.apply_telegram ?? ""}
           />
           <WireField
-            label="Expires at"
+            label="Closes at"
             name="expiresAtInput"
             type="datetime-local"
             required
@@ -192,12 +211,15 @@ export default async function EditJobPage({ params, searchParams }: EditJobPageP
           <Link href={`/jobs/${job.id}`} className="wire-action">
             Cancel
           </Link>
-          <SubmitButton label="Save changes" pendingLabel="Saving..." variant="primary" />
+          <SubmitButton label="Save opportunity changes" pendingLabel="Saving..." variant="primary" />
         </div>
       </form>
 
       <section className="wire-panel">
-        <h2 className="wire-section-title mb-2">Moderation</h2>
+        <h2 className="wire-section-title mb-2">Publication</h2>
+        <p className="mb-3 wire-meta">
+          Use these controls to publish, reject, or hide the opportunity after reviewing how students will see it.
+        </p>
         <div className="wire-action-row">
           <form action={approveJobAction}>
             <input type="hidden" name="jobId" value={job.id} />

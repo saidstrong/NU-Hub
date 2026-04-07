@@ -29,7 +29,7 @@ export default async function CreateCommunityPage({
     <main>
       <TopBar
         title="Create Community"
-        subtitle="Set up a new student community space"
+        subtitle="Start a campus group with a clear purpose and join model"
         backHref="/connect/communities"
       />
       {error ? (
@@ -38,8 +38,16 @@ export default async function CreateCommunityPage({
         </div>
       ) : null}
 
+      <section className="wire-panel py-3">
+        <p className="wire-label">Community setup</p>
+        <p className="mt-1 text-[13px] leading-relaxed text-wire-300">
+          Use a clear name, explain what the group does and who it is for, and choose whether
+          students join immediately or by request.
+        </p>
+      </section>
+
       <form action={createCommunityAction} className="flex flex-col gap-5" encType="multipart/form-data">
-        <FormSection title="Avatar (optional)">
+        <FormSection title="Avatar (optional)" description="Optional visual identity for the group.">
           <label className="block space-y-2">
             <span className="wire-label">Community avatar</span>
             <input
@@ -52,7 +60,7 @@ export default async function CreateCommunityPage({
           <p className="wire-meta">JPEG, PNG, WEBP. Max 5MB.</p>
         </FormSection>
 
-        <FormSection title="Community name">
+        <FormSection title="Community name" description="Use the name students already recognize on campus.">
           <WireField
             label="Name"
             name="name"
@@ -61,16 +69,16 @@ export default async function CreateCommunityPage({
           />
         </FormSection>
 
-        <FormSection title="Description" description="Share the community purpose and what members can do here.">
+        <FormSection title="Purpose" description="Explain what the community does, who it is for, and how members take part.">
           <WireTextarea
-            label="Description"
+            label="Purpose"
             name="description"
             rows={6}
-            placeholder="A student community for product thinking, startup practice, and peer feedback."
+            placeholder="A student group for product thinking, peer critique, and practical workshops for NU builders."
           />
         </FormSection>
 
-        <FormSection title="Category">
+        <FormSection title="Category" description="Helps students understand what kind of community this is.">
           <label className="block space-y-2">
             <span className="wire-label">Category (optional)</span>
             <select name="category" className="wire-input-field">
@@ -84,7 +92,7 @@ export default async function CreateCommunityPage({
           </label>
         </FormSection>
 
-        <FormSection title="Tags" description="Optional comma-separated tags.">
+        <FormSection title="Focus tags" description="Optional short tags that help students scan the community quickly.">
           <WireField
             label="Tags"
             name="tagsInput"
@@ -92,12 +100,12 @@ export default async function CreateCommunityPage({
           />
         </FormSection>
 
-        <FormSection title="Join access">
+        <FormSection title="Join access" description="Choose whether students join right away or wait for owner review.">
           <label className="block space-y-2">
             <span className="wire-label">Join type</span>
             <select name="joinType" required className="wire-input-field">
-              <option value="open">Open (any student can join)</option>
-              <option value="request">Request (owner approval required)</option>
+              <option value="open">Open (students join immediately)</option>
+              <option value="request">Request (owner review before joining)</option>
             </select>
           </label>
         </FormSection>

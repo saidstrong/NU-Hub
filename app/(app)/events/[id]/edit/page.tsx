@@ -40,7 +40,7 @@ export default async function EditEventPage({ params, searchParams }: EditEventP
       <main>
         <TopBar
           title="Edit Event"
-          subtitle="Update title, schedule, and event details"
+          subtitle="Keep this event clear for students who may still join or track it"
           backHref={`/events/${id}`}
         />
         <div className="rounded-xl border border-red-400/30 bg-red-400/10 px-3 py-2 text-[13px] text-red-200">
@@ -71,7 +71,7 @@ export default async function EditEventPage({ params, searchParams }: EditEventP
     <main>
       <TopBar
         title="Edit Event"
-        subtitle="Update title, schedule, and event details"
+        subtitle="Keep this event clear for students who may still join or track it"
         backHref={`/events/${event.id}`}
       />
       {error ? (
@@ -80,10 +80,17 @@ export default async function EditEventPage({ params, searchParams }: EditEventP
         </div>
       ) : null}
 
+      <section className="wire-panel py-3">
+        <p className="wire-label">Organizer maintenance</p>
+        <p className="mt-1 text-[13px] leading-relaxed text-wire-300">
+          Keep the purpose, schedule, and location accurate so students can still understand the event and decide whether to attend.
+        </p>
+      </section>
+
       <form action={updateEventAction} className="flex flex-col gap-5" encType="multipart/form-data">
         <input type="hidden" name="eventId" value={event.id} />
 
-        <FormSection title="Cover image (optional)">
+        <FormSection title="Cover image (optional)" description="Update the visual context students see before they open the event.">
           <label className="block space-y-2">
             <span className="wire-label">Replace event cover</span>
             <input
@@ -96,7 +103,7 @@ export default async function EditEventPage({ params, searchParams }: EditEventP
           <p className="wire-meta">Leave empty to keep current cover. Max 10MB.</p>
         </FormSection>
 
-        <FormSection title="Event title">
+        <FormSection title="Event title" description="Keep the name clear in event lists, saved events, and My Events.">
           <WireField
             label="Title"
             name="title"
@@ -106,17 +113,17 @@ export default async function EditEventPage({ params, searchParams }: EditEventP
           />
         </FormSection>
 
-        <FormSection title="Description" description="Optional context for attendees.">
+        <FormSection title="Purpose and details" description="Keep the event purpose, audience, and participation expectations easy to understand.">
           <WireTextarea
-            label="Description"
+            label="Details"
             name="description"
             rows={6}
-            placeholder="A student-led session for product strategy and project demos."
+            placeholder="A student-led session for product strategy, project demos, and anyone at NU exploring product roles."
             defaultValue={event.description}
           />
         </FormSection>
 
-        <FormSection title="Category">
+        <FormSection title="Category" description="Helps students understand what kind of event they are opening.">
           <label className="block space-y-2">
             <span className="wire-label">Select category</span>
             <select
@@ -134,7 +141,7 @@ export default async function EditEventPage({ params, searchParams }: EditEventP
           </label>
         </FormSection>
 
-        <FormSection title="Schedule">
+        <FormSection title="Schedule" description="Keep timing accurate so Going and Interested still reflect the right plan.">
           <WireField
             label="Starts at"
             name="startsAtInput"
@@ -150,9 +157,9 @@ export default async function EditEventPage({ params, searchParams }: EditEventP
           />
         </FormSection>
 
-        <FormSection title="Location">
+        <FormSection title="Location" description="Keep the location clear so students know where to go if they plan to attend.">
           <WireField
-            label="Venue"
+            label="Location"
             name="location"
             required
             placeholder="C3.200 Auditorium"
@@ -167,7 +174,7 @@ export default async function EditEventPage({ params, searchParams }: EditEventP
             Cancel
           </Link>
           <SubmitButton
-            label="Save changes"
+            label="Save event changes"
             pendingLabel="Saving..."
             variant="primary"
           />
@@ -177,7 +184,7 @@ export default async function EditEventPage({ params, searchParams }: EditEventP
       <section className="wire-panel">
         <h2 className="text-[16px] font-semibold tracking-tight text-wire-100">Delete event</h2>
         <p className="mt-1 wire-meta">
-          This permanently removes the event and related participation/saved records.
+          This permanently removes the event and its related RSVP and saved records.
         </p>
         <form action={deleteEventAction} className="mt-3">
           <input type="hidden" name="eventId" value={event.id} />

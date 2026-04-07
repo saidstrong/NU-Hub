@@ -41,7 +41,7 @@ export default async function CommunitiesDiscoveryPage({
     <main>
       <TopBar
         title="Communities"
-        subtitle="Campus circles, study groups, and student-led initiatives"
+        subtitle="The front door to campus groups you can discover, join, and run"
         backHref="/connect"
         actions={[{ label: "Create", href: "/connect/communities/create" }]}
       />
@@ -61,7 +61,18 @@ export default async function CommunitiesDiscoveryPage({
         </div>
       ) : null}
 
-      <SectionCard title="Student Communities">
+      <section className="wire-panel py-3">
+        <p className="wire-label">Community hub</p>
+        <p className="mt-1 text-[13px] leading-relaxed text-wire-300">
+          Browse active student groups, open a community to review its lead and join access, or
+          return to the communities you already belong to or operate.
+        </p>
+      </section>
+
+      <SectionCard
+        title="Student communities"
+        subtitle="Discover clubs, project groups, and student-led units across NU."
+      >
         {communities.length > 0 ? (
           <div className="wire-list">
             {communities.map((entry) => (
@@ -74,8 +85,10 @@ export default async function CommunitiesDiscoveryPage({
           </div>
         ) : !loadError ? (
           <EmptyState
-            title="No communities available"
-            description="Communities will appear here as they are created."
+            title="No communities available yet"
+            description="Create the first campus group, club, or student initiative and it will appear here."
+            actionLabel="Create community"
+            actionHref="/connect/communities/create"
           />
         ) : null}
       </SectionCard>
@@ -88,15 +101,17 @@ export default async function CommunitiesDiscoveryPage({
 
       <section className="wire-panel">
         <div className="mb-3 border-b border-wire-700 pb-3">
-          <h2 className="wire-section-title">Community management</h2>
-          <p className="mt-1 wire-meta">Open requests and view your joined communities.</p>
+          <h2 className="wire-section-title">Community operations</h2>
+          <p className="mt-1 wire-meta">
+            Review requests you need to handle and return to communities you belong to or run.
+          </p>
         </div>
         <div className="wire-action-row">
           <Link href="/connect/communities/requests" className="wire-action">
-            Join Requests
+            Review requests
           </Link>
           <Link href="/connect/my-communities" className="wire-action">
-            My Communities
+            Your communities
           </Link>
         </div>
       </section>

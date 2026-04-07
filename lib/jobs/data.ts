@@ -66,6 +66,12 @@ export function isJobExpired(expiresAt: string): boolean {
   return new Date(expiresAt).getTime() <= Date.now();
 }
 
+export function isPublicJobVisible(
+  job: Pick<JobRow, "status" | "is_hidden" | "expires_at">,
+): boolean {
+  return job.status === "published" && !job.is_hidden && !isJobExpired(job.expires_at);
+}
+
 export function formatJobTypeLabel(jobType: JobType): string {
   if (jobType === "part_time") return "Part-time";
   if (jobType === "volunteer") return "Volunteer";
@@ -169,14 +175,89 @@ export async function getPublishedJobDetail(jobId: string): Promise<JobRow | nul
 
   if (!job) return null;
 
-  const isPubliclyVisible =
-    job.status === "published" && !job.is_hidden && !isJobExpired(job.expires_at);
+  const isPubliclyVisible = isPublicJobVisible(job);
 
   if (!isPubliclyVisible && !admin) {
     return null;
   }
 
   return job;
+}
+
+export async function isJobSavedByViewer(jobId: string): Promise<boolean> {
+  const user = await requireUser();
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("saved_jobs")
+    .select("job_id")
+    .eq("user_id", user.id)
+    .eq("job_id", jobId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error("Failed to load saved opportunity state.");
+  }
+
+  return Boolean(data);
+}
+
+export async function getSavedJobsPage(
+  page = 1,
+  pageSize = 12,
+): Promise<PublishedJobsPageResult> {
+  const user = await requireUser();
+  const { from, to, pageSize: safePageSize } = createPaginationWindow({
+    page,
+    pageSize,
+    defaultPageSize: 12,
+    maxPageSize: 30,
+  });
+  const supabase = await createClient();
+
+  const { data: savedRows, error: savedError } = await supabase
+    .from("saved_jobs")
+    .select("job_id, created_at")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false })
+    .order("job_id", { ascending: false })
+    .range(from, to);
+
+  if (savedError) {
+    throw new Error("Failed to load saved opportunities.");
+  }
+
+  const pagedSavedRows = splitPaginatedRows(savedRows ?? [], safePageSize);
+
+  if (pagedSavedRows.rows.length === 0) {
+    return {
+      jobs: [],
+      hasMore: false,
+    };
+  }
+
+  const jobIds = pagedSavedRows.rows.map((row) => row.job_id);
+  const nowIso = new Date().toISOString();
+  const { data: jobs, error: jobsError } = await supabase
+    .from("jobs")
+    .select(JOB_LIST_SELECT)
+    .in("id", jobIds)
+    .eq("status", "published")
+    .eq("is_hidden", false)
+    .gt("expires_at", nowIso);
+
+  if (jobsError) {
+    throw new Error("Failed to load saved opportunity details.");
+  }
+
+  const jobsById = new Map((jobs ?? []).map((job) => [job.id, job]));
+
+  return {
+    jobs: jobIds
+      .map((jobId) => jobsById.get(jobId))
+      .filter((job): job is JobListItem => Boolean(job)),
+    hasMore: pagedSavedRows.hasMore,
+  };
 }
 
 export async function getPendingJobsForReview(limit = 50): Promise<PendingJobReviewItem[]> {

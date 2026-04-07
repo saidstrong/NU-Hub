@@ -25,6 +25,30 @@ type EventDetailPageProps = {
   searchParams: Promise<{ message?: string; error?: string }>;
 };
 
+function getParticipationStateCopy(status: "going" | "interested" | null): {
+  label: string;
+  description: string;
+} {
+  if (status === "going") {
+    return {
+      label: "Going",
+      description: "You plan to attend this event.",
+    };
+  }
+
+  if (status === "interested") {
+    return {
+      label: "Interested",
+      description: "You want to keep track of this event.",
+    };
+  }
+
+  return {
+    label: "No RSVP yet",
+    description: "Choose Going if you plan to attend or Interested if you want to keep track of it.",
+  };
+}
+
 export default async function EventDetailPage({ params, searchParams }: EventDetailPageProps) {
   const [{ message, error }, { id }] = await Promise.all([searchParams, params]);
 
@@ -79,6 +103,7 @@ export default async function EventDetailPage({ params, searchParams }: EventDet
     .map((value) => value?.trim())
     .filter(Boolean)
     .join(" - ");
+  const organizerContextLabel = organizerMeta || "NU organizer";
   const locationLabel =
     typeof event.location === "string" && event.location.trim().length > 0
       ? event.location.trim()
@@ -87,12 +112,7 @@ export default async function EventDetailPage({ params, searchParams }: EventDet
     typeof event.description === "string" && event.description.trim().length > 0
       ? event.description.trim()
       : "No additional event description provided.";
-  const rsvpStateLabel =
-    participationStatus === "going"
-      ? "Going"
-      : participationStatus === "interested"
-        ? "Interested"
-        : "No RSVP yet";
+  const participationState = getParticipationStateCopy(participationStatus);
   const coverUrl = toPublicStorageUrl("event-images", event.cover_path);
 
   return (
@@ -100,6 +120,7 @@ export default async function EventDetailPage({ params, searchParams }: EventDet
       <section className="wire-panel">
         <SectionHeader
           title="Event"
+          subtitle="See who is organizing this, when it happens, and how to join."
           actionNode={
             <Link href="/events" className="wire-link">
               Back to events
@@ -129,12 +150,15 @@ export default async function EventDetailPage({ params, searchParams }: EventDet
               <p className="mt-1 text-sm text-wire-100">{locationLabel}</p>
             </div>
             <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-3 py-2">
-              <p className="wire-label">Host</p>
+              <p className="wire-label">Organizer</p>
               <p className="mt-1 text-sm text-wire-100">{organizerLabel}</p>
+              <p className="mt-1 wire-meta">{organizerContextLabel}</p>
             </div>
             <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-3 py-2">
-              <p className="wire-label">Host context</p>
-              <p className="mt-1 text-sm text-wire-100">{organizerMeta || "Campus organizer profile"}</p>
+              <p className="wire-label">Joining</p>
+              <p className="mt-1 text-sm text-wire-100">
+                Going means you plan to attend. Interested helps you keep track of the event.
+              </p>
             </div>
           </div>
         </div>
@@ -152,7 +176,7 @@ export default async function EventDetailPage({ params, searchParams }: EventDet
       <div className="grid gap-6 xl:grid-cols-[1.45fr_1fr]">
         <div className="space-y-6">
           {coverUrl ? (
-            <SectionCard title="Cover" subtitle="Visual context for this event.">
+            <SectionCard title="Cover" subtitle="Visual context from the organizer.">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={coverUrl}
@@ -165,8 +189,8 @@ export default async function EventDetailPage({ params, searchParams }: EventDet
           )}
 
           <SectionCard
-            title="Description"
-            subtitle="Additional context from the organizer."
+            title="About this event"
+            subtitle="What to know before you join."
           >
             <p className="whitespace-pre-wrap break-words text-[14px] leading-relaxed text-wire-200 [overflow-wrap:anywhere]">
               {descriptionLabel}
@@ -176,12 +200,12 @@ export default async function EventDetailPage({ params, searchParams }: EventDet
 
         <div className="space-y-6">
           <SectionCard
-            title="Host"
-            subtitle="Organizer context for attendance confidence."
+            title="Organizer"
+            subtitle="Who is running this event."
           >
             <div className="space-y-1.5">
               <p className="text-sm text-wire-100">{organizerLabel}</p>
-              <p className="wire-meta">{organizerMeta || "Campus organizer profile"}</p>
+              <p className="wire-meta">{organizerContextLabel}</p>
               {organizer?.user_id ? (
                 <Link href={`/connect/people/${organizer.user_id}`} className="wire-link inline-flex">
                   View organizer profile
@@ -192,22 +216,29 @@ export default async function EventDetailPage({ params, searchParams }: EventDet
 
           {isPublished ? (
             <SectionCard
-              title="RSVP"
-              subtitle="Set intent and track participation signals."
+              title="Participation"
+              subtitle="Going means you plan to attend. Interested helps you keep track of the event."
             >
               <div className="mb-3 grid grid-cols-2 gap-2">
                 <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-3 py-2">
                   <p className="wire-label">Going</p>
                   <p className="mt-1 text-[14px] font-medium text-wire-100">{rsvpCounts.going}</p>
+                  <p className="mt-1 wire-meta">Students planning to attend</p>
                 </div>
                 <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-3 py-2">
                   <p className="wire-label">Interested</p>
                   <p className="mt-1 text-[14px] font-medium text-wire-100">{rsvpCounts.interested}</p>
+                  <p className="mt-1 wire-meta">Students keeping track of it</p>
                 </div>
-                <p className="col-span-2 wire-meta">Your RSVP: {rsvpStateLabel}</p>
               </div>
 
-              <div className="wire-action-row">
+              <div className="rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-3 py-2">
+                <p className="wire-label">Your current status</p>
+                <p className="mt-1 text-sm font-medium text-wire-100">{participationState.label}</p>
+                <p className="mt-1 wire-meta">{participationState.description}</p>
+              </div>
+
+              <div className="wire-action-row mt-3">
                 <form action={setEventParticipationAction} className="w-full">
                   <input type="hidden" name="eventId" value={event.id} />
                   <input type="hidden" name="status" value="going" />
@@ -233,7 +264,7 @@ export default async function EventDetailPage({ params, searchParams }: EventDet
 
               {isOwner ? (
                 <div className="mt-3">
-                  <ShellButton label="Edit event" href={`/events/${event.id}/edit`} variant="default" />
+                  <ShellButton label="Manage event" href={`/events/${event.id}/edit`} variant="default" />
                 </div>
               ) : null}
 
@@ -242,8 +273,8 @@ export default async function EventDetailPage({ params, searchParams }: EventDet
                   <input type="hidden" name="eventId" value={event.id} />
                   <input type="hidden" name="redirectTo" value={`/events/${event.id}`} />
                   <SubmitButton
-                    label={isSaved ? "Unsave event" : "Save event"}
-                    pendingLabel={isSaved ? "Unsaving..." : "Saving..."}
+                    label={isSaved ? "Remove from saved" : "Save for later"}
+                    pendingLabel={isSaved ? "Removing..." : "Saving..."}
                     className="w-full"
                   />
                 </form>
@@ -253,6 +284,19 @@ export default async function EventDetailPage({ params, searchParams }: EventDet
                   <SubmitButton label="Clear RSVP" pendingLabel="Clearing..." className="w-full" />
                 </form>
               </div>
+              <p className="mt-3 text-[12px] leading-relaxed text-wire-300">
+                {isOwner ? (
+                  "Students use Going and Interested to track this event. Keep the schedule and location current if details change."
+                ) : (
+                  <>
+                    Track this in{" "}
+                    <Link href="/events/my-events" className="wire-link inline">
+                      My Events
+                    </Link>{" "}
+                    and update your RSVP if your plans change.
+                  </>
+                )}
+              </p>
               {!isOwner ? (
                 <div className="mt-3">
                   <form action={reportContentAction}>
