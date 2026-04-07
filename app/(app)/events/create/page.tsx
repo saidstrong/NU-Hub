@@ -17,8 +17,8 @@ export default async function CreateEventPage({ searchParams }: CreateEventPageP
   return (
     <main>
       <TopBar
-        title="Create Event"
-        subtitle="Set up a campus event students can understand, join, and track"
+        title="Create event"
+        subtitle="Set up a campus event students can understand, join, and track."
         backHref="/events"
       />
       {error ? (
@@ -30,12 +30,15 @@ export default async function CreateEventPage({ searchParams }: CreateEventPageP
       <section className="wire-panel py-3">
         <p className="wire-label">Organizer setup</p>
         <p className="mt-1 text-[13px] leading-relaxed text-wire-300">
-          Give students a clear event purpose, accurate timing, and a real location so they know what they are joining before you submit it for review.
+          Give students a clear purpose, accurate timing, and a real location so they understand the event before you submit it for review.
         </p>
       </section>
 
       <form action={createEventAction} className="flex flex-col gap-5" encType="multipart/form-data">
-        <FormSection title="Cover image (optional)" description="Optional visual context students see before they open the event.">
+        <FormSection
+          title="Cover image (optional)"
+          description="Optional visual context students see in event lists before they open the page."
+        >
           <label className="block space-y-2">
             <span className="wire-label">Event cover</span>
             <input
@@ -48,7 +51,10 @@ export default async function CreateEventPage({ searchParams }: CreateEventPageP
           <p className="wire-meta">JPEG, PNG, WEBP. Max 10MB.</p>
         </FormSection>
 
-        <FormSection title="Event title" description="Use the name students will recognize in event lists, saved events, and My Events.">
+        <FormSection
+          title="Event title"
+          description="Use the name students will recognize in event lists, saved events, and My Events."
+        >
           <WireField
             label="Title"
             name="title"
@@ -57,7 +63,10 @@ export default async function CreateEventPage({ searchParams }: CreateEventPageP
           />
         </FormSection>
 
-        <FormSection title="Purpose and details" description="Explain what the event is for, who it is relevant to, and what students should expect.">
+        <FormSection
+          title="About the event"
+          description="Explain what the event is for, who it is relevant to, and what students should expect before they RSVP."
+        >
           <WireTextarea
             label="Details"
             name="description"
@@ -66,7 +75,10 @@ export default async function CreateEventPage({ searchParams }: CreateEventPageP
           />
         </FormSection>
 
-        <FormSection title="Category" description="Helps students understand what kind of event this is before they open it.">
+        <FormSection
+          title="Category"
+          description="Helps students understand what kind of event this is before they open it."
+        >
           <label className="block space-y-2">
             <span className="wire-label">Select category</span>
             <select name="category" required className="wire-input-field">
@@ -79,7 +91,10 @@ export default async function CreateEventPage({ searchParams }: CreateEventPageP
           </label>
         </FormSection>
 
-        <FormSection title="Schedule" description="Set the timing students should plan around if they mark Going or Interested.">
+        <FormSection
+          title="Schedule"
+          description="Set the timing students should plan around if they mark Going or Interested."
+        >
           <WireField
             label="Starts at"
             name="startsAtInput"
@@ -93,7 +108,10 @@ export default async function CreateEventPage({ searchParams }: CreateEventPageP
           />
         </FormSection>
 
-        <FormSection title="Location" description="Use the place students should actually go or the clearest available meeting point.">
+        <FormSection
+          title="Location"
+          description="Use the place students should actually go, or the clearest available meeting point."
+        >
           <WireField
             label="Location"
             name="location"
@@ -106,7 +124,7 @@ export default async function CreateEventPage({ searchParams }: CreateEventPageP
 
         <div className="wire-action-row-single">
           <SubmitButton
-            label="Submit event"
+            label="Submit event for review"
             pendingLabel="Submitting..."
             variant="primary"
           />

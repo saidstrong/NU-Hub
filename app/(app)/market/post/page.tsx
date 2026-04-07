@@ -21,8 +21,8 @@ export default async function MarketPostPage({ searchParams }: MarketPostPagePro
   return (
     <main>
       <TopBar
-        title="Post listing"
-        subtitle="Create a marketplace sale, rental, or service listing with clear campus details."
+        title="Create listing"
+        subtitle="Create a sale, rental, or service listing other NU students can trust and act on."
         backHref="/market"
       />
       {error ? (
@@ -31,27 +31,43 @@ export default async function MarketPostPage({ searchParams }: MarketPostPagePro
         </div>
       ) : null}
 
+      <section className="wire-panel py-3">
+        <p className="wire-label">Listing setup</p>
+        <p className="mt-1 text-[13px] leading-relaxed text-wire-300">
+          Be clear about what you are offering, what shape it is in, what it costs, and where another student can meet you on campus.
+        </p>
+      </section>
+
       <form action={publishListingAction} className="flex flex-col gap-5">
         <section className="wire-panel">
-          <h3 className="mb-2 text-sm font-semibold text-wire-100">Upload images</h3>
+          <h3 className="mb-2 text-sm font-semibold text-wire-100">Listing photos</h3>
           <p className="mb-3 wire-meta">
-            Use clear photos of the actual item so other students can judge condition quickly.
+            Use clear photos of the actual item, or relevant service context, so students can judge what is being offered quickly.
           </p>
           <DirectListingImageUpload />
         </section>
 
-        <FormSection title="Item title">
+        <FormSection
+          title="Item title"
+          description="Use the name students will recognize in market browse, saved listings, and messages."
+        >
           <WireField label="Title" name="title" required />
         </FormSection>
 
-        <FormSection title="Listing format">
+        <FormSection
+          title="Listing format"
+          description="Match the listing type and pricing model to how this will actually be exchanged."
+        >
           <ListingTypePricingFields initialListingType="sale" initialPricingModel="fixed" />
           <p className="wire-meta">
             Sale uses Fixed. Rentals use Per day/Per week/Per month. Services use Fixed/Per hour/Starting from.
           </p>
         </FormSection>
 
-        <FormSection title="Category">
+        <FormSection
+          title="Category"
+          description="Helps students understand what kind of listing this is before they open it."
+        >
           <label className="block space-y-2">
             <span className="wire-label">Select category</span>
             <select name="category" required className="wire-input-field">
@@ -63,7 +79,10 @@ export default async function MarketPostPage({ searchParams }: MarketPostPagePro
             </select>
           </label>
         </FormSection>
-        <FormSection title="Price">
+        <FormSection
+          title="Price"
+          description="Use the amount or starting rate another student should expect."
+        >
           <WireField
             label="Enter price / rate (KZT)"
             name="priceKzt"
@@ -72,7 +91,10 @@ export default async function MarketPostPage({ searchParams }: MarketPostPagePro
             placeholder="8500"
           />
         </FormSection>
-        <FormSection title="Condition / quality">
+        <FormSection
+          title="Condition and quality"
+          description="Set expectations honestly so buyers know what they are getting before they message you."
+        >
           <label className="block space-y-2">
             <span className="wire-label">Condition or quality</span>
             <select name="condition" required className="wire-input-field">
@@ -83,24 +105,25 @@ export default async function MarketPostPage({ searchParams }: MarketPostPagePro
               ))}
             </select>
           </label>
-          <p className="wire-meta">Choose the most accurate condition so buyers know what to expect.</p>
         </FormSection>
-        <FormSection title="Description">
+        <FormSection
+          title="Description"
+          description="Include the details another student needs before asking about the listing."
+        >
           <WireTextarea label="Describe item" name="description" rows={5} />
-          <p className="wire-meta">
-            Include useful details like size, what is included, timing, and anything another NU student should know.
-          </p>
         </FormSection>
-        <FormSection title="Location">
+        <FormSection
+          title="Pickup and handoff"
+          description="Be specific about where on campus you can meet or hand over the item."
+        >
           <WireField label="Location details" name="pickupLocation" required />
-          <p className="wire-meta">Be specific about where you can meet on campus for pickup or handoff.</p>
         </FormSection>
 
         <div className="wire-action-row">
           <button type="submit" formAction={saveDraftListingAction} className="wire-action">
             Save draft
           </button>
-          <SubmitButton label="Publish" pendingLabel="Publishing..." variant="primary" />
+          <SubmitButton label="Publish listing" pendingLabel="Publishing..." variant="primary" />
         </div>
       </form>
     </main>

@@ -42,7 +42,7 @@ export default async function JobsPostPage({ searchParams }: JobsPostPageProps) 
     <main>
       <TopBar
         title="Post Opportunity"
-        subtitle="Create an opportunity students can review and apply to externally"
+        subtitle="Create an opportunity students can review and apply to externally."
         backHref="/jobs"
       />
       {error ? (
@@ -54,14 +54,14 @@ export default async function JobsPostPage({ searchParams }: JobsPostPageProps) 
       <section className="wire-panel py-3">
         <p className="wire-label">Opportunity setup</p>
         <p className="mt-1 text-[13px] leading-relaxed text-wire-300">
-          Be clear about what the opportunity is, who it suits, where it happens, how students apply, and when it closes. Students will apply through the method you list here, not inside Atrium.
+          Be clear about the opening, the organization, the location, the apply method, and the closing date. Students will apply through the method listed here, not inside Atrium.
         </p>
       </section>
 
       <form action={createJobAction} className="flex flex-col gap-5">
         <FormSection
-          title="Opportunity"
-          description="State what the opening is, who it is with, and who it is relevant to."
+          title="Opportunity basics"
+          description="State what the opening is, who it is with, and who it suits."
         >
           <WireField label="Opportunity title" name="title" required placeholder="Research Assistant (AI Lab)" />
           <WireField label="Organization" name="organizationName" required placeholder="NU AI Lab" />
@@ -79,7 +79,7 @@ export default async function JobsPostPage({ searchParams }: JobsPostPageProps) 
 
         <FormSection
           title="Location"
-          description="Use the location mode and details students should plan around before applying."
+          description="Use the location mode and details students should plan around before they apply."
         >
           <label className="block space-y-2">
             <span className="wire-label">Location mode</span>
@@ -127,7 +127,7 @@ export default async function JobsPostPage({ searchParams }: JobsPostPageProps) 
         </FormSection>
 
         <FormSection
-          title="Apply"
+          title="How students apply"
           description="Students will apply outside Atrium using one listed method before the closing date."
         >
           <label className="block space-y-2">

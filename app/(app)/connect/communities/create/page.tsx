@@ -28,8 +28,8 @@ export default async function CreateCommunityPage({
   return (
     <main>
       <TopBar
-        title="Create Community"
-        subtitle="Start a campus group with a clear purpose and join model"
+        title="Create community"
+        subtitle="Start a campus group with a clear purpose, identity, and join model."
         backHref="/connect/communities"
       />
       {error ? (
@@ -41,13 +41,15 @@ export default async function CreateCommunityPage({
       <section className="wire-panel py-3">
         <p className="wire-label">Community setup</p>
         <p className="mt-1 text-[13px] leading-relaxed text-wire-300">
-          Use a clear name, explain what the group does and who it is for, and choose whether
-          students join immediately or by request.
+          Use a clear name, explain what the group does and who it is for, and choose whether students join immediately or by request.
         </p>
       </section>
 
       <form action={createCommunityAction} className="flex flex-col gap-5" encType="multipart/form-data">
-        <FormSection title="Avatar (optional)" description="Optional visual identity for the group.">
+        <FormSection
+          title="Avatar (optional)"
+          description="Optional visual identity students see in community lists and on the community page."
+        >
           <label className="block space-y-2">
             <span className="wire-label">Community avatar</span>
             <input
@@ -60,7 +62,10 @@ export default async function CreateCommunityPage({
           <p className="wire-meta">JPEG, PNG, WEBP. Max 5MB.</p>
         </FormSection>
 
-        <FormSection title="Community name" description="Use the name students already recognize on campus.">
+        <FormSection
+          title="Community name"
+          description="Use the name students already recognize on campus."
+        >
           <WireField
             label="Name"
             name="name"
@@ -69,7 +74,10 @@ export default async function CreateCommunityPage({
           />
         </FormSection>
 
-        <FormSection title="Purpose" description="Explain what the community does, who it is for, and how members take part.">
+        <FormSection
+          title="Purpose"
+          description="Explain what the community does, who it is for, and how members take part."
+        >
           <WireTextarea
             label="Purpose"
             name="description"
@@ -78,7 +86,10 @@ export default async function CreateCommunityPage({
           />
         </FormSection>
 
-        <FormSection title="Category" description="Helps students understand what kind of community this is.">
+        <FormSection
+          title="Category"
+          description="Helps students place the community quickly when they discover it."
+        >
           <label className="block space-y-2">
             <span className="wire-label">Category (optional)</span>
             <select name="category" className="wire-input-field">
@@ -92,7 +103,10 @@ export default async function CreateCommunityPage({
           </label>
         </FormSection>
 
-        <FormSection title="Focus tags" description="Optional short tags that help students scan the community quickly.">
+        <FormSection
+          title="Focus tags"
+          description="Optional short tags that help students scan the community quickly."
+        >
           <WireField
             label="Tags"
             name="tagsInput"
@@ -100,7 +114,10 @@ export default async function CreateCommunityPage({
           />
         </FormSection>
 
-        <FormSection title="Join access" description="Choose whether students join right away or wait for owner review.">
+        <FormSection
+          title="Join access"
+          description="Choose whether students join right away or request access first."
+        >
           <label className="block space-y-2">
             <span className="wire-label">Join type</span>
             <select name="joinType" required className="wire-input-field">
@@ -113,7 +130,7 @@ export default async function CreateCommunityPage({
         <div className="wire-action-row-single">
           <SubmitButton
             label="Create community"
-            pendingLabel="Creating..."
+            pendingLabel="Creating community..."
             variant="primary"
           />
         </div>
