@@ -62,8 +62,8 @@ export default async function MarketMessagesPage({ searchParams }: MarketMessage
   return (
     <main className="mx-auto w-full max-w-4xl">
       <TopBar
-        title="Messages"
-        subtitle="Marketplace deal inbox"
+        title="Market messages"
+        subtitle="Conversations about listings and deals."
         backHref="/market"
       />
       {message ? <FeedbackBanner tone="success" message={message} /> : null}
@@ -72,8 +72,8 @@ export default async function MarketMessagesPage({ searchParams }: MarketMessage
 
       <section className="wire-panel">
         <SectionHeader
-          title="Inbox"
-          subtitle="Reply-needed listing conversations appear first."
+          title="Active conversations"
+          subtitle="Reply-needed conversations appear first."
         />
 
         {prioritizedConversations.length > 0 ? (
@@ -102,6 +102,9 @@ export default async function MarketMessagesPage({ searchParams }: MarketMessage
               const rowClass = needsReply
                 ? "block rounded-[var(--radius-card)] border border-accent/35 bg-wire-800 px-3.5 py-3.5 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/40 sm:px-4"
                 : "block rounded-[var(--radius-card)] border border-wire-700 bg-wire-800 px-3.5 py-3.5 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/40 sm:px-4";
+              const previewClass = needsReply
+                ? "line-clamp-1 text-[13px] font-medium text-wire-100 [overflow-wrap:anywhere]"
+                : "line-clamp-1 text-[13px] text-wire-200 [overflow-wrap:anywhere]";
 
               return (
                 <Link
@@ -148,6 +151,9 @@ export default async function MarketMessagesPage({ searchParams }: MarketMessage
                       <div className="h-11 w-11 shrink-0 rounded-[10px] border border-dashed border-wire-600 bg-wire-900" />
                     )}
                     <div className="min-w-0">
+                      <p className="text-[10px] uppercase tracking-[0.18em] text-wire-400">
+                        Listing
+                      </p>
                       <div className="flex flex-wrap items-center gap-2">
                         <p className="line-clamp-1 text-[13px] font-medium text-wire-100 [overflow-wrap:anywhere]">
                           {conversation.listingTitle}
@@ -166,7 +172,7 @@ export default async function MarketMessagesPage({ searchParams }: MarketMessage
                   </div>
 
                   <div className="mt-2.5">
-                    <p className="line-clamp-1 text-[13px] text-wire-200 [overflow-wrap:anywhere]">
+                    <p className={previewClass}>
                       {conversation.lastMessagePreview}
                     </p>
                   </div>
@@ -176,8 +182,8 @@ export default async function MarketMessagesPage({ searchParams }: MarketMessage
           </div>
         ) : !loadError ? (
           <EmptyState
-            title="No listing conversations yet"
-            description="Message a seller from any listing to open a marketplace conversation."
+            title="No marketplace conversations yet"
+            description="Message a seller from a listing when you want to ask about availability, condition, or pickup."
             actionLabel="Browse listings"
             actionHref="/market"
             className="py-6"
