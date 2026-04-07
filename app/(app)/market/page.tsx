@@ -83,7 +83,7 @@ export default async function MarketHomePage({ searchParams }: MarketHomePagePro
       <section className="wire-panel">
         <SectionHeader
           title="Market"
-          subtitle="The NU exchange for browsing active listings and moving deals into messages."
+          subtitle="Browse active NU listings, save what matters, and move real exchanges into messages."
           actionNode={
             <Link href="/market/my-listings" className="wire-link">
               My listings
@@ -92,21 +92,21 @@ export default async function MarketHomePage({ searchParams }: MarketHomePagePro
         />
         <div className="mt-3">
           <SearchBar
-            placeholder="Search active listings"
+            placeholder="Search across Atrium"
             queryName="q"
             defaultValue=""
             action="/search"
           />
         </div>
         <p className="mt-3 text-[13px] leading-relaxed text-wire-300">
-          Start here to browse active listings, then use saved listings, messages, and my listings to
-          keep an exchange moving.
+          The search bar opens global search. Use the controls below when you want to browse the
+          market itself.
         </p>
       </section>
 
       <section className="wire-panel py-4">
         <p className="mb-3 text-[13px] leading-relaxed text-wire-300">
-          Narrow the active market by listing type or category.
+          Browse the active market by listing type or category.
         </p>
         <p className="mb-2 wire-label">Listing type</p>
         <div className="-mx-1 mb-3 flex snap-x snap-mandatory gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -135,10 +135,10 @@ export default async function MarketHomePage({ searchParams }: MarketHomePagePro
       </section>
 
       <section className="wire-panel py-4">
-        <p className="wire-label">Marketplace tools</p>
+        <p className="wire-label">Keep exchange moving</p>
         <p className="mt-1 text-[13px] leading-relaxed text-wire-300">
-          Post something new, continue buyer-seller conversations, or track the listings that still
-          need your attention.
+          Post a listing, continue buyer-seller conversations, or return to the listings that still
+          need follow-up.
         </p>
         <div className="flex flex-wrap items-center gap-2">
           <ShellButton label="Post listing" href="/market/post" variant="primary" block={false} />
@@ -169,7 +169,7 @@ export default async function MarketHomePage({ searchParams }: MarketHomePagePro
       </section>
 
       {featuredListings.length > 0 ? (
-        <SectionCard title="Featured listings" subtitle="Highlighted NU listings worth checking first.">
+        <SectionCard title="Featured listings" subtitle="A few highlighted NU listings worth checking first.">
           <div className="grid gap-3 lg:grid-cols-2">
             {featuredListings.map((listing) => {
               const cardData = toListingCardDataWithOptions(listing, { showStatus: true });
@@ -191,7 +191,7 @@ export default async function MarketHomePage({ searchParams }: MarketHomePagePro
 
       <SectionCard
         title={selectedType === "all" ? "Recent listings" : `Recent ${formatMarketTypeLabel(selectedType).toLowerCase()} listings`}
-        subtitle="Active NU listings ready for review and follow-up."
+        subtitle="Active NU listings ready to review, save, or message about."
         actionLabel="Saved listings"
         actionHref="/market/saved"
       >
@@ -217,8 +217,8 @@ export default async function MarketHomePage({ searchParams }: MarketHomePagePro
             title={selectedType === "all" ? "No active listings right now" : `No active ${formatMarketTypeLabel(selectedType).toLowerCase()} listings`}
             description={
               selectedType === "all"
-                ? "New NU listings will appear here when students post them."
-                : `${formatMarketTypeLabel(selectedType)} listings will appear here when NU students post them.`
+                ? "New NU listings will appear here when students post them. You can still create a listing of your own."
+                : `${formatMarketTypeLabel(selectedType)} listings will appear here when NU students post them. You can still post one of your own.`
             }
             actionLabel="Post listing"
             actionHref="/market/post"

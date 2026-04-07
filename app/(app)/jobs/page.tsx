@@ -136,9 +136,11 @@ export default async function JobsPage({ searchParams }: JobsPageProps) {
       {loadError ? <FeedbackBanner tone="error" message={loadError} /> : null}
 
       <section className="wire-panel py-3">
-        <p className="wire-label">Current scope</p>
+        <p className="wire-label">Opportunity board</p>
         <p className="mt-1 text-[13px] leading-relaxed text-wire-300">
-          Atrium currently supports internships, part-time roles, volunteer openings, and research positions. Open an opportunity to review the details, save it for later, and apply through the listed method.
+          Atrium currently supports internships, part-time roles, volunteer openings, and research
+          positions. Open an opportunity to review the details, save it for later, and apply
+          externally through the listed method.
         </p>
       </section>
 
@@ -180,7 +182,7 @@ export default async function JobsPage({ searchParams }: JobsPageProps) {
 
       <SectionCard
         title="Open opportunities"
-        subtitle="Current student-facing openings that can still be pursued."
+        subtitle="Current student-facing openings you can still review, save, and pursue."
       >
         {jobs.length > 0 ? (
           <div className="wire-list">
@@ -221,9 +223,13 @@ export default async function JobsPage({ searchParams }: JobsPageProps) {
         ) : !loadError ? (
           <EmptyState
             title="No open opportunities right now"
-            description="Published internships, part-time roles, volunteer openings, and research positions will appear here when available."
-            actionLabel="Back to home"
-            actionHref="/home"
+            description={
+              isAdmin
+                ? "Published internships, part-time roles, volunteer openings, and research positions will appear here when available. You can still submit one for review."
+                : "Published internships, part-time roles, volunteer openings, and research positions will appear here when available."
+            }
+            actionLabel={isAdmin ? "Post opportunity" : "Back to home"}
+            actionHref={isAdmin ? "/jobs/post" : "/home"}
           />
         ) : null}
       </SectionCard>

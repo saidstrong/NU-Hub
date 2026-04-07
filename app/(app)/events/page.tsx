@@ -44,7 +44,7 @@ export default async function EventsHomePage({ searchParams }: EventsHomePagePro
       <section className="wire-panel">
         <SectionHeader
           title="Events"
-          subtitle="Find upcoming NU events, save what you want to revisit, and keep your plans organized."
+          subtitle="Browse upcoming NU events, save what you want to revisit, and keep attendance plans in one place."
           actionNode={
             <Link href="/events/my-events" className="wire-link">
               My events
@@ -53,12 +53,16 @@ export default async function EventsHomePage({ searchParams }: EventsHomePagePro
         />
         <div className="mt-3">
           <SearchBar
-            placeholder="Search campus activity"
+            placeholder="Search across Atrium"
             queryName="q"
             defaultValue=""
             action="/search"
           />
         </div>
+        <p className="mt-3 text-[13px] leading-relaxed text-wire-300">
+          The search bar opens global search. Use the lists below when you want to browse upcoming
+          events.
+        </p>
         <div className="mt-4 flex flex-wrap items-center gap-2">
           <ShellButton label="Create event" href="/events/create" variant="primary" block={false} />
           <Link href="/events/list" className="wire-action-compact">
@@ -69,16 +73,17 @@ export default async function EventsHomePage({ searchParams }: EventsHomePagePro
           </Link>
         </div>
         <section className="mt-4 rounded-xl border border-wire-700 bg-wire-900/70 px-3 py-3">
-          <p className="wire-label">Event flow</p>
+          <p className="wire-label">Participation flow</p>
           <p className="mt-1 text-[13px] leading-relaxed text-wire-300">
-            Browse upcoming events here, save the ones you want to revisit, and use My Events to track what you may attend, plan to attend, or organize.
+            Browse upcoming events here, save the ones you want to revisit, and use My Events to
+            track what you may attend, plan to attend, or organize.
           </p>
         </section>
       </section>
 
       <SectionCard
         title="Upcoming events"
-        subtitle="Published campus events you can review, save, or join."
+        subtitle="Published NU events you can open, save, and RSVP to."
         actionLabel="All events"
         actionHref="/events/list"
       >
@@ -93,7 +98,7 @@ export default async function EventsHomePage({ searchParams }: EventsHomePagePro
         ) : !loadError ? (
           <EmptyState
             title="No upcoming events right now"
-            description="Published events students can join will appear here. You can still create one."
+            description="Published events students can join will appear here. You can still publish one students can save and RSVP to."
             actionLabel="Create event"
             actionHref="/events/create"
           />
@@ -108,7 +113,7 @@ export default async function EventsHomePage({ searchParams }: EventsHomePagePro
             </div>
           </div>
         ) : featuredEvent && !loadError ? (
-          <p className="wire-inline-empty mt-4">No additional upcoming events yet.</p>
+          <p className="wire-inline-empty mt-4">No more upcoming events in this view yet.</p>
         ) : null}
       </SectionCard>
 

@@ -41,7 +41,7 @@ export default async function CommunitiesDiscoveryPage({
     <main>
       <TopBar
         title="Communities"
-        subtitle="The front door to campus groups you can discover, join, and run"
+        subtitle="The front door to campus groups you can discover, join, and run."
         backHref="/connect"
         actions={[{ label: "Create", href: "/connect/communities/create" }]}
       />
@@ -65,13 +65,13 @@ export default async function CommunitiesDiscoveryPage({
         <p className="wire-label">Community hub</p>
         <p className="mt-1 text-[13px] leading-relaxed text-wire-300">
           Browse active student groups, open a community to review its lead and join access, or
-          return to the communities you already belong to or operate.
+          return to the communities you already belong to or run.
         </p>
       </section>
 
       <SectionCard
-        title="Student communities"
-        subtitle="Discover clubs, project groups, and student-led units across NU."
+        title="Browse communities"
+        subtitle="Discover clubs, project groups, and student-led campus units across NU."
       >
         {communities.length > 0 ? (
           <div className="wire-list">
@@ -86,7 +86,7 @@ export default async function CommunitiesDiscoveryPage({
         ) : !loadError ? (
           <EmptyState
             title="No communities available yet"
-            description="Create the first campus group, club, or student initiative and it will appear here."
+            description="Create the first club, project group, or student initiative and it will appear here for others to join."
             actionLabel="Create community"
             actionHref="/connect/communities/create"
           />
@@ -103,7 +103,8 @@ export default async function CommunitiesDiscoveryPage({
         <div className="mb-3 border-b border-wire-700 pb-3">
           <h2 className="wire-section-title">Community operations</h2>
           <p className="mt-1 wire-meta">
-            Review requests you need to handle and return to communities you belong to or run.
+            Review join requests you need to handle and return to the communities you already belong
+            to or run.
           </p>
         </div>
         <div className="wire-action-row">

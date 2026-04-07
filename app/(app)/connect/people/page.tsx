@@ -18,6 +18,7 @@ export default async function PeopleDiscoveryPage() {
     <main>
       <TopBar
         title="People"
+        subtitle="Browse NU student profiles and open one when you want more context before connecting."
         backHref="/connect"
       />
       {loadError ? (
@@ -26,7 +27,18 @@ export default async function PeopleDiscoveryPage() {
         </div>
       ) : null}
 
-      <SectionCard title="Students You May Work With">
+      <section className="wire-panel py-3">
+        <p className="wire-label">People directory</p>
+        <p className="mt-1 text-[13px] leading-relaxed text-wire-300">
+          Profiles shown here are completed student profiles across NU. Open one to review academic
+          context, identity, and trust cues in more detail.
+        </p>
+      </section>
+
+      <SectionCard
+        title="NU students"
+        subtitle="Browse completed student profiles across the campus network."
+      >
         {people.length > 0 ? (
           <div className="wire-list">
             {people.map((person) => (
@@ -39,8 +51,10 @@ export default async function PeopleDiscoveryPage() {
           </div>
         ) : !loadError ? (
           <EmptyState
-            title="No people found"
-            description="Student profiles will appear here after onboarding is completed."
+            title="No student profiles available yet"
+            description="Completed student profiles will appear here after onboarding is finished."
+            actionLabel="Back to connect"
+            actionHref="/connect"
           />
         ) : null}
       </SectionCard>

@@ -5,7 +5,6 @@ import { ListingCard } from "@/components/ui/ListingCard";
 import { PersonCard } from "@/components/ui/PersonCard";
 import { SearchBar } from "@/components/ui/SearchBar";
 import { SectionCard } from "@/components/ui/SectionCard";
-import { TabRow } from "@/components/ui/TabRow";
 import { TopBar } from "@/components/ui/TopBar";
 import { searchGlobalEntities } from "@/lib/search/data";
 import {
@@ -46,12 +45,12 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   return (
     <main>
       <TopBar
-        title="Campus Search"
-        subtitle="Search students, communities, events, and market listings."
+        title="Search Across Atrium"
+        subtitle="Global search for market listings, events, students, and communities."
         backHref="/home"
       />
       <SearchBar
-        placeholder="Search market, events, students, communities"
+        placeholder="Search by keyword, name, title, or organization"
         queryName="q"
         defaultValue={q}
         action="/search"
@@ -68,20 +67,20 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
         </div>
       ) : null}
 
-      <TabRow
-        tabs={[
-          { label: "All", href: "/search" },
-          { label: "Market" },
-          { label: "Events" },
-          { label: "Students" },
-          { label: "Communities" },
-        ]}
-      />
+      <section className="wire-panel py-3">
+        <p className="wire-label">Global search</p>
+        <p className="mt-1 text-[13px] leading-relaxed text-wire-300">
+          Search scans the market, events, student profiles, and communities at once. If you want
+          to browse one area, use its local page instead.
+        </p>
+      </section>
 
       {!q?.trim() ? (
         <EmptyState
-          title="Start searching"
-          description="Use a keyword to search across market listings, events, students, and communities."
+          title="Search all of Atrium"
+          description="Enter a keyword, event title, community name, student name, or listing term to search across the main campus surfaces."
+          actionLabel="Back to home"
+          actionHref="/home"
         />
       ) : null}
 
@@ -90,11 +89,16 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
           {!hasAnyResults ? (
             <EmptyState
               title="No results found"
-              description="Try a different keyword or a broader phrase."
+              description="Try a broader keyword, a shorter phrase, or return to home to browse by area."
+              actionLabel="Back to home"
+              actionHref="/home"
             />
           ) : null}
 
-          <SectionCard title="Listings">
+          <SectionCard
+            title="Market Matches"
+            subtitle="Listings related to your keyword."
+          >
             {results.listings.length > 0 ? (
               <div className="wire-list">
                 {results.listings.map((listing) => (
@@ -106,11 +110,14 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                 ))}
               </div>
             ) : (
-              <p className="wire-meta">No listing matches.</p>
+              <p className="wire-meta">No market matches.</p>
             )}
           </SectionCard>
 
-          <SectionCard title="Events">
+          <SectionCard
+            title="Event Matches"
+            subtitle="Upcoming or published events related to your keyword."
+          >
             {results.events.length > 0 ? (
               <div className="wire-list">
                 {results.events.map((event) => (
@@ -122,7 +129,10 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
             )}
           </SectionCard>
 
-          <SectionCard title="Students">
+          <SectionCard
+            title="Student Matches"
+            subtitle="People related to your keyword."
+          >
             {results.people.length > 0 ? (
               <div className="wire-list">
                 {results.people.map((person) => (
@@ -138,7 +148,10 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
             )}
           </SectionCard>
 
-          <SectionCard title="Communities">
+          <SectionCard
+            title="Community Matches"
+            subtitle="Groups and campus units related to your keyword."
+          >
             {results.communities.length > 0 ? (
               <div className="wire-list">
                 {results.communities.map((community) => (
