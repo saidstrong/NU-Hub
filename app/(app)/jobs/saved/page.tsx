@@ -54,12 +54,12 @@ export default async function SavedJobsPage({ searchParams }: SavedJobsPageProps
     <main>
       <TopBar
         title="Saved Opportunities"
-        subtitle="Opportunities you want to revisit, compare, or return to before applying externally."
+        subtitle="Your opportunity watchlist for revisiting, comparing, and returning before you apply externally."
         backHref="/jobs"
       />
 
       <section className="wire-panel py-3">
-        <p className="wire-label">Saved for later</p>
+        <p className="wire-label">Opportunity watchlist</p>
         <p className="mt-1 text-[13px] leading-relaxed text-wire-300">
           Saved opportunities help you revisit details, compare options, and return before the closing date. Only currently visible opportunities appear here.
         </p>
@@ -87,7 +87,7 @@ export default async function SavedJobsPage({ searchParams }: SavedJobsPageProps
                   </h2>
                   <p className="mt-1 text-[13px] text-wire-200">{job.organization_name}</p>
                 </div>
-                <TagChip label="Open" tone="status" />
+                <TagChip label="Open now" tone="status" />
               </div>
               <div className="mt-2.5 flex flex-wrap gap-2">
                 <TagChip label={formatJobTypeLabel(job.job_type)} active />
@@ -109,13 +109,13 @@ export default async function SavedJobsPage({ searchParams }: SavedJobsPageProps
               </div>
               <div className="mt-3">
                 <Link href={`/jobs/${job.id}`} className="wire-link">
-                  Open opportunity
+                  Review opportunity
                 </Link>
               </div>
               <form action={toggleSavedJobAction} className="mt-2">
                 <input type="hidden" name="jobId" value={job.id} />
                 <input type="hidden" name="redirectTo" value={currentPageHref} />
-                <button type="submit" className="wire-action w-full text-[12px]">
+                <button type="submit" className="wire-action-ghost w-full text-[12px]">
                   Remove from saved
                 </button>
               </form>

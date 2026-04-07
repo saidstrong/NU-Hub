@@ -31,14 +31,14 @@ export default async function CommunityRequestsPage({ searchParams }: CommunityR
     <main>
       <TopBar
         title="Join Requests"
-        subtitle="Owner review queue for pending community join requests"
+        subtitle="Pending community join requests for communities you run."
         backHref="/connect/communities"
+        actions={[{ label: "My communities", href: "/connect/my-communities?view=created" }]}
       />
       <section className="wire-panel py-3">
-        <p className="wire-label">Review queue</p>
+        <p className="wire-label">Owner review queue</p>
         <p className="mt-1 text-[13px] leading-relaxed text-wire-300">
-          Review requests across communities you run. Requester context below comes from each
-          student&apos;s existing profile, not from a separate join note.
+          Review requests across communities you run. The requester context below comes from each student&apos;s existing profile, not from a separate join note.
         </p>
         {!loadError ? (
           <p className="mt-2 text-[12px] font-medium text-wire-200">{requestCountLabel}</p>
@@ -91,7 +91,7 @@ export default async function CommunityRequestsPage({ searchParams }: CommunityR
                   <p className="mt-1 wire-meta">{request.requester_meta}</p>
                 </div>
                 <div>
-                  <p className="wire-label">Available Profile Context</p>
+                  <p className="wire-label">Profile context</p>
                   <p className="mt-1 text-[13px] leading-relaxed text-wire-200">
                     {request.note === "Interested in joining this community."
                       ? "No additional profile context available."
@@ -103,7 +103,7 @@ export default async function CommunityRequestsPage({ searchParams }: CommunityR
               <div className="mt-4 rounded-[var(--radius-input)] border border-wire-700 bg-wire-800 px-3 py-3">
                 <p className="wire-label">Decision</p>
                 <p className="mt-1 text-[12px] leading-relaxed text-wire-300">
-                  Approve adds this student as a joined member. Reject closes the request.
+                  Approve adds this student as a joined member. Reject closes this request without adding them.
                 </p>
                 <div className="mt-3 wire-action-row">
                   <form action={reviewCommunityRequestAction} className="w-full">
@@ -135,9 +135,9 @@ export default async function CommunityRequestsPage({ searchParams }: CommunityR
       {requests.length === 0 && !loadError ? (
         <EmptyState
           title="No requests waiting for review"
-          description="Pending requests for request-to-join communities will appear here when owners need to review them."
-          actionLabel="View communities"
-          actionHref="/connect/communities"
+          description="Pending requests for request-to-join communities will appear here when one of your communities needs owner review."
+          actionLabel="Open my communities"
+          actionHref="/connect/my-communities?view=created"
         />
       ) : null}
     </main>

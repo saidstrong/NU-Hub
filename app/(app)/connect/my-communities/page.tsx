@@ -66,7 +66,7 @@ export default async function MyCommunitiesPage({ searchParams }: MyCommunitiesP
       ? "No communities run by you yet"
       : "No pending community requests";
   const emptyStateDescription = selectedView === "joined"
-    ? "Communities you join will stay here so you can return to their updates and member context."
+    ? "Communities you join stay here so you can return to updates, members, and activity."
     : selectedView === "created"
       ? "Create a community to start running a campus group, club, or student initiative from Atrium."
       : "Requests waiting for owner approval will appear here until they are approved or declined.";
@@ -77,7 +77,7 @@ export default async function MyCommunitiesPage({ searchParams }: MyCommunitiesP
     <main>
       <TopBar
         title="My Communities"
-        subtitle="Track communities you belong to, run, or are still waiting to join"
+        subtitle="Communities you belong to, run, or are still waiting to join."
         backHref="/connect/communities"
       />
       {message ? (
@@ -106,7 +106,7 @@ export default async function MyCommunitiesPage({ searchParams }: MyCommunitiesP
       />
 
       <section className="wire-panel py-3">
-        <p className="wire-label">Current view</p>
+        <p className="wire-label">Membership view</p>
         <p className="mt-1 text-[13px] leading-relaxed text-wire-300">
           {viewSummary}
         </p>

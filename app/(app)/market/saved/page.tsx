@@ -38,14 +38,13 @@ export default async function SavedListingsPage({ searchParams }: SavedListingsP
     <main>
       <TopBar
         title="Saved Listings"
-        subtitle="Track saved listings before you message or arrange pickup"
+        subtitle="Your listing watchlist for revisiting details before you message or arrange pickup."
         backHref="/market"
       />
       <section className="wire-panel py-3">
-        <p className="wire-label">Watchlist</p>
+        <p className="wire-label">Listing watchlist</p>
         <p className="mt-1 text-[13px] leading-relaxed text-wire-300">
-          Saved listings keep current status visible so you can quickly see what is still active,
-          what is reserved, and what has already sold.
+          Saved listings keep current status visible so you can quickly see what is still active, what is reserved, and what has already sold.
         </p>
       </section>
       {loadError ? (
@@ -63,7 +62,7 @@ export default async function SavedListingsPage({ searchParams }: SavedListingsP
                 href={`/market/item/${listing.id}`}
               />
               <div className="mt-2 flex items-center justify-between gap-3 px-1">
-                <p className="text-[12px] text-wire-300">Open the listing to review current details.</p>
+                <p className="text-[12px] text-wire-300">Open the listing to review current details and seller context.</p>
                 <form action={toggleSavedListingAction}>
                   <input type="hidden" name="listingId" value={listing.id} />
                   <input type="hidden" name="redirectTo" value={currentPageHref} />
@@ -77,8 +76,8 @@ export default async function SavedListingsPage({ searchParams }: SavedListingsP
         </div>
       ) : !loadError ? (
         <EmptyState
-          title="No watchlist items yet"
-          description="Save listings from the market when you want to revisit availability, price, or pickup details."
+          title="No saved listings yet"
+          description="Save a listing from Market when you want to revisit availability, price, or pickup details."
           actionLabel="Browse listings"
           actionHref="/market"
         />

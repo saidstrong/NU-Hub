@@ -49,18 +49,18 @@ export default async function MyListingsPage({ searchParams }: MyListingsPagePro
     ? "Current includes live listings and drafts you can still edit or publish."
     : selectedStatus === "reserved"
       ? "Reserved listings are spoken for and waiting on pickup, handoff, or final confirmation."
-      : "Sold listings are completed exchanges kept here for reference.";
+      : "Sold listings are completed exchanges you can revisit for reference.";
   const emptyStateTitle = selectedStatus === "active"
     ? "No current listings yet"
     : selectedStatus === "reserved"
       ? "No reserved listings"
       : "No sold listings yet";
   const emptyStateDescription = selectedStatus === "active"
-    ? "Live listings and saved drafts will appear here once you start posting."
+    ? "Create a listing or save a draft to start managing it here."
     : selectedStatus === "reserved"
-      ? "Listings move here after a buyer is arranged and before the exchange is finished."
-      : "Completed listings move here after a sale or handoff is done.";
-  const emptyStateActionLabel = selectedStatus === "active" ? "Post listing" : "View current listings";
+      ? "Listings move here after a buyer is arranged and before the exchange is fully completed."
+      : "Completed listings move here after the exchange is finished.";
+  const emptyStateActionLabel = selectedStatus === "active" ? "Create listing" : "Open current listings";
   const emptyStateActionHref = selectedStatus === "active"
     ? "/market/post"
     : buildPageHref("/market/my-listings", 1, { status: "active" });
@@ -69,7 +69,7 @@ export default async function MyListingsPage({ searchParams }: MyListingsPagePro
     <main>
       <TopBar
         title="My Listings"
-        subtitle="Manage current, reserved, and sold listings"
+        subtitle="Your current, reserved, and sold marketplace listings."
         backHref="/market"
       />
       {message ? (
@@ -88,7 +88,7 @@ export default async function MyListingsPage({ searchParams }: MyListingsPagePro
       />
 
       <section className="wire-panel py-3">
-        <p className="wire-label">Status view</p>
+        <p className="wire-label">Listing view</p>
         <p className="mt-1 text-[13px] leading-relaxed text-wire-300">
           {viewSummary}
         </p>

@@ -80,8 +80,8 @@ export default async function MyEventsPage({ searchParams }: MyEventsPageProps) 
   const emptyStateDescription = selectedStatus === "interested"
     ? "Mark an event as Interested to keep it here while you decide whether to attend."
     : selectedStatus === "going"
-      ? "Events marked Going will stay here so you can track what you plan to attend."
-      : "Create an event to start running a campus activity from Atrium.";
+      ? "Events marked Going stay here so you can keep track of what you plan to attend."
+      : "Create an event to start organizing a campus activity from Atrium.";
   const emptyStateActionLabel = selectedStatus === "created" ? "Create event" : "Browse events";
   const emptyStateActionHref = selectedStatus === "created" ? "/events/create" : "/events";
 
@@ -89,7 +89,7 @@ export default async function MyEventsPage({ searchParams }: MyEventsPageProps) 
     <main>
       <TopBar
         title="My Events"
-        subtitle="Track events you may attend, plan to attend, or organize"
+        subtitle="Events you may attend, plan to attend, or organize."
         backHref="/events"
       />
       {message ? (
@@ -108,7 +108,7 @@ export default async function MyEventsPage({ searchParams }: MyEventsPageProps) 
       />
 
       <section className="wire-panel py-3">
-        <p className="wire-label">Current view</p>
+        <p className="wire-label">Participation view</p>
         <p className="mt-1 text-[13px] leading-relaxed text-wire-300">
           {viewSummary}
         </p>

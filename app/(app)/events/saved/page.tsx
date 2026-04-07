@@ -38,13 +38,13 @@ export default async function SavedEventsPage({ searchParams }: SavedEventsPageP
     <main>
       <TopBar
         title="Saved Events"
-        subtitle="Events you want to revisit before deciding whether to attend"
+        subtitle="Your event watchlist for revisiting details before you decide whether to attend."
         backHref="/events"
       />
       <section className="wire-panel py-3">
-        <p className="wire-label">Saved for later</p>
+        <p className="wire-label">Event watchlist</p>
         <p className="mt-1 text-[13px] leading-relaxed text-wire-300">
-          Saved events help you revisit details and compare options. Open one when you want to review it again or remove it from this list.
+          Saved events help you revisit details, compare options, and return before you decide whether to mark Interested or Going.
         </p>
         {!loadError ? (
           <p className="mt-2 text-[12px] font-medium text-wire-200">
@@ -66,7 +66,7 @@ export default async function SavedEventsPage({ searchParams }: SavedEventsPageP
               <form action={toggleSavedEventAction} className="mt-2">
                 <input type="hidden" name="eventId" value={event.id} />
                 <input type="hidden" name="redirectTo" value={currentPageHref} />
-                <button type="submit" className="wire-action w-full text-[12px]">
+                <button type="submit" className="wire-action-ghost w-full text-[12px]">
                   Remove from saved
                 </button>
               </form>
@@ -76,7 +76,7 @@ export default async function SavedEventsPage({ searchParams }: SavedEventsPageP
       ) : !loadError ? (
         <EmptyState
           title="No saved events yet"
-          description="Save an event when you want to revisit the details before deciding whether to attend."
+          description="Save an event when you want to revisit the details, compare options, or decide later."
           actionLabel="Browse events"
           actionHref="/events"
         />

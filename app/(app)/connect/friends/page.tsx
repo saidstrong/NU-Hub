@@ -1,6 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 import Link from "next/link";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { SectionHeader } from "@/components/ui/SectionHeader";
 import { TopBar } from "@/components/ui/TopBar";
 import { requireUser } from "@/lib/auth/session";
 import { acceptFriendRequestAction, rejectFriendRequestAction } from "@/lib/connect/actions";
@@ -36,8 +37,9 @@ export default async function ConnectFriendsPage({ searchParams }: ConnectFriend
     <main>
       <TopBar
         title="Friends"
+        subtitle="Incoming friend requests and accepted campus connections."
         backHref="/connect"
-        actions={[{ label: "People", href: "/connect/people" }]}
+        actions={[{ label: "Browse people", href: "/connect/people" }]}
       />
       {message ? (
         <div className="rounded-xl border border-accent/35 bg-accent/10 px-3 py-2 text-[13px] text-wire-100">
@@ -56,9 +58,10 @@ export default async function ConnectFriendsPage({ searchParams }: ConnectFriend
       ) : null}
 
       <section className="wire-panel">
-        <div className="mb-3 border-b border-wire-700 pb-3">
-          <h2 className="wire-section-title">Incoming requests</h2>
-        </div>
+        <SectionHeader
+          title="Incoming requests"
+          subtitle="Review new friend requests before they become direct connections."
+        />
         {requests.length > 0 ? (
           <div className="space-y-2.5">
             {requests.map((request) => {
@@ -114,14 +117,17 @@ export default async function ConnectFriendsPage({ searchParams }: ConnectFriend
             })}
           </div>
         ) : (
-          <p className="text-[13px] text-wire-300">No incoming requests right now.</p>
+          <p className="text-[13px] text-wire-300">
+            No incoming friend requests right now. Browse people when you want to connect with more NU students.
+          </p>
         )}
       </section>
 
       <section className="wire-panel">
-        <div className="mb-3 border-b border-wire-700 pb-3">
-          <h2 className="wire-section-title">Friends</h2>
-        </div>
+        <SectionHeader
+          title="Accepted friends"
+          subtitle="People you can return to for profile context and direct conversation."
+        />
         {friends.length > 0 ? (
           <div className="space-y-2.5">
             {friends.map((friend) => {
@@ -156,9 +162,9 @@ export default async function ConnectFriendsPage({ searchParams }: ConnectFriend
           </div>
         ) : (
           <EmptyState
-            title="No friends yet"
-            description="You haven't added any friends yet."
-            actionLabel="Find people"
+            title="No accepted friends yet"
+            description="Accepted connections appear here after both sides approve the request."
+            actionLabel="Browse people"
             actionHref="/connect/people"
           />
         )}
